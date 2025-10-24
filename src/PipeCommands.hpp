@@ -36,5 +36,5 @@ namespace scrDbg::PipeCommands
     extern bool BreakpointActive();
     extern void ResumeBreakpoint();
     extern std::vector<std::pair<uint32_t, uint32_t>> GetAllBreakpoints();
-    void RemoveAllBreakpoints();
+    extern void RemoveAllBreakpoints();
 }

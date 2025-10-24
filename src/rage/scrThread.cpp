@@ -210,6 +210,9 @@ namespace rage
 
 	scrThread scrThread::GetThread(uint32_t hash)
 	{
+		if (!hash)
+			return scrThread();
+
 		uint64_t base = scrDbg::g_Pointers.ScriptThreads.Read<uint64_t>();
 		uint16_t count = scrDbg::g_Pointers.ScriptThreads.Add(10).Read<uint16_t>();
 
@@ -220,6 +223,6 @@ namespace rage
 				return thread;
 		}
 
-		return scrThread(0);
+		return scrThread();
 	}
 }

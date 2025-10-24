@@ -29,6 +29,10 @@ namespace scrDbg
 			scanner.Add("ScriptGlobalBlockCounts", "48 8D 05 ? ? ? ? 42 89 0C B8", [this](Pointer ptr) {
 				ScriptGlobalBlockCounts = ptr.Add(3).Rip();
 			});
+
+			scanner.Add("TextLabels", "48 8D 0D ? ? ? ? 0F 2E 35", [this](Pointer ptr) {
+				TextLabels = ptr.Add(3).Rip().Add(8);
+			});
 		}
 		else
 		{
@@ -51,6 +55,10 @@ namespace scrDbg
 
 			scanner.Add("ScriptGlobalBlockCounts", "41 89 9C BC", [this](Pointer ptr) {
 				ScriptGlobalBlockCounts = Process::GetBaseAddress() + ptr.Add(4).Read<int>(); // base + RVA
+			});
+
+			scanner.Add("TextLabels", "48 8D 0D ? ? ? ? 22 D8", [this](Pointer ptr) {
+				TextLabels = ptr.Add(3).Rip().Add(8);
 			});
 		}
 

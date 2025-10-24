@@ -1,4 +1,6 @@
 #include "Disassembler.hpp"
+#include "gta/TextLabels.hpp"
+#include "rage/Joaat.hpp"
 #include "rage/scrProgram.hpp"
 #include "rage/Opcode.hpp"
 
@@ -323,7 +325,12 @@ namespace scrDbg
 				if (stringIndex >= 0 && stringIndex < program.GetStringCount())
 				{
 					auto str = program.GetString(stringIndex);
-					instr << "\"" << str << "\"";
+					auto label = TextLabels::GetTextLabel(RAGE_JOAAT(str));
+
+					if (!label.empty())
+						instr << "\"" << str << "\"" << " // GXT: " << label;
+					else
+						instr << "\"" << str << "\"";
 				}
 				else
 				{

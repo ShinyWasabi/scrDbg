@@ -3,6 +3,7 @@
 #include "Breakpoints.hpp"
 #include "Disassembler.hpp"
 #include "PipeCommands.hpp"
+#include "gta/TextLabels.hpp"
 #include "rage/scrThread.hpp"
 #include "rage/Joaat.hpp"
 #include "rage/Opcode.hpp"
@@ -15,6 +16,8 @@
 #include <QHBoxLayout>
 #include <QTimer>
 #include <QFileDialog>
+#include <QProgressDialog>
+#include <QCheckBox>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QMenu>
@@ -67,6 +70,8 @@ namespace scrDbg
         connect(m_TogglePauseScript, &QPushButton::clicked, this, &ScriptThreadsWidget::OnTogglePauseScript);
         m_KillScript = new QPushButton("Kill Script");
         connect(m_KillScript, &QPushButton::clicked, this, &ScriptThreadsWidget::OnKillScript);
+        m_ExportDisassembly = new QPushButton("Export Disassembly");
+        connect(m_ExportDisassembly, &QPushButton::clicked, this, &ScriptThreadsWidget::OnExportDisassembly);
         m_ExportStrings = new QPushButton("Export Strings");
         connect(m_ExportStrings, &QPushButton::clicked, this, &ScriptThreadsWidget::OnExportStrings);
         m_JumpToAddress = new QPushButton("Jump to Address");
@@ -81,6 +86,7 @@ namespace scrDbg
         QHBoxLayout* buttonLayout = new QHBoxLayout();
         buttonLayout->addWidget(m_TogglePauseScript);
         buttonLayout->addWidget(m_KillScript);
+        buttonLayout->addWidget(m_ExportDisassembly);
         buttonLayout->addWidget(m_ExportStrings);
         buttonLayout->addWidget(m_JumpToAddress);
         buttonLayout->addWidget(m_BinarySearch);
@@ -269,11 +275,88 @@ namespace scrDbg
         }
     }
 
+    void ScriptThreadsWidget::OnExportDisassembly()
+    {
+        if (!GetCurrentScriptHash())
+            return;
+
+        QString fileName = QFileDialog::getSaveFileName(this, "Export Disassembly", "disassembly.txt", "Text Files (*.txt);;All Files (*)");
+        if (fileName.isEmpty())
+            return;
+
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        {
+            QMessageBox::warning(this, "Error", "Failed to open file for writing.");
+            return;
+        }
+
+        QTextStream out(&file);
+        out.setEncoding(QStringConverter::Utf8);
+
+        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
+
+        const int total = model->rowCount({});
+        QProgressDialog progress("Exporting disassembly...", "Cancel", 0, total, this);
+        progress.setWindowModality(Qt::ApplicationModal);
+        progress.setMinimumDuration(200);
+        progress.setValue(0);
+
+        for (int row = 0; row < total; ++row)
+        {
+            if (progress.wasCanceled())
+            {
+                QMessageBox::information(this, "Canceled", "Export canceled.");
+                file.close();
+                QFile::remove(fileName);
+                return;
+            }
+
+            if (model != m_Disassembly->model())
+            {
+                QMessageBox::warning(this, "Error", "Disassembly changed during export.");
+                file.close();
+                QFile::remove(fileName);
+                return;
+            }
+
+            QString addr = model->data(model->index(row, 0), Qt::DisplayRole).toString();
+            QString bytes = model->data(model->index(row, 1), Qt::DisplayRole).toString();
+            QString instr = model->data(model->index(row, 2), Qt::DisplayRole).toString();
+
+            out << QString("%1  %2  %3\n").arg(addr, -10).arg(bytes, -25).arg(instr);
+
+            if (row % 50 == 0)
+            {
+                progress.setValue(row);
+                QCoreApplication::processEvents();
+            }
+        }
+
+        progress.setValue(total);
+        file.close();
+
+        QMessageBox::information(this, "Export Disassembly", "Disassembly successfully exported.");
+    }
+
     void ScriptThreadsWidget::OnExportStrings()
     {
         auto program = rage::scrProgram::GetProgram(GetCurrentScriptHash());
         if (!program)
             return;
+
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("Export Options");
+        msgBox.setText("Options:");
+        QCheckBox* onlyTextLabels = new QCheckBox("Only text labels", &msgBox);
+        msgBox.setCheckBox(onlyTextLabels);
+        msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Ok);
+
+        if (msgBox.exec() != QMessageBox::Ok)
+            return;
+
+        bool onlyLabels = onlyTextLabels->isChecked();
 
         auto strings = program.GetAllStrings();
         if (strings.empty())
@@ -296,16 +379,36 @@ namespace scrDbg
         QTextStream out(&file);
         out.setEncoding(QStringConverter::Utf8);
 
+        int exportedCount = 0;
         for (const auto& s : strings)
-            out << QString::fromStdString(s) << "\n";
+        {
+            if (onlyLabels)
+            {
+                auto hash = RAGE_JOAAT(s);
+                auto label = TextLabels::GetTextLabel(hash);
+                if (!label.empty())
+                {
+                    out << QString("%1 (0x%2): %3\n").arg(QString::fromStdString(s)).arg(QString::number(hash, 16).toUpper()).arg(QString::fromStdString(label));
+                    exportedCount++;
+                }
+            }
+            else
+            {
+                out << QString::fromStdString(s) << "\n";
+                exportedCount++;
+            }
+        }
 
         file.close();
 
-        QMessageBox::information(this, "Export Strings", QString("Exported %1 strings to:\n%2").arg(strings.size()).arg(fileName));
+        QMessageBox::information(this, "Export Strings", QString("Exported %1 strings to:\n%2").arg(exportedCount).arg(fileName));
     }
 
     void ScriptThreadsWidget::OnJumpToAddress()
     {
+        if (!GetCurrentScriptHash())
+            return;
+
         bool ok = false;
         QString input = QInputDialog::getText(this, "Jump to Address", "Enter address (hex):", QLineEdit::Normal, "", &ok);
         if (!ok || input.isEmpty())
@@ -335,6 +438,9 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnBinarySearch()
     {
+        if (!GetCurrentScriptHash())
+            return;
+
         bool ok = false;
         QString input = QInputDialog::getText(this, "Binary Search", "Enter byte pattern:", QLineEdit::Normal, "", &ok);
         if (!ok || input.isEmpty())

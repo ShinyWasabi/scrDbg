@@ -25,6 +25,7 @@ namespace scrDbg
         void OnRefreshDisassembly(const rage::scrProgram& program, bool resetScroll);
         void OnTogglePauseScript();
         void OnKillScript();
+        void OnExportDisassembly();
         void OnExportStrings();
         void OnJumpToAddress();
         void OnBinarySearch();
@@ -63,6 +64,7 @@ namespace scrDbg
         QComboBox* m_ScriptNames;
         QPushButton* m_TogglePauseScript;
         QPushButton* m_KillScript;
+        QPushButton* m_ExportDisassembly;
         QPushButton* m_ExportStrings;
         QPushButton* m_JumpToAddress;
         QPushButton* m_BinarySearch;

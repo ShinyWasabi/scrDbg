@@ -11,6 +11,7 @@ namespace scrDbg
 		Pointer ScriptPrograms;
 		Pointer ScriptGlobals;
 		Pointer ScriptGlobalBlockCounts;
+		Pointer TextLabels;
 	};
 
 	struct Pointers : PointerData

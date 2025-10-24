@@ -183,6 +183,9 @@ namespace rage
 
 	scrProgram scrProgram::GetProgram(uint32_t hash)
 	{
+		if (!hash)
+			return scrProgram();
+
 		for (int i = 0; i < 176; i++)
 		{
 			scrProgram program(scrDbg::Process::Read<uint64_t>(scrDbg::g_Pointers.ScriptPrograms + i * sizeof(uint64_t)));
@@ -190,6 +193,6 @@ namespace rage
 				return program;
 		}
 
-		return scrProgram(0);
+		return scrProgram();
 	}
 }
