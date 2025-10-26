@@ -30,6 +30,10 @@ namespace scrDbg
 				ScriptGlobalBlockCounts = ptr.Add(3).Rip();
 			});
 
+			scanner.Add("NativeRegistrationTable", "4C 8D 0D ? ? ? ? 4C 8D 15 ? ? ? ? 45 31 F6", [this](Pointer ptr) {
+				NativeRegistrationTable = ptr.Add(3).Rip();
+			});
+
 			scanner.Add("TextLabels", "48 8D 0D ? ? ? ? 0F 2E 35", [this](Pointer ptr) {
 				TextLabels = ptr.Add(3).Rip().Add(8);
 			});
@@ -55,6 +59,10 @@ namespace scrDbg
 
 			scanner.Add("ScriptGlobalBlockCounts", "41 89 9C BC", [this](Pointer ptr) {
 				ScriptGlobalBlockCounts = Process::GetBaseAddress() + ptr.Add(4).Read<int>(); // base + RVA
+			});
+
+			scanner.Add("NativeRegistrationTable", "48 8D 0D ? ? ? ? 48 8B 14 FA E8 ? ? ? ? 48 85 C0 75 0A", [this](Pointer ptr) {
+				NativeRegistrationTable = ptr.Add(3).Rip();
 			});
 
 			scanner.Add("TextLabels", "48 8D 0D ? ? ? ? 22 D8", [this](Pointer ptr) {

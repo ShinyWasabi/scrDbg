@@ -45,6 +45,7 @@ namespace rage
         uint32_t GetGlobalCount() const; 
         uint32_t GetGlobalBlockIndex() const; 
         uint32_t GetNativeCount() const;
+        uint64_t GetNative(uint32_t index) const;
         uint32_t GetHash() const;
         uint32_t GetRefCount() const;
         std::vector<std::string> GetAllStrings() const;

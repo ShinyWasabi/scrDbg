@@ -1,7 +1,7 @@
 #include "TextLabels.hpp"
 #include "Pointers.hpp"
 
-namespace scrDbg::TextLabels
+namespace gta::TextLabels
 {
 	struct GXT2Entry
 	{
@@ -17,10 +17,10 @@ namespace scrDbg::TextLabels
 
 	static std::string SearchTextLabelSlot(uint32_t hash, uint64_t slot)
 	{
-		GXT2Header header = Process::Read<GXT2Header>(slot);
+		GXT2Header header = scrDbg::Process::Read<GXT2Header>(slot);
 
 		std::vector<GXT2Entry> entries(header.EntryCount);
-		Process::ReadRaw(slot + sizeof(GXT2Header), entries.data(), header.EntryCount * sizeof(GXT2Entry));
+		scrDbg::Process::ReadRaw(slot + sizeof(GXT2Header), entries.data(), header.EntryCount * sizeof(GXT2Entry));
 
 		auto it = std::lower_bound(entries.begin(), entries.end(), hash, [](GXT2Entry& entry, uint32_t keyHash) {
 			return entry.KeyHash < keyHash;
@@ -31,7 +31,7 @@ namespace scrDbg::TextLabels
 			uint64_t addr = slot + it->KeyOffset;
 
 			char buffer[4096]{};
-			Process::ReadRaw(addr, buffer, sizeof(buffer) - 1);
+			scrDbg::Process::ReadRaw(addr, buffer, sizeof(buffer) - 1);
 			buffer[sizeof(buffer) - 1] = '\0';
 			return buffer;
 		}
@@ -43,7 +43,7 @@ namespace scrDbg::TextLabels
 	{
 		for (int i = 0; i < 23; i++)
 		{
-			if (auto slot = scrDbg::Process::Read<uint64_t>(g_Pointers.TextLabels + i * sizeof(uint64_t)))
+			if (auto slot = scrDbg::Process::Read<uint64_t>(scrDbg::g_Pointers.TextLabels + i * sizeof(uint64_t)))
 			{
 				if (auto label = SearchTextLabelSlot(hash, slot); !label.empty())
 					return label;

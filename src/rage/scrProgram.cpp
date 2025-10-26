@@ -96,6 +96,17 @@ namespace rage
 		return scrDbg::Process::Read<uint32_t>(m_Address + offset);
 	}
 
+	uint64_t scrProgram::GetNative(uint32_t index) const
+	{
+		if (index >= GetNativeCount())
+			return 0;
+
+		size_t offset = offsetof(_scrProgram, m_Natives);
+
+		uint64_t base = scrDbg::Process::Read<uint64_t>(m_Address + offset);
+		return scrDbg::Process::Read<uint64_t>(base + index * sizeof(uint64_t));
+	}
+
 	uint32_t scrProgram::GetHash() const
 	{
 		size_t offset = offsetof(_scrProgram, m_NameHash);

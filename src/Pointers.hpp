@@ -11,6 +11,7 @@ namespace scrDbg
 		Pointer ScriptPrograms;
 		Pointer ScriptGlobals;
 		Pointer ScriptGlobalBlockCounts;
+		Pointer NativeRegistrationTable;
 		Pointer TextLabels;
 	};
 

@@ -1,4 +1,6 @@
 #include "Disassembler.hpp"
+#include "Process.hpp"
+#include "gta/Natives.hpp"
 #include "gta/TextLabels.hpp"
 #include "rage/Joaat.hpp"
 #include "rage/scrProgram.hpp"
@@ -51,7 +53,7 @@ namespace scrDbg
 		{"PUSH_CONST_F", 5, {OperandType::FLOAT}},
 		{"DUP", 1, {OperandType::NONE}},
 		{"DROP", 1, {OperandType::NONE}},
-		{"NATIVE", 4, {OperandType::U8, OperandType::U8, OperandType::U8}},
+		{"NATIVE", 4, {OperandType::NATIVE}},
 		{"ENTER", 0, {OperandType::U8, OperandType::S16, OperandType::NAME}},
 		{"LEAVE", 3, {OperandType::U8, OperandType::U8}},
 		{"LOAD", 1, {OperandType::NONE}},
@@ -303,6 +305,28 @@ namespace scrDbg
 				offset += 2;
 				break;
 			}
+			case OperandType::NATIVE:
+			{
+				uint8_t native = ReadByte(code, offset++);
+				uint32_t argCount = (native >> 2) & 0x3F;
+				uint32_t retCount = native & 3;
+				uint32_t index = (ReadByte(code, offset++) << 8) | ReadByte(code, offset++);
+
+				uint64_t handler = program.GetNative(index);
+				uint64_t hash = gta::Natives::GetNativeHashByHandler(handler);
+
+				instr << argCount << ", " << retCount << ", " << index;
+				if (handler && hash)
+				{
+					std::ostringstream nativeStr;
+					nativeStr << " // 0x" << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << hash;
+					nativeStr << ", " << (g_IsEnhanced ? "GTA5_Enhanced.exe" : "GTA5.exe") << "+0x" << handler - Process::GetBaseAddress();
+
+					instr << nativeStr.str();
+				}
+
+				break;
+			}
 			case OperandType::SWITCH:
 			{
 				uint8_t cases = ReadByte(code, offset++);
@@ -325,7 +349,7 @@ namespace scrDbg
 				if (stringIndex >= 0 && stringIndex < program.GetStringCount())
 				{
 					auto str = program.GetString(stringIndex);
-					auto label = TextLabels::GetTextLabel(RAGE_JOAAT(str));
+					auto label = gta::TextLabels::GetTextLabel(RAGE_JOAAT(str));
 
 					if (!label.empty())
 						instr << "\"" << str << "\"" << " // GXT: " << label;

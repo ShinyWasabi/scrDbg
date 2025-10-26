@@ -17,6 +17,7 @@ namespace scrDbg
 		U32,    // 4 byte unsigned
 		FLOAT,  // 4 byte float
 		REL,    // Relative jump
+		NATIVE, // Native command call
 		SWITCH, // Switch-case
 		STRING, // String
 		NAME    // Function name

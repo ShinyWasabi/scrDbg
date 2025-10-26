@@ -385,7 +385,7 @@ namespace scrDbg
             if (onlyLabels)
             {
                 auto hash = RAGE_JOAAT(s);
-                auto label = TextLabels::GetTextLabel(hash);
+                auto label = gta::TextLabels::GetTextLabel(hash);
                 if (!label.empty())
                 {
                     out << QString("%1 (0x%2): %3\n").arg(QString::fromStdString(s)).arg(QString::number(hash, 16).toUpper()).arg(QString::fromStdString(label));

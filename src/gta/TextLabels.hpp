@@ -1,6 +1,6 @@
 #pragma once
 
-namespace scrDbg::TextLabels
+namespace gta::TextLabels
 {
 	extern std::string GetTextLabel(uint32_t hash);
 }

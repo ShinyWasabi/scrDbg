@@ -80,7 +80,6 @@ int main(int argc, char* argv[])
     }
 
     GUIWidget gui;
-    gui.setWindowIcon(QIcon(":/resources/scrDbg.ico"));
     gui.show();
     int ret = app.exec();
 
