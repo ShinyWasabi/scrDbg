@@ -12,7 +12,9 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
 - View running scripts
 - Pause scripts
 - Kill scripts
+- Export disassembly
 - Export strings
+  - Optional: Export only text labels with translations
 - View disassembly
   - Jump to a raw address
   - Binary search
