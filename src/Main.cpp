@@ -2,6 +2,7 @@
 #include "Pointers.hpp"
 #include "PipeCommands.hpp"
 #include "core/PipeClient.hpp"
+#include "game/gta/Natives.hpp"
 
 namespace scrDbg
 {
@@ -78,6 +79,9 @@ int main(int argc, char* argv[])
     {
         QMessageBox::warning(nullptr, "Module Not Found", "ScriptVM.asi not found. Some features will be disabled.");
     }
+
+    if (!gta::Natives::Init())
+        QMessageBox::warning(nullptr, "Natives", "Failed to load native names.");
 
     GUIWidget gui;
     gui.show();

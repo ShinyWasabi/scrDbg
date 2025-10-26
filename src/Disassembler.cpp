@@ -319,7 +319,11 @@ namespace scrDbg
 				if (handler && hash)
 				{
 					std::ostringstream nativeStr;
-					nativeStr << " // 0x" << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << hash;
+
+					auto name = gta::Natives::GetNameByHash(hash);
+					nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
+
+					nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << hash;
 					nativeStr << ", " << (g_IsEnhanced ? "GTA5_Enhanced.exe" : "GTA5.exe") << "+0x" << handler - Process::GetBaseAddress();
 
 					instr << nativeStr.str();
