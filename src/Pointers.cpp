@@ -1,5 +1,5 @@
 #include "Pointers.hpp"
-#include "Pattern.hpp"
+#include "core/Scanner.hpp"
 
 namespace scrDbg
 {

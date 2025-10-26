@@ -1,6 +1,6 @@
 #include "scrThread.hpp"
 #include "Pointers.hpp"
-#include "Process.hpp"
+#include "core/Process.hpp"
 
 namespace rage
 {

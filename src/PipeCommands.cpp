@@ -1,5 +1,5 @@
 #include "PipeCommands.hpp"
-#include "PipeClient.hpp"
+#include "core/PipeClient.hpp"
 
 namespace scrDbg::PipeCommands
 {

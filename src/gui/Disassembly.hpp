@@ -1,5 +1,5 @@
 #pragma once
-#include "rage/scrProgram.hpp"
+#include "game/rage/scrProgram.hpp"
 #include <QWidget>
 #include <QtCore>
 

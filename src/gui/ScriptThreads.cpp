@@ -3,10 +3,10 @@
 #include "Breakpoints.hpp"
 #include "Disassembler.hpp"
 #include "PipeCommands.hpp"
-#include "gta/TextLabels.hpp"
-#include "rage/scrThread.hpp"
-#include "rage/Joaat.hpp"
-#include "rage/Opcode.hpp"
+#include "game/gta/TextLabels.hpp"
+#include "game/rage/scrThread.hpp"
+#include "game/rage/Joaat.hpp"
+#include "game/rage/Opcode.hpp"
 #include <QComboBox>
 #include <QLabel>
 #include <QPushButton>

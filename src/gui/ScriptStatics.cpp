@@ -1,7 +1,7 @@
 #include "ScriptStatics.hpp"
-#include "rage/scrThread.hpp"
-#include "rage/scrProgram.hpp"
-#include "rage/Joaat.hpp"
+#include "game/rage/scrThread.hpp"
+#include "game/rage/scrProgram.hpp"
+#include "game/rage/Joaat.hpp"
 #include <QVBoxLayout>
 #include <QLineEdit>
 #include <QIntValidator>

@@ -1,5 +1,5 @@
 #pragma once
-#include "Pointer.hpp"
+#include "core/Pointer.hpp"
 
 namespace scrDbg
 {

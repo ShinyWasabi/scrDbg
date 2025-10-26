@@ -1,7 +1,7 @@
 #include "GUI/GUI.hpp"
 #include "Pointers.hpp"
-#include "PipeClient.hpp"
 #include "PipeCommands.hpp"
+#include "core/PipeClient.hpp"
 
 namespace scrDbg
 {

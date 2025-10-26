@@ -1,10 +1,10 @@
 #include "Disassembler.hpp"
-#include "Process.hpp"
-#include "gta/Natives.hpp"
-#include "gta/TextLabels.hpp"
-#include "rage/Joaat.hpp"
-#include "rage/scrProgram.hpp"
-#include "rage/Opcode.hpp"
+#include "core/Process.hpp"
+#include "game/gta/Natives.hpp"
+#include "game/gta/TextLabels.hpp"
+#include "game/rage/Joaat.hpp"
+#include "game/rage/scrProgram.hpp"
+#include "game/rage/Opcode.hpp"
 
 namespace scrDbg
 {

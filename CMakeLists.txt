@@ -9,7 +9,7 @@ set(CMAKE_AUTORCC ON)
 
 set(SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 
-set(RESOURCES "${SRC_DIR}/scrDbg.rc")
+set(RESOURCES "${SRC_DIR}/resource/scrDbg.rc")
 
 file(GLOB_RECURSE SRC_FILES
     "${SRC_DIR}/**.hpp"

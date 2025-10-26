@@ -2,7 +2,7 @@
 #include "ScriptThreads.hpp"
 #include "ScriptStatics.hpp"
 #include "ScriptGlobals.hpp"
-#include "Process.hpp"
+#include "core/Process.hpp"
 #include <QVBoxLayout>
 
 namespace scrDbg
