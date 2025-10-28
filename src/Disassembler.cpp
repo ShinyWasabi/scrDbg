@@ -175,6 +175,22 @@ namespace scrDbg
 		return f;
 	}
 
+	bool ScriptDisassembler::IsJumpInstruction(uint8_t insnStart)
+	{
+		if (insnStart >= m_InstructionTable.size())
+			return false;
+
+		const auto& info = m_InstructionTable[insnStart];
+
+		for (auto operand : info.OperandType)
+		{
+			if (operand == OperandType::REL)
+				return true;
+		}
+
+		return false;
+	}
+
 	int ScriptDisassembler::GetInstructionSize(const std::vector<uint8_t>& code, uint32_t pc)
 	{
 		uint8_t op = ReadByte(code, pc);

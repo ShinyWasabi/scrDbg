@@ -1,6 +1,7 @@
 #include "ScriptThreads.hpp"
 #include "Disassembly.hpp"
 #include "Breakpoints.hpp"
+#include "Xrefs.hpp"
 #include "Disassembler.hpp"
 #include "PipeCommands.hpp"
 #include "game/gta/TextLabels.hpp"
@@ -124,6 +125,36 @@ namespace scrDbg
             return 0;
 
         return m_ScriptNames->currentData().toUInt();
+    }
+
+    DisassemblyModel* ScriptThreadsWidget::GetDisassembly()
+    {
+        return static_cast<DisassemblyModel*>(m_Disassembly->model());
+    }
+
+    bool ScriptThreadsWidget::ScrollToAddress(uint32_t address)
+    {
+        auto disassembly = GetDisassembly();
+
+        QModelIndex idx;
+        for (int i = 0; i < disassembly->rowCount(); ++i)
+        {
+            uint32_t pc = disassembly->GetInstructionPC(i);
+            uint32_t size = ScriptDisassembler::GetInstructionSize(disassembly->GetCode(), pc);
+
+            if (address >= pc && address < pc + size)
+            {
+                idx = disassembly->index(i, 0);
+                break;
+            }
+        }
+
+        if (!idx.isValid())
+            return false;
+
+        m_Disassembly->scrollTo(idx, QAbstractItemView::PositionAtCenter);
+        m_Disassembly->setCurrentIndex(idx);
+        return true;
     }
 
     void ScriptThreadsWidget::UpdateCurrentScript()
@@ -294,14 +325,15 @@ namespace scrDbg
         QTextStream out(&file);
         out.setEncoding(QStringConverter::Utf8);
 
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
+        auto disassembly = GetDisassembly();
 
-        const int total = model->rowCount({});
+        const int total = disassembly->rowCount({});
         QProgressDialog progress("Exporting disassembly...", "Cancel", 0, total, this);
         progress.setWindowModality(Qt::ApplicationModal);
         progress.setMinimumDuration(200);
         progress.setValue(0);
 
+        int insnCount = 0;
         for (int row = 0; row < total; ++row)
         {
             if (progress.wasCanceled())
@@ -312,7 +344,7 @@ namespace scrDbg
                 return;
             }
 
-            if (model != m_Disassembly->model())
+            if (disassembly != GetDisassembly())
             {
                 QMessageBox::warning(this, "Error", "Disassembly changed during export.");
                 file.close();
@@ -320,9 +352,9 @@ namespace scrDbg
                 return;
             }
 
-            QString addr = model->data(model->index(row, 0), Qt::DisplayRole).toString();
-            QString bytes = model->data(model->index(row, 1), Qt::DisplayRole).toString();
-            QString instr = model->data(model->index(row, 2), Qt::DisplayRole).toString();
+            QString addr = disassembly->data(disassembly->index(row, 0), Qt::DisplayRole).toString();
+            QString bytes = disassembly->data(disassembly->index(row, 1), Qt::DisplayRole).toString();
+            QString instr = disassembly->data(disassembly->index(row, 2), Qt::DisplayRole).toString();
 
             out << QString("%1  %2  %3\n").arg(addr, -10).arg(bytes, -25).arg(instr);
 
@@ -331,12 +363,14 @@ namespace scrDbg
                 progress.setValue(row);
                 QCoreApplication::processEvents();
             }
+
+            insnCount++;
         }
 
         progress.setValue(total);
         file.close();
 
-        QMessageBox::information(this, "Export Disassembly", "Disassembly successfully exported.");
+        QMessageBox::information(this, "Export Disassembly", QString("Exported %1 instructions.").arg(insnCount));
     }
 
     void ScriptThreadsWidget::OnExportStrings()
@@ -401,7 +435,7 @@ namespace scrDbg
 
         file.close();
 
-        QMessageBox::information(this, "Export Strings", QString("Exported %1 strings to:\n%2").arg(exportedCount).arg(fileName));
+        QMessageBox::information(this, "Export Strings", QString("Exported %1 strings.").arg(exportedCount));
     }
 
     void ScriptThreadsWidget::OnJumpToAddress()
@@ -422,18 +456,8 @@ namespace scrDbg
             return;
         }
 
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
-
-        auto idx = model->GetJumpIndex(addr);
-        if (idx.isValid())
-        {
-            m_Disassembly->scrollTo(idx, QAbstractItemView::PositionAtCenter);
-            m_Disassembly->setCurrentIndex(idx);
-        }
-        else
-        {
+        if (!ScrollToAddress(addr))
             QMessageBox::warning(this, "Not Found", "No instruction at this address.");
-        }
     }
 
     void ScriptThreadsWidget::OnBinarySearch()
@@ -469,9 +493,10 @@ namespace scrDbg
             }
         }
 
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
-        auto& program = model->GetProgram();
-        auto& code = model->GetCode();
+        auto disassembly = GetDisassembly();
+
+        auto& program = disassembly->GetProgram();
+        auto& code = disassembly->GetCode();
 
         const uint32_t codeSize = program.GetCodeSize();
         const size_t patSize = pattern.size();
@@ -500,13 +525,7 @@ namespace scrDbg
             return;
         }
 
-        uint32_t firstAddr = results.front();
-        auto idx = model->GetJumpIndex(firstAddr);
-        if (idx.isValid())
-        {
-            m_Disassembly->scrollTo(idx, QAbstractItemView::PositionAtCenter);
-            m_Disassembly->setCurrentIndex(idx);
-        }
+        ScrollToAddress(results.front());
 
         QString msg = QString("Found %1 matches:\n\n").arg(results.size());
         int limit = std::min<int>(results.size(), 10);
@@ -521,28 +540,17 @@ namespace scrDbg
     void ScriptThreadsWidget::OnBreakpointsDialog()
     {
         auto* dlg = new BreakpointsDialog(this);
-
         connect(dlg, &BreakpointsDialog::BreakpointDoubleClicked, this, [this, dlg](uint32_t script, uint32_t pc) {
-            int scIdx = m_ScriptNames->findData(script);
-            if (scIdx != -1)
-                m_ScriptNames->setCurrentIndex(scIdx);
+            int idx = m_ScriptNames->findData(script);
+            if (idx != -1)
+                m_ScriptNames->setCurrentIndex(idx);
 
             // wait a bit
             QTimer::singleShot(100, this, [this, pc]() {
-                if (auto model = static_cast<DisassemblyModel*>(m_Disassembly->model()))
-                {
-                    auto idx = model->GetJumpIndex(pc);
-                    if (idx.isValid())
-                    {
-                        m_Disassembly->scrollTo(idx, QAbstractItemView::PositionAtCenter);
-                        m_Disassembly->setCurrentIndex(idx);
-                    }
-                }
+                ScrollToAddress(pc);
             });
-
             dlg->close();
         });
-
         dlg->show();
     }
 
@@ -557,6 +565,7 @@ namespace scrDbg
         QAction* nopAction = menu.addAction("NOP Instruction");
         QAction* patchAction = menu.addAction("Custom Patch");
         QAction* patternAction = menu.addAction("Generate Pattern");
+        QAction* xrefAction = menu.addAction("View Xrefs");
 
         connect(copyAction, &QAction::triggered, [this, index]() {
             OnCopyInstruction(index);
@@ -574,14 +583,16 @@ namespace scrDbg
             OnGeneratePattern(index);
         });
 
-        // TO-DO: Move this somewhere else
-        static const std::unordered_set<uint8_t> jmpInsns = {rage::scrOpcode::CALL, rage::scrOpcode::J, rage::scrOpcode::JZ, rage::scrOpcode::IEQ_JZ, rage::scrOpcode::INE_JZ, rage::scrOpcode::IGT_JZ, rage::scrOpcode::IGE_JZ, rage::scrOpcode::ILT_JZ, rage::scrOpcode::ILE_JZ};
+        connect(xrefAction, &QAction::triggered, [this, index]() {
+            OnViewXrefs(index);
+        });
 
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
-        auto& code = model->GetCode();
-        uint32_t pc = model->GetInstructionPC(index.row());
+        auto disassembly = GetDisassembly();
 
-        if (jmpInsns.contains(code[pc]))
+        auto& code = disassembly->GetCode();
+        uint32_t pc = disassembly->GetInstructionPC(index.row());
+
+        if (ScriptDisassembler::IsJumpInstruction(code[pc]) || code[pc] == rage::scrOpcode::CALL)
         {
             QAction* jumpAction = menu.addAction("Jump to Address");
             connect(jumpAction, &QAction::triggered, [this, index]() {
@@ -609,9 +620,6 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnCopyInstruction(const QModelIndex& index)
     {
-        if (!index.isValid())
-            return;
-
         auto model = index.model();
         int row = index.row();
         int columnCount = model->columnCount();
@@ -629,27 +637,22 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnNopInstruction(const QModelIndex& index)
     {
-        if (!index.isValid())
-            return;
+        auto disassembly = GetDisassembly();
 
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
-
-        uint32_t pc = model->GetInstructionPC(index.row());
-        uint32_t size = ScriptDisassembler::GetInstructionSize(model->GetCode(), pc);
+        uint32_t pc = disassembly->GetInstructionPC(index.row());
+        uint32_t size = ScriptDisassembler::GetInstructionSize(disassembly->GetCode(), pc);
         for (uint32_t i = 0; i < size; ++i)
-            model->GetProgram().SetCode(pc + i, rage::scrOpcode::NOP);
+            disassembly->GetProgram().SetCode(pc + i, rage::scrOpcode::NOP);
 
-        OnRefreshDisassembly(model->GetProgram(), false);
+        OnRefreshDisassembly(disassembly->GetProgram(), false);
     }
 
     void ScriptThreadsWidget::OnPatchInstruction(const QModelIndex& index)
     {
-        if (!index.isValid())
-            return;
+        auto disassembly = GetDisassembly();
 
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
-        uint32_t pc = model->GetInstructionPC(index.row());
-        uint32_t instrSize = ScriptDisassembler::GetInstructionSize(model->GetCode(), pc);
+        uint32_t pc = disassembly->GetInstructionPC(index.row());
+        uint32_t instrSize = ScriptDisassembler::GetInstructionSize(disassembly->GetCode(), pc);
 
         bool ok = false;
         QString input = QInputDialog::getText(this, "Custom Patch", QString("Enter %1 bytes in hex (space or comma separated):").arg(instrSize), QLineEdit::Normal, "", &ok);
@@ -681,9 +684,9 @@ namespace scrDbg
             newBytes.append(rage::scrOpcode::NOP);
 
         for (int i = 0; i < newBytes.size(); ++i)
-            model->GetProgram().SetCode(pc + i, static_cast<uint8_t>(newBytes[i]));
+            disassembly->GetProgram().SetCode(pc + i, static_cast<uint8_t>(newBytes[i]));
 
-        OnRefreshDisassembly(model->GetProgram(), false);
+        OnRefreshDisassembly(disassembly->GetProgram(), false);
     }
 
     // TO-DO: Refactor this shit
@@ -692,9 +695,10 @@ namespace scrDbg
         if (!index.isValid())
             return;
 
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
-        auto& code = model->GetCode();
-        uint32_t pc = model->GetInstructionPC(index.row());
+        auto disassembly = GetDisassembly();
+
+        auto& code = disassembly->GetCode();
+        uint32_t pc = disassembly->GetInstructionPC(index.row());
 
         if (pc >= code.size())
             return;
@@ -823,44 +827,77 @@ namespace scrDbg
         QMessageBox::information(this, "Generate Pattern", QString("Pattern copied to clipboard:\n%2").arg(QString::fromStdString(uniquePattern)));
     }
 
+    void ScriptThreadsWidget::OnViewXrefs(const QModelIndex& index)
+    {
+        auto disassembly = GetDisassembly();
+
+        auto& code = disassembly->GetCode();
+        uint32_t targetPc = disassembly->GetInstructionPC(index.row());
+
+        std::vector<std::pair<uint32_t, std::string>> xrefs;
+
+        uint32_t pc = 0;
+        while (pc < code.size())
+        {
+            bool isXref = false;
+            if (ScriptDisassembler::IsJumpInstruction(code[pc]))
+            {
+                if ((pc + 2 + ScriptDisassembler::ReadS16(code, pc + 1) + 1) == targetPc)
+                    isXref = true;
+            }
+            else if (code[pc] == rage::scrOpcode::CALL || code[pc] == rage::scrOpcode::PUSH_CONST_U24) // check for function pointers
+            {
+                if (ScriptDisassembler::ReadU24(code, pc + 1) == targetPc)
+                    isXref = true;
+            }
+
+            if (isXref)
+            {
+                auto insn = ScriptDisassembler::DecodeInstruction(rage::scrProgram(), code, pc, -1);
+                xrefs.emplace_back(pc, insn.Instruction);
+            }
+
+            pc += ScriptDisassembler::GetInstructionSize(code, pc);
+        }
+
+        if (xrefs.empty())
+        {
+            QMessageBox::warning(this, "No Xrefs", "No xrefs found for this address.");
+            return;
+        }
+
+        auto* dlg = new XrefDialog(xrefs, this);
+        connect(dlg, &XrefDialog::XrefDoubleClicked, this, [this, dlg](uint32_t addr) {
+            ScrollToAddress(addr);
+            dlg->close();
+        });
+        dlg->show();
+    }
+
     void ScriptThreadsWidget::OnJumpToInstructionAddress(const QModelIndex& index)
     {
         int32_t targetAddress = -1;
 
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
+        auto disassembly = GetDisassembly();
 
-        auto& code = model->GetCode();
-        uint32_t pc = model->GetInstructionPC(index.row());
+        auto& code = disassembly->GetCode();
+        uint32_t pc = disassembly->GetInstructionPC(index.row());
 
         if (code[pc] == rage::scrOpcode::CALL)
-        {
             targetAddress = ScriptDisassembler::ReadU24(code, pc + 1);
-        }
         else
-        {
             targetAddress = pc + 2 + ScriptDisassembler::ReadS16(code, pc + 1) + 1;
-        }
 
         if (targetAddress == -1)
             return;
 
-        auto idx = model->GetJumpIndex(targetAddress);
-        if (idx.isValid())
-        {
-            m_Disassembly->scrollTo(idx, QAbstractItemView::PositionAtCenter);
-            m_Disassembly->setCurrentIndex(idx);
-        }
+        ScrollToAddress(targetAddress);
     }
 
     void ScriptThreadsWidget::OnSetBreakpoint(const QModelIndex& index, bool set)
     {
-        if (!index.isValid())
-            return;
-
-        auto model = static_cast<DisassemblyModel*>(m_Disassembly->model());
-
         uint32_t script = GetCurrentScriptHash();
-        uint32_t pc = model->GetInstructionPC(index.row());
+        uint32_t pc = GetDisassembly()->GetInstructionPC(index.row());
         PipeCommands::SetBreakpoint(script, pc, set);
     }
 }

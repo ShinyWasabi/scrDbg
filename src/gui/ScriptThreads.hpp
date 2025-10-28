@@ -13,6 +13,8 @@ namespace rage
 
 namespace scrDbg
 {
+    class DisassemblyModel;
+
 	class ScriptThreadsWidget : public QWidget
 	{
 		Q_OBJECT
@@ -35,11 +37,14 @@ namespace scrDbg
         void OnNopInstruction(const QModelIndex& index);
         void OnPatchInstruction(const QModelIndex& index);
         void OnGeneratePattern(const QModelIndex& index);
+        void OnViewXrefs(const QModelIndex& index);
         void OnJumpToInstructionAddress(const QModelIndex& index);
         void OnSetBreakpoint(const QModelIndex& index, bool set);
 
 	private:
         uint32_t GetCurrentScriptHash();
+        DisassemblyModel* GetDisassembly();
+        bool ScrollToAddress(uint32_t address);
         void UpdateCurrentScript();
 
         uint32_t m_LastScriptHash;

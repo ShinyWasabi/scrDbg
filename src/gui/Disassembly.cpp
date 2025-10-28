@@ -21,7 +21,7 @@ namespace scrDbg
         }
     }
 
-    int DisassemblyModel::rowCount(const QModelIndex&) const
+    int DisassemblyModel::rowCount(const QModelIndex& parent) const
     {
         return static_cast<int>(m_Instructions.size());
     }
@@ -74,18 +74,5 @@ namespace scrDbg
     std::vector<uint8_t>& DisassemblyModel::GetCode()
     {
         return m_Code;
-    }
-
-    QModelIndex DisassemblyModel::GetJumpIndex(uint32_t address)
-    {
-        for (int i = 0; i < static_cast<int>(m_Instructions.size()); ++i)
-        {
-            uint32_t pc = m_Instructions[i].first;
-            uint32_t size = ScriptDisassembler::GetInstructionSize(m_Code, pc);
-
-            if (address >= pc && address < pc + size)
-                return index(i, 0);
-        }
-        return QModelIndex();
     }
 }

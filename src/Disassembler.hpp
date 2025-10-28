@@ -47,6 +47,8 @@ namespace scrDbg
 		static uint32_t ReadU32(const std::vector<uint8_t>& code, std::uint32_t pc);
 		static float ReadF32(const std::vector<uint8_t>& code, std::uint32_t pc);
 
+		static bool IsJumpInstruction(uint8_t opcode);
+
 		static int GetInstructionSize(const std::vector<uint8_t>& code, std::uint32_t pc);
 		static int GetNextStringIndex(const std::vector<uint8_t>& code, uint32_t pc, int current = -1);
 		static DecodedInstruction DecodeInstruction(const rage::scrProgram& program, const std::vector<uint8_t>& code, std::uint32_t pc, int stringIndex = -1);

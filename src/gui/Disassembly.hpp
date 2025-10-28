@@ -12,7 +12,7 @@ namespace scrDbg
     public:
         explicit DisassemblyModel(const rage::scrProgram& program, QObject* parent = nullptr);
 
-        int rowCount(const QModelIndex&) const override;
+        int rowCount(const QModelIndex& parent = QModelIndex()) const override;
         int columnCount(const QModelIndex&) const override;
         QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
         QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
@@ -20,7 +20,6 @@ namespace scrDbg
         const rage::scrProgram& GetProgram() const;
         uint32_t GetInstructionPC(int row) const;
         std::vector<uint8_t>& GetCode();
-        QModelIndex GetJumpIndex(uint32_t address);
 
     private:
         rage::scrProgram m_Program;
