@@ -1,29 +1,18 @@
 #include "Disassembly.hpp"
 #include "Disassembler.hpp"
+#include "game/rage/Opcode.hpp"
 
 namespace scrDbg
 {
-    DisassemblyModel::DisassemblyModel(const rage::scrProgram& program, QObject* parent) :
+    DisassemblyModel::DisassemblyModel(ScriptLayout& layout, QObject* parent) :
         QAbstractTableModel(parent),
-        m_Program(program)
+        m_Layout(layout)
     {
-        m_Code = m_Program.GetFullCode();
-
-        uint32_t pc = 0;
-        int strIndex = -1;
-        while (pc < m_Code.size())
-        {
-            strIndex = ScriptDisassembler::GetNextStringIndex(m_Code, pc, strIndex);
-
-            m_Instructions.emplace_back(pc, strIndex);
-
-            pc += ScriptDisassembler::GetInstructionSize(m_Code, pc);
-        }
     }
 
     int DisassemblyModel::rowCount(const QModelIndex& parent) const
     {
-        return static_cast<int>(m_Instructions.size());
+        return static_cast<int>(m_Layout.GetInstructions().size());
     }
 
     int DisassemblyModel::columnCount(const QModelIndex&) const
@@ -45,8 +34,20 @@ namespace scrDbg
         if (!index.isValid() || role != Qt::DisplayRole)
             return QVariant();
 
-        const auto& [offset, strIndex] = m_Instructions[index.row()];
-        auto insn = ScriptDisassembler::DecodeInstruction(m_Program, m_Code, offset, strIndex);
+        const auto& entry = m_Layout.GetInstructions()[index.row()];
+        const auto& code = m_Layout.GetCode();
+
+        int funcIndex = entry.FuncIndex;
+        if (code[entry.Pc] == rage::scrOpcode::CALL)
+        {
+            uint32_t targetPc = ScriptDisassembler::ReadU24(code, entry.Pc + 1);
+
+            int targetFuncIndex = m_Layout.GetFunctionIndexForPc(targetPc);
+            if (targetFuncIndex != -1)
+                funcIndex = targetFuncIndex;
+        }
+
+        auto insn = ScriptDisassembler::DecodeInstruction(m_Layout.GetProgram(), code, entry.Pc, entry.StringIndex, funcIndex);
 
         switch (index.column())
         {
@@ -60,19 +61,19 @@ namespace scrDbg
 
     const rage::scrProgram& DisassemblyModel::GetProgram() const
     {
-        return m_Program;
+        return m_Layout.GetProgram();
     }
 
     uint32_t DisassemblyModel::GetInstructionPC(int row) const
     {
-        if (row < 0 || row >= static_cast<int>(m_Instructions.size()))
+        if (row < 0 || row >= static_cast<int>(m_Layout.GetInstructions().size()))
             return 0;
 
-        return m_Instructions[row].first;
+        return m_Layout.GetInstructions()[row].Pc;
     }
 
     std::vector<uint8_t>& DisassemblyModel::GetCode()
     {
-        return m_Code;
+        return m_Layout.GetCode();
     }
 }

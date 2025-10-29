@@ -33,6 +33,17 @@ namespace scrDbg
 			std::vector<OperandType> OperandType;
 		};
 
+		struct FunctionInfo
+		{
+			uint32_t Start;
+			uint32_t End;
+			uint32_t Length;
+			uint32_t LocalCount;
+			uint32_t ArgCount;
+			uint32_t RetCount;
+			std::string Name;
+		};
+
 		struct DecodedInstruction
 		{
 			std::string Address;
@@ -41,17 +52,19 @@ namespace scrDbg
 		};
 
 		static uint8_t ReadByte(const std::vector<uint8_t>& code, uint32_t pc);
-		static uint16_t ReadU16(const std::vector<uint8_t>& code, std::uint32_t pc);
-		static int16_t ReadS16(const std::vector<uint8_t>& code, std::uint32_t pc);
-		static uint32_t ReadU24(const std::vector<uint8_t>& code, std::uint32_t pc);
-		static uint32_t ReadU32(const std::vector<uint8_t>& code, std::uint32_t pc);
-		static float ReadF32(const std::vector<uint8_t>& code, std::uint32_t pc);
+		static uint16_t ReadU16(const std::vector<uint8_t>& code, uint32_t pc);
+		static int16_t ReadS16(const std::vector<uint8_t>& code, uint32_t pc);
+		static uint32_t ReadU24(const std::vector<uint8_t>& code, uint32_t pc);
+		static uint32_t ReadU32(const std::vector<uint8_t>& code, uint32_t pc);
+		static float ReadF32(const std::vector<uint8_t>& code, uint32_t pc);
 
+		static std::string GetFunctionName(const std::vector<uint8_t>& code, uint32_t pc, uint32_t size, int funcIndex);
 		static bool IsJumpInstruction(uint8_t opcode);
 
-		static int GetInstructionSize(const std::vector<uint8_t>& code, std::uint32_t pc);
+		static int GetInstructionSize(const std::vector<uint8_t>& code, uint32_t pc);
 		static int GetNextStringIndex(const std::vector<uint8_t>& code, uint32_t pc, int current = -1);
-		static DecodedInstruction DecodeInstruction(const rage::scrProgram& program, const std::vector<uint8_t>& code, std::uint32_t pc, int stringIndex = -1);
+		static FunctionInfo GetFunctionInfo(const std::vector<uint8_t>& code, uint32_t pc, int funcIndex = -1);
+		static DecodedInstruction DecodeInstruction(const rage::scrProgram& program, const std::vector<uint8_t>& code, std::uint32_t pc, int stringIndex = -1, int funcIndex = -1);
 
 	private:
 		static const std::array<ScriptDisassembler::InstructionInfo, 131> m_InstructionTable;

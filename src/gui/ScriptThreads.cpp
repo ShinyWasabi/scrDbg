@@ -1,4 +1,5 @@
 #include "ScriptThreads.hpp"
+#include "FunctionList.hpp"
 #include "Disassembly.hpp"
 #include "Breakpoints.hpp"
 #include "Xrefs.hpp"
@@ -17,6 +18,7 @@
 #include <QHeaderView>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QSplitter>
 #include <QTimer>
 #include <QFileDialog>
 #include <QProgressDialog>
@@ -31,7 +33,8 @@ namespace scrDbg
 {
     ScriptThreadsWidget::ScriptThreadsWidget(QWidget* parent) :
         QWidget(parent),
-        m_LastScriptHash(0)
+        m_LastScriptHash(0),
+        m_Layout(nullptr)
     {
         m_ScriptNames = new QComboBox(this);
         m_ScriptNames->setEditable(false);
@@ -93,6 +96,15 @@ namespace scrDbg
         buttonLayout->addWidget(m_ViewBreakpoints);
         buttonLayout->addStretch();
 
+        m_FunctionList = new QTableView(this);
+        m_FunctionList->setSelectionBehavior(QAbstractItemView::SelectRows);
+        m_FunctionList->setSelectionMode(QAbstractItemView::SingleSelection);
+        m_FunctionList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        m_FunctionList->setAlternatingRowColors(true);
+        m_FunctionList->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+        m_FunctionList->verticalHeader()->setVisible(false);
+        m_FunctionList->setStyleSheet("QTableView { font-family: Consolas; font-size: 11pt; }");
+
         m_Disassembly = new QTableView(this);
         m_Disassembly->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
         m_Disassembly->verticalHeader()->setVisible(false);
@@ -106,6 +118,12 @@ namespace scrDbg
         m_Disassembly->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(m_Disassembly, &QWidget::customContextMenuRequested, this, &ScriptThreadsWidget::OnDisassemblyContextMenu);
 
+        QSplitter* splitter = new QSplitter(Qt::Horizontal, this);
+        splitter->addWidget(m_FunctionList);
+        splitter->addWidget(m_Disassembly);
+        splitter->setStretchFactor(0, 2);
+        splitter->setStretchFactor(1, 4);
+
         m_UpdateTimer = new QTimer(this);
         m_UpdateTimer->setInterval(50);
         connect(m_UpdateTimer, &QTimer::timeout, this, &ScriptThreadsWidget::OnUpdateScripts);
@@ -115,7 +133,7 @@ namespace scrDbg
         scriptThreadsLayout->addWidget(m_ScriptNames);
         scriptThreadsLayout->addLayout(columnsLayout);
         scriptThreadsLayout->addLayout(buttonLayout);
-        scriptThreadsLayout->addWidget(m_Disassembly, 1);
+        scriptThreadsLayout->addWidget(splitter, 1);
         scriptThreadsLayout->addStretch();
         setLayout(scriptThreadsLayout);
     }
@@ -295,13 +313,27 @@ namespace scrDbg
         if (m_Disassembly->model())
             delete m_Disassembly->model();
 
-        auto model = new DisassemblyModel(program, m_Disassembly);
-        m_Disassembly->setModel(model);
+        if (m_FunctionList->model())
+            delete m_FunctionList->model();
+
+        m_Layout = std::make_unique<scrDbg::ScriptLayout>(program);
+
+        auto disasmModel = new DisassemblyModel(*m_Layout, m_Disassembly);
+        m_Disassembly->setModel(disasmModel);
         m_Disassembly->setColumnWidth(0, 100);
         m_Disassembly->setColumnWidth(1, 150);
         m_Disassembly->setColumnWidth(2, 400);
         if (resetScroll)
             m_Disassembly->scrollToTop();
+
+        auto funcModel = new FunctionListModel(*m_Layout, m_FunctionList);
+        m_FunctionList->setModel(funcModel);
+        connect(m_FunctionList, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
+            auto model = static_cast<FunctionListModel*>(m_FunctionList->model());
+
+            uint32_t pc = model->GetFunctionStart(index.row());
+            ScrollToAddress(pc);
+        });
     }
 
     void ScriptThreadsWidget::OnTogglePauseScript()
@@ -1103,7 +1135,8 @@ namespace scrDbg
 
             if (isXref)
             {
-                auto insn = ScriptDisassembler::DecodeInstruction(rage::scrProgram(), code, pc, -1);
+                int funcIndex = m_Layout->GetFunctionIndexForPc(targetPc);
+                auto insn = ScriptDisassembler::DecodeInstruction(rage::scrProgram(), code, pc, -1, funcIndex);
                 xrefs.emplace_back(pc, insn.Instruction);
             }
 

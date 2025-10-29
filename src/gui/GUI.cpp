@@ -11,7 +11,7 @@ namespace scrDbg
         : QWidget(parent)
     {
         setWindowTitle("scrDbg");
-        resize(700, 700);
+        resize(900, 780);
 
         m_MainWidget = new QTabWidget(this);
 

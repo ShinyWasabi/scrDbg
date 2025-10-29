@@ -1,4 +1,5 @@
 #pragma once
+#include "ScriptLayout.hpp"
 #include <QWidget>
 #include <QtCore>
 
@@ -55,6 +56,7 @@ namespace scrDbg
         void UpdateCurrentScript();
 
         uint32_t m_LastScriptHash;
+        std::unique_ptr<ScriptLayout> m_Layout;
 
         QLabel* m_State;
         QLabel* m_Priority;
@@ -79,6 +81,7 @@ namespace scrDbg
         QPushButton* m_JumpToAddress;
         QPushButton* m_BinarySearch;
         QPushButton* m_ViewBreakpoints;
+        QTableView* m_FunctionList;
         QTableView* m_Disassembly;
         QTimer* m_UpdateTimer;
 	};

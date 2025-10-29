@@ -5,23 +5,21 @@
 
 namespace scrDbg
 {
-    class DisassemblyModel : public QAbstractTableModel
+    class FunctionListModel : public QAbstractTableModel
     {
         Q_OBJECT
 
     public:
-        explicit DisassemblyModel(ScriptLayout& layout, QObject* parent = nullptr);
+        explicit FunctionListModel(const ScriptLayout& layout, QObject* parent = nullptr);
 
         int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-        int columnCount(const QModelIndex&) const override;
+        int columnCount(const QModelIndex& parent = QModelIndex()) const override;
         QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
         QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
-        const rage::scrProgram& GetProgram() const;
-        uint32_t GetInstructionPC(int row) const;
-        std::vector<uint8_t>& GetCode();
+        uint32_t GetFunctionStart(int row) const;
 
     private:
-        ScriptLayout& m_Layout;
+        const ScriptLayout& m_Layout;
     };
 }

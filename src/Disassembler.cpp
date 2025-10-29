@@ -175,6 +175,29 @@ namespace scrDbg
 		return f;
 	}
 
+	std::string ScriptDisassembler::GetFunctionName(const std::vector<uint8_t>& code, uint32_t pc, uint32_t size, int funcIndex)
+	{
+		if (size > 0)
+		{
+			std::string name(reinterpret_cast<const char*>(&code[pc]), size);
+
+			// Remove profiler placeholders in case the script is compiled by RAGE script compiler
+			if (name.size() >= 2 && name[0] == '_' && name[1] == '_')
+				name.erase(0, 2);
+
+			while (!name.empty() && (name.back() == '\0' || name.back() == ' '))
+				name.pop_back();
+
+			if (!name.empty())
+				return name;
+		}
+
+		if (funcIndex >= 0)
+			return "func_" + std::to_string(funcIndex);
+
+		return "[INVALID_NAME]";
+	}
+
 	bool ScriptDisassembler::IsJumpInstruction(uint8_t opcode)
 	{
 		if (opcode >= m_InstructionTable.size())
@@ -240,7 +263,57 @@ namespace scrDbg
 		return current;
 	}
 
-	ScriptDisassembler::DecodedInstruction ScriptDisassembler::DecodeInstruction(const rage::scrProgram& program, const std::vector<uint8_t>& code, uint32_t pc, int stringIndex)
+	ScriptDisassembler::FunctionInfo ScriptDisassembler::GetFunctionInfo(const std::vector<uint8_t>& code, uint32_t pc, int funcIndex)
+	{
+		if (pc >= code.size() || ReadByte(code, pc) != rage::scrOpcode::ENTER)
+			return {};
+
+		uint32_t start = pc;
+		uint8_t argCount = ReadByte(code, pc + 1);
+		uint16_t localCount = ReadS16(code, pc + 2);
+		uint8_t nameLen = ReadByte(code, pc + 4);
+
+		std::string name = GetFunctionName(code, pc + 5, nameLen, funcIndex);
+
+		uint32_t pos = pc + GetInstructionSize(code, pc);
+		uint32_t lastLeave = 0;
+		uint8_t retCount = 0;
+
+		while (pos < code.size())
+		{
+			uint8_t op = ReadByte(code, pos);
+			int size = GetInstructionSize(code, pos);
+
+			if (op == rage::scrOpcode::LEAVE)
+			{
+				uint32_t next = pos + size;
+				uint8_t nextOp = (next < code.size()) ? ReadByte(code, next) : 0xFF;
+
+				// If next op is ENTER, this is the last LEAVE of the function
+				if (nextOp == rage::scrOpcode::ENTER || next >= code.size())
+				{
+					lastLeave = pos;
+					retCount = ReadByte(code, pos + 2);
+					break;
+				}
+			}
+
+			pos += size;
+		}
+
+		ScriptDisassembler::FunctionInfo info{};
+		info.Start = start;
+		info.End = lastLeave;
+		info.Length = lastLeave + GetInstructionSize(code, lastLeave) - start;
+		info.ArgCount = argCount;
+		info.LocalCount = localCount;
+		info.RetCount = retCount;
+		info.Name = name;
+
+		return info;
+	}
+
+	ScriptDisassembler::DecodedInstruction ScriptDisassembler::DecodeInstruction(const rage::scrProgram& program, const std::vector<uint8_t>& code, uint32_t pc, int stringIndex, int funcIndex)
 	{
 		DecodedInstruction result;
 
@@ -290,11 +363,18 @@ namespace scrDbg
 			case OperandType::U24:
 			{
 				uint32_t val = ReadU24(code, offset);
-				if (op == rage::scrOpcode::CALL) // Print CALL as hex
+				if (op == rage::scrOpcode::CALL)
+				{
 					instr << "0x" << std::uppercase << std::hex << val;
-				else
-					instr << std::dec << val;
 
+					auto funcInfo = ScriptDisassembler::GetFunctionInfo(code, val, funcIndex);
+					if (!funcInfo.Name.empty())
+						instr << " // " << funcInfo.Name;
+				}
+				else
+				{
+					instr << std::dec << val;
+				}
 				offset += 3;
 				break;
 			}
@@ -387,23 +467,7 @@ namespace scrDbg
 				uint8_t nameLen = ReadByte(code, offset);
 				offset += 1;
 
-				if (nameLen > 0)
-				{
-					std::string name(reinterpret_cast<const char*>(&code[offset]), nameLen);
-
-					// Remove profiler placeholders in case the script is compiled by RAGE script compiler
-					if (name.size() >= 2 && name[0] == '_' && name[1] == '_')
-						name.erase(0, 2);
-
-					while (!name.empty() && (name.back() == '\0' || name.back() == ' '))
-						name.pop_back();
-
-					instr << "\"" << name << "\"";
-				}
-				else
-				{
-					instr << "[INVALID_NAME]";
-				}
+				instr << GetFunctionName(code, offset, nameLen, funcIndex);
 
 				offset += nameLen;
 				break;
