@@ -45,6 +45,8 @@ namespace rage
         uint32_t GetGlobalCount() const; 
         uint32_t GetGlobalBlockIndex() const; 
         uint32_t GetNativeCount() const;
+        uint64_t GetStatic(uint32_t index) const;
+        uint64_t GetProgramGlobal(uint32_t index) const;
         uint64_t GetNative(uint32_t index) const;
         uint32_t GetHash() const;
         uint32_t GetRefCount() const;
@@ -52,6 +54,9 @@ namespace rage
         std::string GetString(uint32_t index) const;
         uint32_t GetStringCount() const;
         
+        static uint64_t GetGlobal(uint32_t index);
+        static void SetGlobal(uint32_t index, uint64_t value);
+        static int GetGlobalBlockCount(uint32_t block);
         static scrProgram GetProgram(uint32_t hash);
 
 		operator bool() const

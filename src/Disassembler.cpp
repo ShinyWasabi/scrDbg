@@ -175,12 +175,12 @@ namespace scrDbg
 		return f;
 	}
 
-	bool ScriptDisassembler::IsJumpInstruction(uint8_t insnStart)
+	bool ScriptDisassembler::IsJumpInstruction(uint8_t opcode)
 	{
-		if (insnStart >= m_InstructionTable.size())
+		if (opcode >= m_InstructionTable.size())
 			return false;
 
-		const auto& info = m_InstructionTable[insnStart];
+		const auto& info = m_InstructionTable[opcode];
 
 		for (auto operand : info.OperandType)
 		{
@@ -329,7 +329,7 @@ namespace scrDbg
 				uint32_t index = (ReadByte(code, offset++) << 8) | ReadByte(code, offset++);
 
 				uint64_t handler = program.GetNative(index);
-				uint64_t hash = gta::Natives::GetNativeHashByHandler(handler);
+				uint64_t hash = gta::Natives::GetHashByHandler(handler);
 
 				instr << argCount << ", " << retCount << ", " << index;
 				if (handler && hash)
@@ -340,7 +340,7 @@ namespace scrDbg
 					nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
 
 					nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << hash;
-					nativeStr << ", " << (g_IsEnhanced ? "GTA5_Enhanced.exe" : "GTA5.exe") << "+0x" << handler - Process::GetBaseAddress();
+					nativeStr << ", " << Process::GetName() << "+0x" << handler - Process::GetBaseAddress();
 
 					instr << nativeStr.str();
 				}

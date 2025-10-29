@@ -1,5 +1,5 @@
 #include "ScriptGlobals.hpp"
-#include "Pointers.hpp"
+#include "game/rage/scrProgram.hpp"
 #include <QVBoxLayout>
 #include <QLineEdit>
 #include <QIntValidator>
@@ -17,7 +17,7 @@ namespace scrDbg
         if (blockIndex >= 64)
             return false;
 
-        int blockCount = g_Pointers.ScriptGlobalBlockCounts.Add(blockIndex * sizeof(int)).Read<int>();
+        int blockCount = rage::scrProgram::GetGlobalBlockCount(blockIndex);
         int offset = address & 0x3FFFF;
         if (offset >= blockCount)
             return false;
@@ -117,13 +117,8 @@ namespace scrDbg
             return;
         }
 
-        int blockIndex = (address >> 0x12) & 0x3F;
-        int offset = address & 0x3FFFF;
-
-        uint64_t base = g_Pointers.ScriptGlobals.Add(blockIndex * sizeof(uint64_t)).Read<uint64_t>();
         int value = m_GlobalNewValue->text().toInt();
-
-        Process::Write<int>(base + offset * sizeof(uint64_t), value);
+        rage::scrProgram::SetGlobal(address, value);
     }
 
     void ScriptGlobalsWidget::OnUpdateCurrentGlobalValue()
@@ -135,12 +130,7 @@ namespace scrDbg
             return;
         }
 
-        int blockIndex = (address >> 0x12) & 0x3F;
-        int offset = address & 0x3FFFF;
-
-        uint64_t base = g_Pointers.ScriptGlobals.Add(blockIndex * sizeof(uint64_t)).Read<uint64_t>();
-        int value = Process::Read<int>(base + offset * sizeof(uint64_t));
-
+        int value = static_cast<int>(rage::scrProgram::GetGlobal(address));
         m_GlobalCurrentValue->setText(QString::number(value));
     }
 }

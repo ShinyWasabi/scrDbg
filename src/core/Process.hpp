@@ -25,6 +25,11 @@ namespace scrDbg
 			return GetInstance().m_Size;
 		}
 
+		static std::string GetName()
+		{
+			return GetInstance().m_Name;
+		}
+
 		static bool IsRunning()
 		{
 			return GetInstance().IsRunningImpl();
@@ -76,5 +81,6 @@ namespace scrDbg
 		HANDLE m_Handle;
 		uintptr_t m_BaseAddress;
 		size_t m_Size;
+		std::string m_Name;
 	};
 }

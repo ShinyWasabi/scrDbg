@@ -96,6 +96,32 @@ namespace rage
 		return scrDbg::Process::Read<uint32_t>(m_Address + offset);
 	}
 
+	uint64_t scrProgram::GetStatic(uint32_t index) const
+	{
+		if (index >= GetStaticCount())
+			return 0;
+
+		size_t offset = offsetof(_scrProgram, m_Statics);
+
+		uint64_t base = scrDbg::Process::Read<uint64_t>(m_Address + offset);
+		return scrDbg::Process::Read<uint64_t>(base + index * sizeof(uint64_t));
+	}
+
+	uint64_t scrProgram::GetProgramGlobal(uint32_t index) const
+	{
+		if (index >= GetGlobalCount())
+			return 0;
+
+		size_t offset = offsetof(_scrProgram, m_Globals);
+
+		int blockIndex = (index >> 0x12) & 0x3F;
+		int _offset = index & 0x3FFFF;
+
+		uint64_t base = scrDbg::Process::Read<uint64_t>(m_Address + offset);
+		uint64_t block = scrDbg::Process::Read<uint64_t>(base + blockIndex * sizeof(uint64_t));
+		return scrDbg::Process::Read<uint64_t>(block + _offset * sizeof(uint64_t));
+	}
+
 	uint64_t scrProgram::GetNative(uint32_t index) const
 	{
 		if (index >= GetNativeCount())
@@ -190,6 +216,29 @@ namespace rage
 	{
 		size_t offset = offsetof(_scrProgram, m_StringCount);
 		return scrDbg::Process::Read<uint32_t>(m_Address + offset);
+	}
+
+	uint64_t scrProgram::GetGlobal(uint32_t index)
+	{
+		int blockIndex = (index >> 0x12) & 0x3F;
+		int offset = index & 0x3FFFF;
+
+		uint64_t base = scrDbg::g_Pointers.ScriptGlobals.Add(blockIndex * sizeof(uint64_t)).Read<uint64_t>();
+		return scrDbg::Process::Read<uint64_t>(base + offset * sizeof(uint64_t));
+	}
+
+	void scrProgram::SetGlobal(uint32_t index, uint64_t value)
+	{
+		int blockIndex = (index >> 0x12) & 0x3F;
+		int offset = index & 0x3FFFF;
+
+		uint64_t base = scrDbg::g_Pointers.ScriptGlobals.Add(blockIndex * sizeof(uint64_t)).Read<uint64_t>();
+		scrDbg::Process::Write<uint64_t>(base + offset * sizeof(uint64_t), value);
+	}
+
+	int scrProgram::GetGlobalBlockCount(uint32_t block)
+	{
+		return scrDbg::g_Pointers.ScriptGlobalBlockCounts.Add(block * sizeof(int)).Read<int>();
 	}
 
 	scrProgram scrProgram::GetProgram(uint32_t hash)

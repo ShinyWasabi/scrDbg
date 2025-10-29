@@ -6,6 +6,8 @@ class QLabel;
 class QComboBox;
 class QPushButton;
 class QTableView;
+class QTextStream;
+class QProgressDialog;
 namespace rage
 {
     class scrProgram;
@@ -27,8 +29,12 @@ namespace scrDbg
         void OnRefreshDisassembly(const rage::scrProgram& program, bool resetScroll);
         void OnTogglePauseScript();
         void OnKillScript();
+        void OnExportOptionsDialog();
         void OnExportDisassembly();
-        void OnExportStrings();
+        void OnExportStatics();
+        void OnExportGlobals(bool exportAll);
+        void OnExportNatives(bool exportAll);
+        void OnExportStrings(bool onlyTextLabels);
         void OnJumpToAddress();
         void OnBinarySearch();
         void OnBreakpointsDialog();
@@ -37,7 +43,7 @@ namespace scrDbg
         void OnNopInstruction(const QModelIndex& index);
         void OnPatchInstruction(const QModelIndex& index);
         void OnGeneratePattern(const QModelIndex& index);
-        void OnViewXrefs(const QModelIndex& index);
+        void OnViewXrefsDialog(const QModelIndex& index);
         void OnJumpToInstructionAddress(const QModelIndex& index);
         void OnSetBreakpoint(const QModelIndex& index, bool set);
 
@@ -45,6 +51,7 @@ namespace scrDbg
         uint32_t GetCurrentScriptHash();
         DisassemblyModel* GetDisassembly();
         bool ScrollToAddress(uint32_t address);
+        void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
         void UpdateCurrentScript();
 
         uint32_t m_LastScriptHash;
@@ -65,17 +72,14 @@ namespace scrDbg
         QLabel* m_GlobalBlock;
         QLabel* m_NativeCount;
         QLabel* m_StringCount;
-
         QComboBox* m_ScriptNames;
         QPushButton* m_TogglePauseScript;
         QPushButton* m_KillScript;
-        QPushButton* m_ExportDisassembly;
-        QPushButton* m_ExportStrings;
+        QPushButton* m_ExportOptions;
         QPushButton* m_JumpToAddress;
         QPushButton* m_BinarySearch;
         QPushButton* m_ViewBreakpoints;
         QTableView* m_Disassembly;
-
         QTimer* m_UpdateTimer;
 	};
 }

@@ -55,6 +55,10 @@ namespace scrDbg
 
 		m_Size = moduleInfo.SizeOfImage;
 
+		std::wstring ws(processName);
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		m_Name = converter.to_bytes(ws);
+
 		return true;
 	}
 
