@@ -34,7 +34,8 @@ namespace scrDbg
     ScriptThreadsWidget::ScriptThreadsWidget(QWidget* parent) :
         QWidget(parent),
         m_LastScriptHash(0),
-        m_Layout(nullptr)
+        m_Layout(nullptr),
+        m_FunctionFilter(nullptr)
     {
         m_ScriptNames = new QComboBox(this);
         m_ScriptNames->setEditable(false);
@@ -96,30 +97,49 @@ namespace scrDbg
         buttonLayout->addWidget(m_ViewBreakpoints);
         buttonLayout->addStretch();
 
+        m_FunctionSearch = new QLineEdit(this);
+        m_FunctionSearch->setPlaceholderText("Search function...");
+        connect(m_FunctionSearch, &QLineEdit::textChanged, this, [this](const QString& text) {
+            m_FunctionFilter->setFilterFixedString(text);
+        });
+
         m_FunctionList = new QTableView(this);
         m_FunctionList->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_FunctionList->setSelectionMode(QAbstractItemView::SingleSelection);
         m_FunctionList->setEditTriggers(QAbstractItemView::NoEditTriggers);
         m_FunctionList->setAlternatingRowColors(true);
+        m_FunctionList->horizontalHeader()->setStretchLastSection(true);
         m_FunctionList->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
         m_FunctionList->verticalHeader()->setVisible(false);
         m_FunctionList->setStyleSheet("QTableView { font-family: Consolas; font-size: 11pt; }");
+        connect(m_FunctionList, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
+            QModelIndex idx = m_FunctionFilter->mapToSource(index);
+            uint32_t pc = m_Layout->GetFunctionStart(idx.row());
+            ScrollToAddress(pc);
+        });
+
+        QVBoxLayout* functionLayout = new QVBoxLayout();
+        functionLayout->addWidget(m_FunctionList);
+        functionLayout->addWidget(m_FunctionSearch);
+
+        QWidget* functionWidget = new QWidget(this);
+        functionWidget->setLayout(functionLayout);
 
         m_Disassembly = new QTableView(this);
-        m_Disassembly->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
-        m_Disassembly->verticalHeader()->setVisible(false);
         m_Disassembly->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_Disassembly->setSelectionMode(QAbstractItemView::SingleSelection);
         m_Disassembly->setEditTriggers(QAbstractItemView::NoEditTriggers);
         m_Disassembly->setAlternatingRowColors(true);
         m_Disassembly->setShowGrid(false);
         m_Disassembly->horizontalHeader()->setStretchLastSection(true);
+        m_Disassembly->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+        m_Disassembly->verticalHeader()->setVisible(false);
         m_Disassembly->setStyleSheet("QTableView { font-family: Consolas; font-size: 11pt; }");
         m_Disassembly->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(m_Disassembly, &QWidget::customContextMenuRequested, this, &ScriptThreadsWidget::OnDisassemblyContextMenu);
 
         QSplitter* splitter = new QSplitter(Qt::Horizontal, this);
-        splitter->addWidget(m_FunctionList);
+        splitter->addWidget(functionWidget);
         splitter->addWidget(m_Disassembly);
         splitter->setStretchFactor(0, 2);
         splitter->setStretchFactor(1, 4);
@@ -146,24 +166,17 @@ namespace scrDbg
         return m_ScriptNames->currentData().toUInt();
     }
 
-    DisassemblyModel* ScriptThreadsWidget::GetDisassembly()
-    {
-        return static_cast<DisassemblyModel*>(m_Disassembly->model());
-    }
-
     bool ScriptThreadsWidget::ScrollToAddress(uint32_t address)
     {
-        auto disassembly = GetDisassembly();
-
         QModelIndex idx;
-        for (int i = 0; i < disassembly->rowCount(); ++i)
+        for (int i = 0; i < m_Disassembly->model()->rowCount(); ++i)
         {
-            uint32_t pc = disassembly->GetInstructionPC(i);
-            uint32_t size = ScriptDisassembler::GetInstructionSize(disassembly->GetCode(), pc);
+            uint32_t pc = m_Layout->GetInstructionPc(i);
+            uint32_t size = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
 
             if (address >= pc && address < pc + size)
             {
-                idx = disassembly->index(i, 0);
+                idx = m_Disassembly->model()->index(i, 0);
                 break;
             }
         }
@@ -173,6 +186,7 @@ namespace scrDbg
 
         m_Disassembly->scrollTo(idx, QAbstractItemView::PositionAtCenter);
         m_Disassembly->setCurrentIndex(idx);
+        m_Disassembly->setFocus(Qt::OtherFocusReason);
         return true;
     }
 
@@ -310,13 +324,10 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnRefreshDisassembly(const rage::scrProgram& program, bool resetScroll)
     {
+        m_Layout = std::make_unique<ScriptLayout>(program);
+
         if (m_Disassembly->model())
             delete m_Disassembly->model();
-
-        if (m_FunctionList->model())
-            delete m_FunctionList->model();
-
-        m_Layout = std::make_unique<scrDbg::ScriptLayout>(program);
 
         auto disasmModel = new DisassemblyModel(*m_Layout, m_Disassembly);
         m_Disassembly->setModel(disasmModel);
@@ -326,14 +337,23 @@ namespace scrDbg
         if (resetScroll)
             m_Disassembly->scrollToTop();
 
-        auto funcModel = new FunctionListModel(*m_Layout, m_FunctionList);
-        m_FunctionList->setModel(funcModel);
-        connect(m_FunctionList, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
-            auto model = static_cast<FunctionListModel*>(m_FunctionList->model());
+        if (m_FunctionFilter)
+        {
+            m_FunctionList->setModel(nullptr);
+            delete m_FunctionFilter;
+            m_FunctionFilter = nullptr;
+        }
 
-            uint32_t pc = model->GetFunctionStart(index.row());
-            ScrollToAddress(pc);
-        });
+        auto funcModel = new FunctionListModel(*m_Layout, m_FunctionList);
+        m_FunctionFilter = new QSortFilterProxyModel(this);
+        m_FunctionFilter->setSourceModel(funcModel);
+        m_FunctionFilter->setFilterCaseSensitivity(Qt::CaseInsensitive);
+        m_FunctionFilter->setFilterKeyColumn(0);
+        m_FunctionList->setModel(m_FunctionFilter);
+        if (resetScroll)
+            m_FunctionList->scrollToTop();
+
+        m_FunctionSearch->clear();
     }
 
     void ScriptThreadsWidget::OnTogglePauseScript()
@@ -430,7 +450,7 @@ namespace scrDbg
         if (!GetCurrentScriptHash())
             return;
 
-        auto disassembly = GetDisassembly();
+        auto disassembly = m_Disassembly->model();
 
         const int count = disassembly->rowCount();
         ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
@@ -439,7 +459,7 @@ namespace scrDbg
                 if (progress.wasCanceled())
                     return;
 
-                if (disassembly != GetDisassembly())
+                if (disassembly != m_Disassembly->model())
                 {
                     QMessageBox::critical(this, "Error", "Disassembly changed during export.");
                     return;
@@ -775,10 +795,8 @@ namespace scrDbg
             }
         }
 
-        auto disassembly = GetDisassembly();
-
-        auto& program = disassembly->GetProgram();
-        auto& code = disassembly->GetCode();
+        auto& program = m_Layout->GetProgram();
+        auto& code = m_Layout->GetCode();
 
         const uint32_t codeSize = program.GetCodeSize();
         const size_t patSize = pattern.size();
@@ -869,10 +887,8 @@ namespace scrDbg
             OnViewXrefsDialog(index);
         });
 
-        auto disassembly = GetDisassembly();
-
-        auto& code = disassembly->GetCode();
-        uint32_t pc = disassembly->GetInstructionPC(index.row());
+        auto& code = m_Layout->GetCode();
+        uint32_t pc = m_Layout->GetInstructionPc(index.row());
 
         if (ScriptDisassembler::IsJumpInstruction(code[pc]) || code[pc] == rage::scrOpcode::CALL)
         {
@@ -919,22 +935,18 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnNopInstruction(const QModelIndex& index)
     {
-        auto disassembly = GetDisassembly();
-
-        uint32_t pc = disassembly->GetInstructionPC(index.row());
-        uint32_t size = ScriptDisassembler::GetInstructionSize(disassembly->GetCode(), pc);
+        uint32_t pc = m_Layout->GetInstructionPc(index.row());
+        uint32_t size = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
         for (uint32_t i = 0; i < size; ++i)
-            disassembly->GetProgram().SetCode(pc + i, rage::scrOpcode::NOP);
+            m_Layout->GetProgram().SetCode(pc + i, rage::scrOpcode::NOP);
 
-        OnRefreshDisassembly(disassembly->GetProgram(), false);
+        OnRefreshDisassembly(m_Layout->GetProgram(), false);
     }
 
     void ScriptThreadsWidget::OnPatchInstruction(const QModelIndex& index)
     {
-        auto disassembly = GetDisassembly();
-
-        uint32_t pc = disassembly->GetInstructionPC(index.row());
-        uint32_t instrSize = ScriptDisassembler::GetInstructionSize(disassembly->GetCode(), pc);
+        uint32_t pc = m_Layout->GetInstructionPc(index.row());
+        uint32_t instrSize = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
 
         bool ok = false;
         QString input = QInputDialog::getText(this, "Custom Patch", QString("Enter %1 bytes in hex (space or comma separated):").arg(instrSize), QLineEdit::Normal, "", &ok);
@@ -966,9 +978,9 @@ namespace scrDbg
             newBytes.append(rage::scrOpcode::NOP);
 
         for (int i = 0; i < newBytes.size(); ++i)
-            disassembly->GetProgram().SetCode(pc + i, static_cast<uint8_t>(newBytes[i]));
+            m_Layout->GetProgram().SetCode(pc + i, static_cast<uint8_t>(newBytes[i]));
 
-        OnRefreshDisassembly(disassembly->GetProgram(), false);
+        OnRefreshDisassembly(m_Layout->GetProgram(), false);
     }
 
     // TO-DO: Refactor this shit
@@ -977,10 +989,8 @@ namespace scrDbg
         if (!index.isValid())
             return;
 
-        auto disassembly = GetDisassembly();
-
-        auto& code = disassembly->GetCode();
-        uint32_t pc = disassembly->GetInstructionPC(index.row());
+        auto& code = m_Layout->GetCode();
+        uint32_t pc = m_Layout->GetInstructionPc(index.row());
 
         if (pc >= code.size())
             return;
@@ -1111,10 +1121,8 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnViewXrefsDialog(const QModelIndex& index)
     {
-        auto disassembly = GetDisassembly();
-
-        auto& code = disassembly->GetCode();
-        uint32_t targetPc = disassembly->GetInstructionPC(index.row());
+        auto& code = m_Layout->GetCode();
+        uint32_t targetPc = m_Layout->GetInstructionPc(index.row());
 
         std::vector<std::pair<uint32_t, std::string>> xrefs;
 
@@ -1161,10 +1169,8 @@ namespace scrDbg
     {
         int32_t targetAddress = -1;
 
-        auto disassembly = GetDisassembly();
-
-        auto& code = disassembly->GetCode();
-        uint32_t pc = disassembly->GetInstructionPC(index.row());
+        auto& code = m_Layout->GetCode();
+        uint32_t pc = m_Layout->GetInstructionPc(index.row());
 
         if (code[pc] == rage::scrOpcode::CALL)
             targetAddress = ScriptDisassembler::ReadU24(code, pc + 1);
@@ -1180,7 +1186,7 @@ namespace scrDbg
     void ScriptThreadsWidget::OnSetBreakpoint(const QModelIndex& index, bool set)
     {
         uint32_t script = GetCurrentScriptHash();
-        uint32_t pc = GetDisassembly()->GetInstructionPC(index.row());
+        uint32_t pc = m_Layout->GetInstructionPc(index.row());
         PipeCommands::SetBreakpoint(script, pc, set);
     }
 }

@@ -58,22 +58,4 @@ namespace scrDbg
 
         return QVariant();
     }
-
-    const rage::scrProgram& DisassemblyModel::GetProgram() const
-    {
-        return m_Layout.GetProgram();
-    }
-
-    uint32_t DisassemblyModel::GetInstructionPC(int row) const
-    {
-        if (row < 0 || row >= static_cast<int>(m_Layout.GetInstructions().size()))
-            return 0;
-
-        return m_Layout.GetInstructions()[row].Pc;
-    }
-
-    std::vector<uint8_t>& DisassemblyModel::GetCode()
-    {
-        return m_Layout.GetCode();
-    }
 }

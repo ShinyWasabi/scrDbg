@@ -6,6 +6,8 @@
 class QLabel;
 class QComboBox;
 class QPushButton;
+class QLineEdit;
+class QSortFilterProxyModel;
 class QTableView;
 class QTextStream;
 class QProgressDialog;
@@ -16,8 +18,6 @@ namespace rage
 
 namespace scrDbg
 {
-    class DisassemblyModel;
-
 	class ScriptThreadsWidget : public QWidget
 	{
 		Q_OBJECT
@@ -50,7 +50,6 @@ namespace scrDbg
 
 	private:
         uint32_t GetCurrentScriptHash();
-        DisassemblyModel* GetDisassembly();
         bool ScrollToAddress(uint32_t address);
         void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
         void UpdateCurrentScript();
@@ -81,6 +80,8 @@ namespace scrDbg
         QPushButton* m_JumpToAddress;
         QPushButton* m_BinarySearch;
         QPushButton* m_ViewBreakpoints;
+        QLineEdit* m_FunctionSearch;
+        QSortFilterProxyModel* m_FunctionFilter;
         QTableView* m_FunctionList;
         QTableView* m_Disassembly;
         QTimer* m_UpdateTimer;

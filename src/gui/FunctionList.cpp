@@ -17,7 +17,7 @@ namespace scrDbg
 
     int FunctionListModel::columnCount(const QModelIndex&) const
     {
-        return 6;
+        return 7;
     }
 
     QVariant FunctionListModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -25,8 +25,8 @@ namespace scrDbg
         if (role != Qt::DisplayRole || orientation != Qt::Horizontal)
             return QVariant();
 
-        static const char* headers[] = { "Name", "Start", "End", "Args", "Locals", "Ret" };
-        return section < 6 ? headers[section] : QVariant();
+        static const char* headers[] = { "Name", "Start", "End", "Length", "Args", "Locals", "Rets" };
+        return section < 7 ? headers[section] : QVariant();
     }
 
     QVariant FunctionListModel::data(const QModelIndex& index, int role) const
@@ -41,19 +41,12 @@ namespace scrDbg
         case 0: return QString::fromStdString(func.Name);
         case 1: return QString("0x%1").arg(QString::number(func.Start, 16).toUpper());
         case 2: return QString("0x%1").arg(QString::number(func.End, 16).toUpper());
-        case 3: return func.ArgCount;
-        case 4: return func.LocalCount;
-        case 5: return func.RetCount;
+        case 3: return func.Length;
+        case 4: return func.ArgCount;
+        case 5: return func.LocalCount;
+        case 6: return func.RetCount;
         }
 
         return QVariant();
-    }
-
-    uint32_t FunctionListModel::GetFunctionStart(int row) const
-    {
-        if (row < 0 || row >= static_cast<int>(m_Layout.GetFunctions().size()))
-            return 0;
-
-        return m_Layout.GetFunctions()[row].Start;
     }
 }

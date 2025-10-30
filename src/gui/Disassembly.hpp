@@ -17,10 +17,6 @@ namespace scrDbg
         QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
         QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
-        const rage::scrProgram& GetProgram() const;
-        uint32_t GetInstructionPC(int row) const;
-        std::vector<uint8_t>& GetCode();
-
     private:
         ScriptLayout& m_Layout;
     };

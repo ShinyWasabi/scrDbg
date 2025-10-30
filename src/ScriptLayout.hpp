@@ -23,9 +23,11 @@ namespace scrDbg
         ScriptLayout(const rage::scrProgram& program);
 
         const rage::scrProgram& GetProgram() const;
-        std::vector<uint8_t>& GetCode();
+        const std::vector<uint8_t>& GetCode() const;
         const std::vector<ScriptDisassembler::FunctionInfo>& GetFunctions() const;
         const std::vector<InstructionEntry>& GetInstructions() const;
+        uint32_t GetInstructionPc(int row) const;
         int GetFunctionIndexForPc(uint32_t pc) const;
+        uint32_t GetFunctionStart(int row) const;
     };
 }
