@@ -100,7 +100,8 @@ namespace scrDbg
         m_FunctionSearch = new QLineEdit(this);
         m_FunctionSearch->setPlaceholderText("Search function...");
         connect(m_FunctionSearch, &QLineEdit::textChanged, this, [this](const QString& text) {
-            m_FunctionFilter->setFilterFixedString(text);
+            if (m_FunctionFilter)
+                m_FunctionFilter->setFilterFixedString(text);
         });
 
         m_FunctionList = new QTableView(this);
@@ -129,7 +130,6 @@ namespace scrDbg
         m_Disassembly->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_Disassembly->setSelectionMode(QAbstractItemView::SingleSelection);
         m_Disassembly->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        m_Disassembly->setAlternatingRowColors(true);
         m_Disassembly->setShowGrid(false);
         m_Disassembly->horizontalHeader()->setStretchLastSection(true);
         m_Disassembly->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
@@ -141,6 +141,7 @@ namespace scrDbg
         QSplitter* splitter = new QSplitter(Qt::Horizontal, this);
         splitter->addWidget(functionWidget);
         splitter->addWidget(m_Disassembly);
+        splitter->setChildrenCollapsible(false);
         splitter->setStretchFactor(0, 2);
         splitter->setStretchFactor(1, 4);
 
@@ -267,6 +268,21 @@ namespace scrDbg
         }
     }
 
+    void ScriptThreadsWidget::ClearViews()
+    {
+        m_Layout.reset();
+
+        if (m_Disassembly->model())
+            m_Disassembly->setModel(nullptr);
+
+        if (m_FunctionFilter)
+        {
+            m_FunctionList->setModel(nullptr);
+            delete m_FunctionFilter;
+            m_FunctionFilter = nullptr;
+        }
+    }
+
     void ScriptThreadsWidget::OnUpdateScripts()
     {
         QString currentScript = m_ScriptNames->currentText();
@@ -319,15 +335,20 @@ namespace scrDbg
                 m_ScriptNames->setCurrentIndex(0);
         }
 
+        if (aliveScripts.empty())
+        {
+            ClearViews();
+            return;
+        }
+
         UpdateCurrentScript();
     }
 
     void ScriptThreadsWidget::OnRefreshDisassembly(const rage::scrProgram& program, bool resetScroll)
     {
-        m_Layout = std::make_unique<ScriptLayout>(program);
+        ClearViews();
 
-        if (m_Disassembly->model())
-            delete m_Disassembly->model();
+        m_Layout = std::make_unique<ScriptLayout>(program);
 
         auto disasmModel = new DisassemblyModel(*m_Layout, m_Disassembly);
         m_Disassembly->setModel(disasmModel);
@@ -336,13 +357,6 @@ namespace scrDbg
         m_Disassembly->setColumnWidth(2, 400);
         if (resetScroll)
             m_Disassembly->scrollToTop();
-
-        if (m_FunctionFilter)
-        {
-            m_FunctionList->setModel(nullptr);
-            delete m_FunctionFilter;
-            m_FunctionFilter = nullptr;
-        }
 
         auto funcModel = new FunctionListModel(*m_Layout, m_FunctionList);
         m_FunctionFilter = new QSortFilterProxyModel(this);

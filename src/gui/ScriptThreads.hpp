@@ -53,6 +53,7 @@ namespace scrDbg
         bool ScrollToAddress(uint32_t address);
         void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
         void UpdateCurrentScript();
+        void ClearViews();
 
         uint32_t m_LastScriptHash;
         std::unique_ptr<ScriptLayout> m_Layout;

@@ -1,4 +1,3 @@
-
 #include "ScriptLayout.hpp"
 #include "game/rage/Opcode.hpp"
 
