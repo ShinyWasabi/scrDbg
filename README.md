@@ -12,23 +12,38 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
 - View running scripts
 - Pause scripts
 - Kill scripts
-- Export disassembly
-- Export strings
-  - Optional: Export only text labels with translations
+- Export disassembly, strings, statics, globals, and natives
 - View disassembly
   - Jump to a raw address
   - Binary search
   - NOP instructions
   - Apply custom patches
   - Generate patterns
-  - Set breakpoints (requires [ScriptVM.asi](https://github.com/ShinyWasabi/ScriptVM))
+  - View xrefs
+  - Set breakpoints (Enhanced only, requires [ScriptVM.asi](https://github.com/ShinyWasabi/ScriptVM))
 - Statics editor
 - Globals editor
 
-## Screenshot
+## Screenshots
 
 <p align="center">
-  <img src="resources/scrDbgScreenshot.png" alt="Screenshot"/>
+  <img src="resources/scrDbgScreenshot1.png" alt="Screenshot"/>
+</p>
+
+<p align="center">
+  <img src="resources/scrDbgScreenshot2.png" alt="Screenshot"/>
+</p>
+
+<p align="center">
+  <img src="resources/scrDbgScreenshot3.png" alt="Screenshot"/>
+</p>
+
+<p align="center">
+  <img src="resources/scrDbgScreenshot4.png" alt="Screenshot"/>
+</p>
+
+<p align="center">
+  <img src="resources/scrDbgScreenshot5.png" alt="Screenshot"/>
 </p>
 
 ## Building
