@@ -39,6 +39,8 @@ namespace scrDbg
         void OnJumpToAddress();
         void OnBinarySearch();
         void OnBreakpointsDialog();
+        void OnUpdateDisassemblyInfoByScroll();
+        void OnUpdateDisassemblyInfoBySelection();
         void OnDisassemblyContextMenu(const QPoint& pos);
         void OnCopyInstruction(const QModelIndex& index);
         void OnNopInstruction(const QModelIndex& index);
@@ -53,6 +55,7 @@ namespace scrDbg
         bool ScrollToAddress(uint32_t address);
         void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
         void UpdateCurrentScript();
+        void UpdateDisassemblyInfo(int row, bool includeDesc);
         void ClearViews();
 
         uint32_t m_LastScriptHash;
@@ -84,6 +87,7 @@ namespace scrDbg
         QLineEdit* m_FunctionSearch;
         QSortFilterProxyModel* m_FunctionFilter;
         QTableView* m_FunctionList;
+        QLabel* m_DisassemblyInfo;
         QTableView* m_Disassembly;
         QTimer* m_UpdateTimer;
 	};

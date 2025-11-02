@@ -9,137 +9,137 @@
 namespace scrDbg
 {
 	const std::array<ScriptDisassembler::InstructionInfo, 131> ScriptDisassembler::m_InstructionTable = {{
-		{"NOP", 1, {OperandType::NONE}},
-		{"IADD", 1, {OperandType::NONE}},
-		{"ISUB", 1, {OperandType::NONE}},
-		{"IMUL", 1, {OperandType::NONE}},
-		{"IDIV", 1, {OperandType::NONE}},
-		{"IMOD", 1, {OperandType::NONE}},
-		{"INOT", 1, {OperandType::NONE}},
-		{"INEG", 1, {OperandType::NONE}},
-		{"IEQ", 1, {OperandType::NONE}},
-		{"INE", 1, {OperandType::NONE}},
-		{"IGT", 1, {OperandType::NONE}},
-		{"IGE", 1, {OperandType::NONE}},
-		{"ILT", 1, {OperandType::NONE}},
-		{"ILE", 1, {OperandType::NONE}},
-		{"FADD", 1, {OperandType::NONE}},
-		{"FSUB", 1, {OperandType::NONE}},
-		{"FMUL", 1, {OperandType::NONE}},
-		{"FDIV", 1, {OperandType::NONE}},
-		{"FMOD", 1, {OperandType::NONE}},
-		{"FNEG", 1, {OperandType::NONE}},
-		{"FEQ", 1, {OperandType::NONE}},
-		{"FNE", 1, {OperandType::NONE}},
-		{"FGT", 1, {OperandType::NONE}},
-		{"FGE", 1, {OperandType::NONE}},
-		{"FLT", 1, {OperandType::NONE}},
-		{"FLE", 1, {OperandType::NONE}},
-		{"VADD", 1, {OperandType::NONE}},
-		{"VSUB", 1, {OperandType::NONE}},
-		{"VMUL", 1, {OperandType::NONE}},
-		{"VDIV", 1, {OperandType::NONE}},
-		{"VNEG", 1, {OperandType::NONE}},
-		{"IAND", 1, {OperandType::NONE}},
-		{"IOR", 1, {OperandType::NONE}},
-		{"IXOR", 1, {OperandType::NONE}},
-		{"I2F", 1, {OperandType::NONE}},
-		{"F2I", 1, {OperandType::NONE}},
-		{"F2V", 1, {OperandType::NONE}},
-		{"PUSH_CONST_U8", 2, {OperandType::U8}},
-		{"PUSH_CONST_U8_U8", 3, {OperandType::U8, OperandType::U8}},
-		{"PUSH_CONST_U8_U8_U8", 4, {OperandType::U8, OperandType::U8, OperandType::U8}},
-		{"PUSH_CONST_U32", 5, {OperandType::U32}},
-		{"PUSH_CONST_F", 5, {OperandType::FLOAT}},
-		{"DUP", 1, {OperandType::NONE}},
-		{"DROP", 1, {OperandType::NONE}},
-		{"NATIVE", 4, {OperandType::NATIVE}},
-		{"ENTER", 0, {OperandType::U8, OperandType::S16, OperandType::NAME}},
-		{"LEAVE", 3, {OperandType::U8, OperandType::U8}},
-		{"LOAD", 1, {OperandType::NONE}},
-		{"STORE", 1, {OperandType::NONE}},
-		{"STORE_REV", 1, {OperandType::NONE}},
-		{"LOAD_N", 1, {OperandType::NONE}},
-		{"STORE_N", 1, {OperandType::NONE}},
-		{"ARRAY_U8", 2, {OperandType::U8}},
-		{"ARRAY_U8_LOAD", 2, {OperandType::U8}},
-		{"ARRAY_U8_STORE", 2, {OperandType::U8}},
-		{"LOCAL_U8", 2, {OperandType::U8}},
-		{"LOCAL_U8_LOAD", 2, {OperandType::U8}},
-		{"LOCAL_U8_STORE", 2, {OperandType::U8}},
-		{"STATIC_U8", 2, {OperandType::U8}},
-		{"STATIC_U8_LOAD", 2, {OperandType::U8}},
-		{"STATIC_U8_STORE", 2, {OperandType::U8}},
-		{"IADD_U8", 2, {OperandType::U8}},
-		{"IMUL_U8", 2, {OperandType::U8}},
-		{"IOFFSET", 1, {OperandType::NONE}},
-		{"IOFFSET_U8", 2, {OperandType::U8}},
-		{"IOFFSET_U8_LOAD", 2, {OperandType::U8}},
-		{"IOFFSET_U8_STORE", 2, {OperandType::U8}},
-		{"PUSH_CONST_S16", 3, {OperandType::S16}},
-		{"IADD_S16", 3, {OperandType::S16}},
-		{"IMUL_S16", 3, {OperandType::S16}},
-		{"IOFFSET_S16", 3, {OperandType::S16}},
-		{"IOFFSET_S16_LOAD", 3, {OperandType::S16}},
-		{"IOFFSET_S16_STORE", 3, {OperandType::S16}},
-		{"ARRAY_U16", 3, {OperandType::U16}},
-		{"ARRAY_U16_LOAD", 3, {OperandType::U16}},
-		{"ARRAY_U16_STORE", 3, {OperandType::U16}},
-		{"LOCAL_U16", 3, {OperandType::U16}},
-		{"LOCAL_U16_LOAD", 3, {OperandType::U16}},
-		{"LOCAL_U16_STORE", 3, {OperandType::U16}},
-		{"STATIC_U16", 3, {OperandType::U16}},
-		{"STATIC_U16_LOAD", 3, {OperandType::U16}},
-		{"STATIC_U16_STORE", 3, {OperandType::U16}},
-		{"GLOBAL_U16", 3, {OperandType::U16}},
-		{"GLOBAL_U16_LOAD", 3, {OperandType::U16}},
-		{"GLOBAL_U16_STORE", 3, {OperandType::U16}},
-		{"J", 3, {OperandType::REL}},
-		{"JZ", 3, {OperandType::REL}},
-		{"IEQ_JZ", 3, {OperandType::REL}},
-		{"INE_JZ", 3, {OperandType::REL}},
-		{"IGT_JZ", 3, {OperandType::REL}},
-		{"IGE_JZ", 3, {OperandType::REL}},
-		{"ILT_JZ", 3, {OperandType::REL}},
-		{"ILE_JZ", 3, {OperandType::REL}},
-		{"CALL", 4, {OperandType::U24}},
-		{"STATIC_U24", 4, {OperandType::U24}},
-		{"STATIC_U24_LOAD", 4, {OperandType::U24}},
-		{"STATIC_U24_STORE", 4, {OperandType::U24}},
-		{"GLOBAL_U24", 4, {OperandType::U24}},
-		{"GLOBAL_U24_LOAD", 4, {OperandType::U24}},
-		{"GLOBAL_U24_STORE", 4, {OperandType::U24}},
-		{"PUSH_CONST_U24", 4, {OperandType::U24}},
-		{"SWITCH", 0, {OperandType::SWITCH}},
-		{"STRING", 1, {OperandType::STRING}},
-		{"STRINGHASH", 1, {OperandType::NONE}},
-		{"TEXT_LABEL_ASSIGN_STRING", 2, {OperandType::U8}},
-		{"TEXT_LABEL_ASSIGN_INT", 2, {OperandType::U8}},
-		{"TEXT_LABEL_APPEND_STRING", 2, {OperandType::U8}},
-		{"TEXT_LABEL_APPEND_INT", 2, {OperandType::U8}},
-		{"TEXT_LABEL_COPY", 1, {OperandType::NONE}},
-		{"CATCH", 1, {OperandType::NONE}},
-		{"THROW", 1, {OperandType::NONE}},
-		{"CALLINDIRECT", 1, {OperandType::NONE}},
-		{"PUSH_CONST_M1", 1, {OperandType::NONE}},
-		{"PUSH_CONST_0", 1, {OperandType::NONE}},
-		{"PUSH_CONST_1", 1, {OperandType::NONE}},
-		{"PUSH_CONST_2", 1, {OperandType::NONE}},
-		{"PUSH_CONST_3", 1, {OperandType::NONE}},
-		{"PUSH_CONST_4", 1, {OperandType::NONE}},
-		{"PUSH_CONST_5", 1, {OperandType::NONE}},
-		{"PUSH_CONST_6", 1, {OperandType::NONE}},
-		{"PUSH_CONST_7", 1, {OperandType::NONE}},
-		{"PUSH_CONST_FM1", 1, {OperandType::NONE}},
-		{"PUSH_CONST_F0", 1, {OperandType::NONE}},
-		{"PUSH_CONST_F1", 1, {OperandType::NONE}},
-		{"PUSH_CONST_F2", 1, {OperandType::NONE}},
-		{"PUSH_CONST_F3", 1, {OperandType::NONE}},
-		{"PUSH_CONST_F4", 1, {OperandType::NONE}},
-		{"PUSH_CONST_F5", 1, {OperandType::NONE}},
-		{"PUSH_CONST_F6", 1, {OperandType::NONE}},
-		{"PUSH_CONST_F7", 1, {OperandType::NONE}},
-		{"IS_BIT_SET", 1, {OperandType::NONE}}
+		{"NOP", "Does nothing.", "", 1},
+		{"IADD", "Adds the top two integers on the stack and pushes the result.", "", 1},
+		{"ISUB", "Subtracts the top integer from the next on the stack and pushes the result.", "", 1},
+		{"IMUL", "Multiplies the top two integers on the stack and pushes the result.", "", 1},
+		{"IDIV", "Divides the next integer on the stack by the top one and pushes the result.", "", 1},
+		{"IMOD", "Computes the remainder of the next integer divided by the top one and pushes it.", "", 1},
+		{"INOT", "Pushes 1 if the top integer is 0, otherwise pushes 0.", "", 1},
+		{"INEG", "Negates the integer at the top of the stack.", "", 1},
+		{"IEQ", "Pushes 1 if the top two integers are equal, otherwise pushes 0.", "", 1},
+		{"INE", "Pushes 1 if the top two integers are not equal, otherwise pushes 0.", "", 1},
+		{"IGT", "Pushes 1 if the first integer is greater than the second, otherwise pushes 0.", "", 1},
+		{"IGE", "Pushes 1 if the first integer is greater than or equal to the second, otherwise pushes 0.", "", 1},
+		{"ILT", "Pushes 1 if the first integer is less than the second, otherwise pushes 0.", "", 1},
+		{"ILE", "Pushes 1 if the first integer is less than or equal to the second, otherwise pushes 0.", "", 1},
+		{"FADD", "Adds the top two floats on the stack and pushes the result.", "", 1},
+		{"FSUB", "Subtracts the top float from the next on the stack and pushes the result.", "", 1},
+		{"FMUL", "Multiplies the top two floats on the stack and pushes the result.", "", 1},
+		{"FDIV", "Divides the next float by the top one and pushes the result.", "", 1},
+		{"FMOD", "Computes the remainder of the next float divided by the top one and pushes it.", "", 1},
+		{"FNEG", "Negates the float at the top of the stack.", "", 1},
+		{"FEQ", "Pushes 1 if the top two floats are equal, otherwise pushes 0.", "", 1},
+		{"FNE", "Pushes 1 if the top two floats are not equal, otherwise pushes 0.", "", 1},
+		{"FGT", "Pushes 1 if the first float is greater than the second, otherwise pushes 0.", "", 1},
+		{"FGE", "Pushes 1 if the first float is greater than or equal to the second, otherwise pushes 0.", "", 1},
+		{"FLT", "Pushes 1 if the first float is less than the second, otherwise pushes 0.", "", 1},
+		{"FLE", "Pushes 1 if the first float is less than or equal to the second, otherwise pushes 0.", "", 1},
+		{"VADD", "Adds the top two vectors on the stack and pushes the result.", "", 1},
+		{"VSUB", "Subtracts the top vector from the next on the stack and pushes the result.", "", 1},
+		{"VMUL", "Multiplies the top two vectors on the stack and pushes the result.", "", 1},
+		{"VDIV", "Divides the next vector by the top one and pushes the result.", "", 1},
+		{"VNEG", "Negates the vector at the top of the stack.", "", 1},
+		{"IAND", "Performs a bitwise AND on the top two integers and pushes the result.", "", 1},
+		{"IOR", "Performs a bitwise OR on the top two integers and pushes the result.", "", 1},
+		{"IXOR", "Performs a bitwise XOR on the top two integers and pushes the result.", "", 1},
+		{"I2F", "Converts the top integer to a float and pushes it.", "", 1},
+		{"F2I", "Converts the top float to an integer and pushes it.", "", 1},
+		{"F2V", "Converts the top float into a vector of three identical float values and pushes it.", "", 1},
+		{"PUSH_CONST_U8", "Pushes the next byte after the opcode onto the stack.", "a", 2},
+		{"PUSH_CONST_U8_U8", "Pushes the next two bytes after the opcode onto the stack.", "aa", 3},
+		{"PUSH_CONST_U8_U8_U8", "Pushes the next three bytes after the opcode onto the stack.", "aaa", 4},
+		{"PUSH_CONST_U32", "Pushes the 4-byte integer following the opcode onto the stack.", "e", 5},
+		{"PUSH_CONST_F", "Pushes the 4-byte float following the opcode onto the stack.", "f", 5},
+		{"DUP", "Duplicates the top item on the stack.", "", 1},
+		{"DROP", "Removes the top item from the stack.", "", 1},
+		{"NATIVE", "Calls a native command using argument and return counts from the next byte, and a hash index from the next two bytes.", "N", 4},
+		{"ENTER", "Marks the start of a function; defines argument count, local variable count, and name size to skip.", "aan", 0},
+		{"LEAVE", "Marks the end of a function; restores the caller's frame, pops arguments, pushes return values onto the stack, and returns to the caller if there's any.", "aa", 3},
+		{"LOAD", "Pops a pointer and pushes the value it points to.", "", 1},
+		{"STORE", "Stores the second stack item's value at the address pointed to by the top item.", "", 1},
+		{"STORE_REV", "Stores the top item's value at the address of the next item without popping it.", "", 1},
+		{"LOAD_N", "Loads a specified number of items from a memory address onto the stack.", "", 1},
+		{"STORE_N", "Stores a specified number of items from the stack into a memory address.", "", 1},
+		{"ARRAY_U8", "Pushes the pointer to an array element by index, using an element size defined by the next byte.", "a", 2},
+		{"ARRAY_U8_LOAD", "Pushes the array element at the given index onto the stack; element size is defined by the next byte.", "a", 2},
+		{"ARRAY_U8_STORE", "Stores a value in the array at the given index; element size is defined by the next byte.", "a", 2},
+		{"LOCAL_U8", "Pushes a pointer to a local variable indexed by the next byte.", "a", 2},
+		{"LOCAL_U8_LOAD", "Pushes the value of a local variable indexed by the next byte.", "a", 2},
+		{"LOCAL_U8_STORE", "Stores the top stack value into a local variable indexed by the next byte.", "a", 2},
+		{"STATIC_U8", "Pushes a pointer to a static variable indexed by the next byte.", "a", 2},
+		{"STATIC_U8_LOAD", "Pushes the value of a static variable indexed by the next byte.", "a", 2},
+		{"STATIC_U8_STORE", "Stores the top stack value into a static variable indexed by the next byte.", "a", 2},
+		{"IADD_U8", "Adds the next byte to the integer at the top of the stack and pushes the result.", "a", 2},
+		{"IMUL_U8", "Multiplies the next byte with the integer at the top of the stack and pushes the result.", "a", 2},
+		{"IOFFSET", "Pushes a pointer to a struct element indexed by the popped index * 8.", "", 1},
+		{"IOFFSET_U8", "Pushes a pointer to a struct element at the offset (byte * 8) defined by the next byte.", "a", 2},
+		{"IOFFSET_U8_LOAD", "Pushes the value of a struct element at offset (byte * 8) defined by the next byte.", "a", 2},
+		{"IOFFSET_U8_STORE", "Stores a value into a struct element at offset (byte * 8) defined by the next byte.", "a", 2},
+		{"PUSH_CONST_S16", "Pushes the signed short (2 bytes) following the opcode onto the stack.", "c", 3},
+		{"IADD_S16", "Adds the short following the opcode to the integer at the top of the stack and pushes the result.", "c", 3},
+		{"IMUL_S16", "Multiplies the short following the opcode with the integer at the top of the stack and pushes the result.", "c", 3},
+		{"IOFFSET_S16", "Pushes a pointer to a struct element at offset (short * 8) defined by the next two bytes.", "c", 3},
+		{"IOFFSET_S16_LOAD", "Pushes the value of a struct element at offset (short * 8) defined by the next two bytes.", "c", 3},
+		{"IOFFSET_S16_STORE", "Stores a value into a struct element at offset (short * 8) defined by the next two bytes.", "c", 3},
+		{"ARRAY_U16", "Pushes a pointer to an array element using an index and 2-byte element size.", "b", 3},
+		{"ARRAY_U16_LOAD", "Pushes the value of an array element using an index and 2-byte element size.", "b", 3},
+		{"ARRAY_U16_STORE", "Stores a value in an array element using an index and 2-byte element size.", "b", 3},
+		{"LOCAL_U16", "Pushes a pointer to a local variable indexed by the next two bytes.", "b", 3},
+		{"LOCAL_U16_LOAD", "Pushes the value of a local variable indexed by the next two bytes.", "b", 3},
+		{"LOCAL_U16_STORE", "Stores the top stack value into a local variable indexed by the next two bytes.", "b", 3},
+		{"STATIC_U16", "Pushes a pointer to a static variable indexed by the next two bytes.", "b", 3},
+		{"STATIC_U16_LOAD", "Pushes the value of a static variable indexed by the next two bytes.", "b", 3},
+		{"STATIC_U16_STORE", "Stores the top stack value into a static variable indexed by the next two bytes.", "b", 3},
+		{"GLOBAL_U16", "Pushes a pointer to a global variable indexed by the next two bytes.", "b", 3},
+		{"GLOBAL_U16_LOAD", "Pushes the value of a global variable indexed by the next two bytes.", "b", 3},
+		{"GLOBAL_U16_STORE", "Stores the top stack value into a global variable indexed by the next two bytes.", "b", 3},
+		{"J", "Performs an unconditional relative jump by the signed short following the opcode.", "r", 3},
+		{"JZ", "Performs a relative jump if the top stack value is zero; offset defined by the following short.", "r", 3},
+		{"IEQ_JZ", "Performs a relative jump if the top two integers are not equal; offset defined by the following short.", "r", 3},
+		{"INE_JZ", "Performs a relative jump if the top two integers are equal; offset defined by the following short.", "r", 3},
+		{"IGT_JZ", "Performs a relative jump if the first integer is less than or equal to the second; offset defined by the following short.", "r", 3},
+		{"IGE_JZ", "Performs a relative jump if the first integer is less than the second; offset defined by the following short.", "r", 3},
+		{"ILT_JZ", "Performs a relative jump if the first integer is greater than or equal to the second; offset defined by the following short.", "r", 3},
+		{"ILE_JZ", "Performs a relative jump if the first integer is greater than the second; offset defined by the following short.", "r", 3},
+		{"CALL", "Calls a function within the script; address is defined by the next three bytes.", "d", 4},
+		{"STATIC_U24", "Pushes a pointer to a static variable indexed by the next three bytes.", "d", 4},
+		{"STATIC_U24_LOAD", "Pushes the value of a static variable indexed by the next three bytes.", "d", 4},
+		{"STATIC_U24_STORE", "Stores the top stack value into a static variable indexed by the next three bytes.", "d", 4},
+		{"GLOBAL_U24", "Pushes a pointer to a global variable indexed by the next three bytes.", "d", 4},
+		{"GLOBAL_U24_LOAD", "Pushes the value of a global variable indexed by the next three bytes.", "d", 4},
+		{"GLOBAL_U24_STORE", "Stores the top stack value into a global variable indexed by the next three bytes.", "d", 4},
+		{"PUSH_CONST_U24", "Pushes the unsigned 24-bit integer following the opcode onto the stack.", "d", 4},
+		{"SWITCH", "Performs a switch jump based on a comparison value; table and offsets follow the opcode.", "x", 0},
+		{"STRING", "Pushes a pointer to a string from the string table using the index at the top of the stack.", "s", 1},
+		{"STRINGHASH", "Hashes the string pointed to by the top stack value using JOAAT algorithm and pushes the hash.", "", 1},
+		{"TEXT_LABEL_ASSIGN_STRING", "Copies a string into a destination buffer; buffer size is given by the next byte.", "a", 2},
+		{"TEXT_LABEL_ASSIGN_INT", "Converts an integer to a string and stores it in a destination buffer; size given by the next byte.", "a", 2},
+		{"TEXT_LABEL_APPEND_STRING", "Appends a string to an existing buffer; buffer size is given by the next byte.", "a", 2},
+		{"TEXT_LABEL_APPEND_INT", "Appends an integer (as a string) to an existing buffer; buffer size is given by the next byte.", "a", 2},
+		{"TEXT_LABEL_COPY", "Copies memory from one buffer to another multiple times and appends a null terminator.", "", 1},
+		{"CATCH", "Defines a protected code region for handling script errors (unused in release builds).", "", 1},
+		{"THROW", "Marks an exception handling block relative to a CATCH region (unused in release builds).", "", 1},
+		{"CALLINDIRECT", "Calls a script function whose address is taken from the integer at the top of the stack.", "", 1},
+		{"PUSH_CONST_M1", "Pushes -1 onto the stack.", "", 1},
+		{"PUSH_CONST_0", "Pushes 0 onto the stack.", "", 1},
+		{"PUSH_CONST_1", "Pushes 1 onto the stack.", "", 1},
+		{"PUSH_CONST_2", "Pushes 2 onto the stack.", "", 1},
+		{"PUSH_CONST_3", "Pushes 3 onto the stack.", "", 1},
+		{"PUSH_CONST_4", "Pushes 4 onto the stack.", "", 1},
+		{"PUSH_CONST_5", "Pushes 5 onto the stack.", "", 1},
+		{"PUSH_CONST_6", "Pushes 6 onto the stack.", "", 1},
+		{"PUSH_CONST_7", "Pushes 7 onto the stack.", "", 1},
+		{"PUSH_CONST_FM1", "Pushes -1.0 onto the stack.", "", 1},
+		{"PUSH_CONST_F0", "Pushes 0.0 onto the stack.", "", 1},
+		{"PUSH_CONST_F1", "Pushes 1.0 onto the stack.", "", 1},
+		{"PUSH_CONST_F2", "Pushes 2.0 onto the stack.", "", 1},
+		{"PUSH_CONST_F3", "Pushes 3.0 onto the stack.", "", 1},
+		{"PUSH_CONST_F4", "Pushes 4.0 onto the stack.", "", 1},
+		{"PUSH_CONST_F5", "Pushes 5.0 onto the stack.", "", 1},
+		{"PUSH_CONST_F6", "Pushes 6.0 onto the stack.", "", 1},
+		{"PUSH_CONST_F7", "Pushes 7.0 onto the stack.", "", 1},
+		{"IS_BIT_SET", "Checks if a specific bit is set in a value using value & (1 << bit) and pushes the result.", "", 1},
 	}};
 
 	uint8_t ScriptDisassembler::ReadByte(const std::vector<uint8_t>& code, uint32_t pc)
@@ -175,6 +175,30 @@ namespace scrDbg
 		return f;
 	}
 
+	bool ScriptDisassembler::IsJumpInstruction(uint8_t opcode)
+	{
+		if (opcode >= m_InstructionTable.size())
+			return false;
+
+		const char* operands = m_InstructionTable[opcode].OperandFmt;
+		while (*operands)
+		{
+			if (*operands == 'r')
+				return true;
+			operands++;
+		}
+
+		return false;
+	}
+
+	const char* ScriptDisassembler::GetInstructionDesc(uint8_t opcode)
+	{
+		if (opcode >= m_InstructionTable.size())
+			return "???";
+
+	    return m_InstructionTable[opcode].Desc;
+	}
+
 	std::string ScriptDisassembler::GetFunctionName(const std::vector<uint8_t>& code, uint32_t pc, uint32_t size, int funcIndex)
 	{
 		if (size > 0)
@@ -196,22 +220,6 @@ namespace scrDbg
 			return "func_" + std::to_string(funcIndex);
 
 		return "[INVALID_NAME]";
-	}
-
-	bool ScriptDisassembler::IsJumpInstruction(uint8_t opcode)
-	{
-		if (opcode >= m_InstructionTable.size())
-			return false;
-
-		const auto& info = m_InstructionTable[opcode];
-
-		for (auto operand : info.OperandType)
-		{
-			if (operand == OperandType::REL)
-				return true;
-		}
-
-		return false;
 	}
 
 	int ScriptDisassembler::GetInstructionSize(const std::vector<uint8_t>& code, uint32_t pc)
@@ -313,7 +321,7 @@ namespace scrDbg
 		return info;
 	}
 
-	ScriptDisassembler::DecodedInstruction ScriptDisassembler::DecodeInstruction(const rage::scrProgram& program, const std::vector<uint8_t>& code, uint32_t pc, int stringIndex, int funcIndex)
+	ScriptDisassembler::DecodedInstruction ScriptDisassembler::DecodeInstruction(const std::vector<uint8_t>& code, uint32_t pc, const rage::scrProgram& program, int stringIndex, int funcIndex)
 	{
 		DecodedInstruction result;
 
@@ -342,28 +350,27 @@ namespace scrDbg
 		instr << insn.Name << " ";
 
 		uint32_t offset = pc + 1;
-		for (size_t i = 0; i < insn.OperandType.size(); ++i)
+
+		auto operands = insn.OperandFmt;
+		while (*operands)
 		{
-			auto operand = insn.OperandType[i];
-			switch (operand)
+			switch (*operands++)
 			{
-			case OperandType::NONE:
-				break;
-			case OperandType::U8:
+			case 'a': // U8
 				instr << std::dec << static_cast<int>(ReadByte(code, offset++));
 				break;
-			case OperandType::S16:
-				instr << std::dec << ReadS16(code, offset);
-				offset += 2;
-				break;
-			case OperandType::U16:
+			case 'b': // U16
 				instr << std::dec << ReadU16(code, offset);
 				offset += 2;
 				break;
-			case OperandType::U24:
+			case 'c': // S16
+				instr << std::dec << ReadS16(code, offset);
+				offset += 2;
+				break;
+			case 'd': // U24
 			{
 				uint32_t val = ReadU24(code, offset);
-				if (op == rage::scrOpcode::CALL)
+				if (op == rage::scrOpcode::CALL) // Print CALL as hex
 				{
 					instr << "0x" << std::uppercase << std::hex << val;
 
@@ -378,15 +385,15 @@ namespace scrDbg
 				offset += 3;
 				break;
 			}
-			case OperandType::U32:
+			case 'e': // U32
 				instr << std::dec << ReadU32(code, offset);
 				offset += 4;
 				break;
-			case OperandType::FLOAT:
+			case 'f': // FLOAT
 				instr << ReadF32(code, offset);
 				offset += 4;
 				break;
-			case OperandType::REL:
+			case 'r': // REL
 			{
 				int16_t rel = ReadS16(code, offset);
 				uint32_t target = (offset + 2) + rel;
@@ -401,7 +408,7 @@ namespace scrDbg
 				offset += 2;
 				break;
 			}
-			case OperandType::NATIVE:
+			case 'N': // NATIVE
 			{
 				uint8_t native = ReadByte(code, offset++);
 				uint32_t argCount = (native >> 2) & 0x3F;
@@ -427,7 +434,7 @@ namespace scrDbg
 
 				break;
 			}
-			case OperandType::SWITCH:
+			case 'x': // SWITCH
 			{
 				uint8_t cases = ReadByte(code, offset++);
 				instr << " [" << std::dec << static_cast<int>(cases) << "]";
@@ -444,7 +451,7 @@ namespace scrDbg
 					instr << " ...";
 				break;
 			}
-			case OperandType::STRING:
+			case 's': // STRING
 			{
 				if (stringIndex >= 0 && stringIndex < program.GetStringCount())
 				{
@@ -462,7 +469,7 @@ namespace scrDbg
 				}
 				break;
 			}
-			case OperandType::NAME:
+			case 'n': // NAME
 			{
 				uint8_t nameLen = ReadByte(code, offset);
 				offset += 1;
@@ -474,7 +481,7 @@ namespace scrDbg
 			}
 			}
 
-			if (i != insn.OperandType.size() - 1)
+			if (*operands)
 				instr << ", ";
 		}
 

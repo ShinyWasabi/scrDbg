@@ -47,7 +47,7 @@ namespace scrDbg
                 funcIndex = targetFuncIndex;
         }
 
-        auto insn = ScriptDisassembler::DecodeInstruction(m_Layout.GetProgram(), code, entry.Pc, entry.StringIndex, funcIndex);
+        auto insn = ScriptDisassembler::DecodeInstruction(code, entry.Pc, m_Layout.GetProgram(), entry.StringIndex, funcIndex);
 
         switch (index.column())
         {

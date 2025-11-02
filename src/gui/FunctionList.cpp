@@ -43,7 +43,7 @@ namespace scrDbg
         case 2: return QString("0x%1").arg(QString::number(func.End, 16).toUpper());
         case 3: return func.Length;
         case 4: return func.ArgCount;
-        case 5: return func.LocalCount - 2; // first slot is for return address, second slot is for last frame pointer
+        case 5: return func.LocalCount - (func.ArgCount + 2); // args, return address, last fp, locals
         case 6: return func.RetCount;
         }
 

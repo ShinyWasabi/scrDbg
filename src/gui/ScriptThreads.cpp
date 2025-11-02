@@ -15,6 +15,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QTableView>
+#include <QScrollBar>
 #include <QHeaderView>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -126,6 +127,11 @@ namespace scrDbg
         QWidget* functionWidget = new QWidget(this);
         functionWidget->setLayout(functionLayout);
 
+        m_DisassemblyInfo = new QLabel(this);
+        m_DisassemblyInfo->setText("- <none>");
+        m_DisassemblyInfo->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        m_DisassemblyInfo->setStyleSheet("font-weight: bold; padding: 2px;");
+
         m_Disassembly = new QTableView(this);
         m_Disassembly->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_Disassembly->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -138,9 +144,16 @@ namespace scrDbg
         m_Disassembly->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(m_Disassembly, &QWidget::customContextMenuRequested, this, &ScriptThreadsWidget::OnDisassemblyContextMenu);
 
+        QVBoxLayout* disasmLayout = new QVBoxLayout();
+        disasmLayout->addWidget(m_Disassembly);
+        disasmLayout->addWidget(m_DisassemblyInfo);
+
+        QWidget* disasmWidget = new QWidget(this);
+        disasmWidget->setLayout(disasmLayout);
+
         QSplitter* splitter = new QSplitter(Qt::Horizontal, this);
         splitter->addWidget(functionWidget);
-        splitter->addWidget(m_Disassembly);
+        splitter->addWidget(disasmWidget);
         splitter->setChildrenCollapsible(false);
         splitter->setStretchFactor(0, 2);
         splitter->setStretchFactor(1, 4);
@@ -268,6 +281,28 @@ namespace scrDbg
         }
     }
 
+    void ScriptThreadsWidget::UpdateDisassemblyInfo(int row, bool includeDesc)
+    {
+        auto& code = m_Layout->GetCode();
+        uint32_t pc = m_Layout->GetInstructionPc(row);
+        int index = m_Layout->GetFunctionIndexForPc(pc);
+
+        const auto& funcs = m_Layout->GetFunctions();
+
+        QString name = QString::fromStdString(funcs[index].Name);
+        uint32_t offset = pc - funcs[index].Start;
+
+        QString desc;
+        if (includeDesc)
+            desc = QString::fromStdString(ScriptDisassembler::GetInstructionDesc(code[pc]));
+
+        QString text = QString("%1+%2").arg(name).arg(offset);
+        if (!desc.isEmpty())
+            text += QString(" | %1").arg(desc);
+
+        m_DisassemblyInfo->setText(text);
+    }
+
     void ScriptThreadsWidget::ClearViews()
     {
         m_Layout.reset();
@@ -281,6 +316,9 @@ namespace scrDbg
             delete m_FunctionFilter;
             m_FunctionFilter = nullptr;
         }
+
+        m_DisassemblyInfo->setText("- <none>");
+        m_FunctionSearch->clear();
     }
 
     void ScriptThreadsWidget::OnUpdateScripts()
@@ -358,6 +396,11 @@ namespace scrDbg
         if (resetScroll)
             m_Disassembly->scrollToTop();
 
+        // Fire once to initialize
+        OnUpdateDisassemblyInfoByScroll();
+        connect(m_Disassembly->verticalScrollBar(), &QScrollBar::valueChanged, this, &ScriptThreadsWidget::OnUpdateDisassemblyInfoByScroll);
+        connect(m_Disassembly->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ScriptThreadsWidget::OnUpdateDisassemblyInfoBySelection);
+
         auto funcModel = new FunctionListModel(*m_Layout, m_FunctionList);
         m_FunctionFilter = new QSortFilterProxyModel(this);
         m_FunctionFilter->setSourceModel(funcModel);
@@ -366,8 +409,6 @@ namespace scrDbg
         m_FunctionList->setModel(m_FunctionFilter);
         if (resetScroll)
             m_FunctionList->scrollToTop();
-
-        m_FunctionSearch->clear();
     }
 
     void ScriptThreadsWidget::OnTogglePauseScript()
@@ -868,6 +909,20 @@ namespace scrDbg
         dlg->show();
     }
 
+    void ScriptThreadsWidget::OnUpdateDisassemblyInfoByScroll()
+    {
+        int row = m_Disassembly->indexAt(QPoint(0, 0)).row();
+        if (row >= 0)
+            UpdateDisassemblyInfo(row, false);
+    }
+
+    void ScriptThreadsWidget::OnUpdateDisassemblyInfoBySelection()
+    {
+        auto selected = m_Disassembly->selectionModel()->selectedIndexes();
+        if (!selected.isEmpty())
+            UpdateDisassemblyInfo(selected.first().row(), true);
+    }
+
     void ScriptThreadsWidget::OnDisassemblyContextMenu(const QPoint& pos)
     {
         QModelIndex index = m_Disassembly->indexAt(pos);
@@ -1158,7 +1213,7 @@ namespace scrDbg
             if (isXref)
             {
                 int funcIndex = m_Layout->GetFunctionIndexForPc(targetPc);
-                auto insn = ScriptDisassembler::DecodeInstruction(rage::scrProgram(), code, pc, -1, funcIndex);
+                auto insn = ScriptDisassembler::DecodeInstruction(code, pc, rage::scrProgram(), -1, funcIndex);
                 xrefs.emplace_back(pc, insn.Instruction);
             }
 
