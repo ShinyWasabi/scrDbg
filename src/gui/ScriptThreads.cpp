@@ -3,14 +3,15 @@
 #include "Disassembly.hpp"
 #include "Breakpoints.hpp"
 #include "Xrefs.hpp"
-#include "Disassembler.hpp"
-#include "PipeCommands.hpp"
+#include "script/ScriptDisassembler.hpp"
+#include "pipe/PipeCommands.hpp"
 #include "Pointers.hpp"
+#include "util/ScriptHelpers.hpp"
 #include "game/gta/Natives.hpp"
 #include "game/gta/TextLabels.hpp"
 #include "game/rage/scrThread.hpp"
 #include "game/rage/Joaat.hpp"
-#include "game/rage/Opcode.hpp"
+#include "game/rage/scrOpcode.hpp"
 #include <QComboBox>
 #include <QLabel>
 #include <QPushButton>
@@ -186,7 +187,7 @@ namespace scrDbg
         for (int i = 0; i < m_Disassembly->model()->rowCount(); ++i)
         {
             uint32_t pc = m_Layout->GetInstruction(i).Pc;
-            uint32_t size = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
+            uint32_t size = ScriptHelpers::GetInstructionSize(m_Layout->GetCode(), pc);
 
             if (address >= pc && address < pc + size)
             {
@@ -242,7 +243,7 @@ namespace scrDbg
 
         QString desc;
         if (includeDesc)
-            desc = QString::fromStdString(ScriptDisassembler::GetInstructionDesc(code[pc]));
+            desc = QString::fromStdString(ScriptDisassembler::GetInstructionDescription(code[pc]));
 
         QString text = QString("%1+%2").arg(name).arg(offset);
         if (!desc.isEmpty())
@@ -818,7 +819,7 @@ namespace scrDbg
             return;
 
         bool ok = false;
-        QString input = QInputDialog::getText(this, "Binary Search", "Enter byte pattern:", QLineEdit::Normal, "", &ok);
+        QString input = QInputDialog::getText(this, "Binary Search", "Enter byte pattern (? for wildcard):", QLineEdit::Normal, "", &ok);
         if (!ok || input.isEmpty())
             return;
 
@@ -828,7 +829,7 @@ namespace scrDbg
         for (const QString& part : parts)
         {
             QString token = part.trimmed();
-            if (token == "?" || token == "??")
+            if (token == "?")
             {
                 pattern.push_back(std::nullopt);
             }
@@ -845,30 +846,7 @@ namespace scrDbg
             }
         }
 
-        auto& program = m_Layout->GetProgram();
-        auto& code = m_Layout->GetCode();
-
-        const uint32_t codeSize = program.GetCodeSize();
-        const size_t patSize = pattern.size();
-
-        std::vector<uint32_t> results;
-        for (uint32_t i = 0; i + patSize <= codeSize; ++i)
-        {
-            bool match = true;
-            for (uint32_t j = 0; j < patSize; ++j)
-            {
-                const auto& p = pattern[j];
-                if (p && *p != code[i + j])
-                {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match)
-                results.push_back(i);
-        }
-
+        auto results = ScriptHelpers::ScanPattern(m_Layout->GetCode(), pattern);
         if (results.empty())
         {
             QMessageBox::information(this, "Binary Search", "No matches found.");
@@ -879,6 +857,7 @@ namespace scrDbg
 
         QString msg = QString("Found %1 matches:\n\n").arg(results.size());
         int limit = std::min<int>(results.size(), 10);
+
         for (int i = 0; i < limit; ++i)
             msg += QString("0x%1\n").arg(QString::number(results[i], 16).toUpper());
         if (results.size() > 10)
@@ -954,7 +933,7 @@ namespace scrDbg
         auto& code = m_Layout->GetCode();
         uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
 
-        if (ScriptDisassembler::IsJumpInstruction(code[pc]) || code[pc] == rage::scrOpcode::CALL)
+        if (ScriptHelpers::IsJumpInstruction(code[pc]) || code[pc] == rage::scrOpcode::CALL)
         {
             QAction* jumpAction = menu.addAction("Jump to Address");
             connect(jumpAction, &QAction::triggered, [this, index]() {
@@ -1000,7 +979,7 @@ namespace scrDbg
     void ScriptThreadsWidget::OnNopInstruction(const QModelIndex& index)
     {
         uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
-        uint32_t size = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
+        uint32_t size = ScriptHelpers::GetInstructionSize(m_Layout->GetCode(), pc);
         for (uint32_t i = 0; i < size; ++i)
             m_Layout->GetProgram().SetCode(pc + i, rage::scrOpcode::NOP);
 
@@ -1011,7 +990,7 @@ namespace scrDbg
     void ScriptThreadsWidget::OnPatchInstruction(const QModelIndex& index)
     {
         uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
-        uint32_t instrSize = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
+        uint32_t instrSize = ScriptHelpers::GetInstructionSize(m_Layout->GetCode(), pc);
 
         bool ok = false;
         QString input = QInputDialog::getText(this, "Custom Patch", QString("Enter up to %1 bytes in hex (space separated):").arg(instrSize), QLineEdit::Normal, "", &ok);
@@ -1059,7 +1038,6 @@ namespace scrDbg
         static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
     }
 
-    // TO-DO: Refactor this shit
     void ScriptThreadsWidget::OnGeneratePattern(const QModelIndex& index)
     {
         if (!index.isValid())
@@ -1068,119 +1046,14 @@ namespace scrDbg
         auto& code = m_Layout->GetCode();
         uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
 
-        if (pc >= code.size())
-            return;
-
-        auto GetWildcardSize = [](uint8_t opcode) -> size_t {
-            switch (opcode)
-            {
-            case rage::scrOpcode::CALL:
-                return 3;
-            case rage::scrOpcode::J:
-            case rage::scrOpcode::JZ:
-            case rage::scrOpcode::IEQ_JZ:
-            case rage::scrOpcode::INE_JZ:
-            case rage::scrOpcode::IGT_JZ:
-            case rage::scrOpcode::IGE_JZ:
-            case rage::scrOpcode::ILT_JZ:
-            case rage::scrOpcode::ILE_JZ:
-                return 2;
-            case rage::scrOpcode::STATIC_U8:
-            case rage::scrOpcode::STATIC_U8_LOAD:
-            case rage::scrOpcode::STATIC_U8_STORE:
-                return 1;
-            case rage::scrOpcode::STATIC_U16:
-            case rage::scrOpcode::STATIC_U16_LOAD:
-            case rage::scrOpcode::STATIC_U16_STORE:
-            case rage::scrOpcode::GLOBAL_U16:
-            case rage::scrOpcode::GLOBAL_U16_LOAD:
-            case rage::scrOpcode::GLOBAL_U16_STORE:
-                return 2;
-            case rage::scrOpcode::STATIC_U24:
-            case rage::scrOpcode::STATIC_U24_LOAD:
-            case rage::scrOpcode::STATIC_U24_STORE:
-            case rage::scrOpcode::GLOBAL_U24:
-            case rage::scrOpcode::GLOBAL_U24_LOAD:
-            case rage::scrOpcode::GLOBAL_U24_STORE:
-                return 3;
-            default:
-                return 0;
-            }
-        };
-
-        auto MakePattern = [&](size_t start, size_t len) -> std::string {
-            std::ostringstream ss;
-            ss << std::uppercase << std::hex << std::setfill('0');
-
-            size_t i = 0;
-            bool first = true;
-            while (i < len && (start + i) < code.size())
-            {
-                if (!first)
-                    ss << ' ';
-                first = false;
-
-                uint8_t opcode = code[start + i];
-                ss << std::setw(2) << static_cast<int>(opcode);
-                ++i;
-
-                size_t operandSize = GetWildcardSize(opcode);
-                for (size_t j = 0; j < operandSize && i < len && (start + i) < code.size(); ++j, ++i)
-                {
-                    ss << ' ' << '?';
-                }
-            }
-
-            return ss.str();
-        };
-
-        constexpr size_t maxPatternLength = 32;
-        size_t patternLength = 4;
         std::string uniquePattern;
 
-        for (; patternLength <= maxPatternLength; ++patternLength)
+        int patternLength = 4;
+        for (; patternLength <= 32; ++patternLength)
         {
-            std::string patternStr = MakePattern(pc, patternLength);
-
-            size_t count = 0;
-            for (size_t i = 0; i + patternLength <= code.size(); ++i)
+            if (ScriptHelpers::IsPatternUnique(code, pc, patternLength))
             {
-                bool match = true;
-                size_t j = 0;
-
-                while (j < patternLength)
-                {
-                    uint8_t a = code[pc + j];
-                    uint8_t b = code[i + j];
-
-                    size_t operandSize = GetWildcardSize(a);
-
-                    if (operandSize > 0 && j < patternLength - operandSize)
-                    {
-                        ++j;
-                        j += operandSize;
-                        continue;
-                    }
-
-                    if (a != b)
-                    {
-                        match = false;
-                        break;
-                    }
-
-                    ++j;
-                }
-
-                if (match)
-                    ++count;
-
-                if (count > 1)
-                    break;
-            }
-
-            if (count == 1)
-            {
-                uniquePattern = patternStr;
+                uniquePattern = ScriptHelpers::MakePattern(code, pc, patternLength);
                 break;
             }
         }
@@ -1205,26 +1078,14 @@ namespace scrDbg
         uint32_t pc = 0;
         while (pc < code.size())
         {
-            bool isXref = false;
-            if (ScriptDisassembler::IsJumpInstruction(code[pc]))
-            {
-                if ((pc + 2 + ScriptDisassembler::ReadS16(code, pc + 1) + 1) == targetPc)
-                    isXref = true;
-            }
-            else if (code[pc] == rage::scrOpcode::CALL || code[pc] == rage::scrOpcode::PUSH_CONST_U24) // check for function pointers
-            {
-                if (ScriptDisassembler::ReadU24(code, pc + 1) == targetPc)
-                    isXref = true;
-            }
-
-            if (isXref)
+            if (ScriptHelpers::IsXrefToPc(code, pc, targetPc))
             {
                 int funcIndex = m_Layout->GetFunctionIndexForPc(targetPc);
                 auto insn = ScriptDisassembler::DecodeInstruction(code, pc, rage::scrProgram(), -1, funcIndex);
                 xrefs.emplace_back(pc, insn.Instruction);
             }
 
-            pc += ScriptDisassembler::GetInstructionSize(code, pc);
+            pc += ScriptHelpers::GetInstructionSize(code, pc);
         }
 
         if (xrefs.empty())
@@ -1243,18 +1104,15 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnJumpToInstructionAddress(const QModelIndex& index)
     {
-        int32_t targetAddress = -1;
+        uint32_t targetAddress;
 
         auto& code = m_Layout->GetCode();
         uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
 
         if (code[pc] == rage::scrOpcode::CALL)
-            targetAddress = ScriptDisassembler::ReadU24(code, pc + 1);
+            targetAddress = ScriptHelpers::ReadU24(code, pc + 1);
         else
-            targetAddress = pc + 2 + ScriptDisassembler::ReadS16(code, pc + 1) + 1;
-
-        if (targetAddress == -1)
-            return;
+            targetAddress = pc + 2 + ScriptHelpers::ReadS16(code, pc + 1) + 1;
 
         ScrollToAddress(targetAddress);
     }

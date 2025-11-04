@@ -1,5 +1,5 @@
 #pragma once
-#include "Disassembler.hpp"
+#include "ScriptDisassembler.hpp"
 #include "game/rage/scrProgram.hpp"
 
 namespace scrDbg

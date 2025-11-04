@@ -1,5 +1,5 @@
 #include "Breakpoints.hpp"
-#include "PipeCommands.hpp"
+#include "pipe/PipeCommands.hpp"
 #include <QTableWidget>
 #include <QPushButton>
 #include <QVBoxLayout>

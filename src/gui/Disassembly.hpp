@@ -1,5 +1,5 @@
 #pragma once
-#include "ScriptLayout.hpp"
+#include "script/ScriptLayout.hpp"
 #include <QWidget>
 #include <QtCore>
 

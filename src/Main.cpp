@@ -1,7 +1,7 @@
-#include "GUI/GUI.hpp"
 #include "Pointers.hpp"
-#include "PipeCommands.hpp"
 #include "core/PipeClient.hpp"
+#include "GUI/GUI.hpp"
+#include "pipe/PipeCommands.hpp"
 #include "game/gta/Natives.hpp"
 
 namespace scrDbg

@@ -1,5 +1,6 @@
 #include "ScriptLayout.hpp"
-#include "game/rage/Opcode.hpp"
+#include "util/ScriptHelpers.hpp"
+#include "game/rage/scrOpcode.hpp"
 
 namespace scrDbg
 {
@@ -23,17 +24,18 @@ namespace scrDbg
         uint32_t pc = 0;
         while (pc < m_Code.size())
         {
-            uint8_t opcode = ScriptDisassembler::ReadByte(m_Code, pc);
+            uint8_t opcode = ScriptHelpers::ReadByte(m_Code, pc);
             if (opcode == rage::scrOpcode::ENTER)
             {
                 auto info = ScriptDisassembler::GetFunctionInfo(m_Code, pc, ++funcIndex);
                 m_Functions.push_back({ info });
             }
 
-            strIndex = ScriptDisassembler::GetNextStringIndex(m_Code, pc, strIndex);
-            m_Instructions.push_back({ pc, strIndex, std::max(funcIndex, 0) });
+            if (auto newIndex = ScriptDisassembler::UpdateStringIndex(m_Code, pc))
+                strIndex = *newIndex;
 
-            pc += ScriptDisassembler::GetInstructionSize(m_Code, pc);
+            m_Instructions.push_back({ pc, strIndex, std::max(funcIndex, 0) });
+            pc += ScriptHelpers::GetInstructionSize(m_Code, pc);
         }
     }
 

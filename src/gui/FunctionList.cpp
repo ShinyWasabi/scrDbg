@@ -1,6 +1,4 @@
 #include "FunctionList.hpp"
-#include "Disassembler.hpp"
-#include "game/rage/Opcode.hpp"
 
 namespace scrDbg
 {

@@ -1,6 +1,7 @@
 #include "Disassembly.hpp"
-#include "Disassembler.hpp"
-#include "game/rage/Opcode.hpp"
+#include "script/ScriptDisassembler.hpp"
+#include "util/ScriptHelpers.hpp"
+#include "game/rage/scrOpcode.hpp"
 
 namespace scrDbg
 {
@@ -40,7 +41,7 @@ namespace scrDbg
         int funcIndex = entry.FuncIndex;
         if (code[entry.Pc] == rage::scrOpcode::CALL)
         {
-            uint32_t targetPc = ScriptDisassembler::ReadU24(code, entry.Pc + 1);
+            uint32_t targetPc = ScriptHelpers::ReadU24(code, entry.Pc + 1);
 
             int targetFuncIndex = m_Layout.GetFunctionIndexForPc(targetPc);
             if (targetFuncIndex != -1)
