@@ -6,6 +6,15 @@ namespace scrDbg
     ScriptLayout::ScriptLayout(const rage::scrProgram& program) :
         m_Program(program)
     {
+        Refresh();
+    }
+
+    void ScriptLayout::Refresh()
+    {
+        m_Code.clear();
+        m_Instructions.clear();
+        m_Functions.clear();
+
         m_Code = m_Program.GetFullCode();
 
         int strIndex = -1;
@@ -17,10 +26,7 @@ namespace scrDbg
             uint8_t opcode = ScriptDisassembler::ReadByte(m_Code, pc);
             if (opcode == rage::scrOpcode::ENTER)
             {
-                m_FunctionStarts.push_back(pc);
-                funcIndex++;
-
-                auto info = ScriptDisassembler::GetFunctionInfo(m_Code, pc, funcIndex);
+                auto info = ScriptDisassembler::GetFunctionInfo(m_Code, pc, ++funcIndex);
                 m_Functions.push_back({ info });
             }
 
@@ -41,22 +47,30 @@ namespace scrDbg
         return m_Code;
     }
 
-    const std::vector<ScriptDisassembler::FunctionInfo>& ScriptLayout::GetFunctions() const
+    const int ScriptLayout::GetInstructionCount() const
     {
-        return m_Functions;
+        return static_cast<int>(m_Instructions.size());
     }
 
-    const std::vector<ScriptLayout::InstructionEntry>& ScriptLayout::GetInstructions() const
+    const int ScriptLayout::GetFunctionCount() const
     {
-        return m_Instructions;
+        return static_cast<int>(m_Functions.size());
     }
 
-    uint32_t ScriptLayout::GetInstructionPc(int row) const
+    ScriptLayout::InstructionEntry ScriptLayout::GetInstruction(int index) const
     {
-        if (row < 0 || row >= static_cast<int>(m_Instructions.size()))
-            return 0;
+        if (index < 0 || index >= static_cast<int>(m_Instructions.size()))
+            return {};
 
-        return m_Instructions[row].Pc;
+        return m_Instructions[index];
+    }
+
+    ScriptDisassembler::FunctionInfo ScriptLayout::GetFunction(int index) const
+    {
+        if (index < 0 || static_cast<size_t>(index) >= m_Functions.size())
+            return {};
+
+        return m_Functions[index];
     }
 
     int ScriptLayout::GetFunctionIndexForPc(uint32_t pc) const
@@ -68,13 +82,5 @@ namespace scrDbg
         }
 
         return -1;
-    }
-
-    uint32_t ScriptLayout::GetFunctionStart(int row) const
-    {
-        if (row < 0 || row >= static_cast<int>(m_Functions.size()))
-            return 0;
-
-        return m_Functions[row].Start;
     }
 }

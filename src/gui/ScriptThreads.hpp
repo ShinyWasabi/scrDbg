@@ -27,7 +27,6 @@ namespace scrDbg
 
     private slots:
         void OnUpdateScripts();
-        void OnRefreshDisassembly(const rage::scrProgram& program, bool resetScroll);
         void OnTogglePauseScript();
         void OnKillScript();
         void OnExportOptionsDialog();
@@ -54,11 +53,12 @@ namespace scrDbg
         uint32_t GetCurrentScriptHash();
         bool ScrollToAddress(uint32_t address);
         void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
-        void UpdateCurrentScript();
         void UpdateDisassemblyInfo(int row, bool includeDesc);
-        void ClearViews();
+        void CleanupDisassembly();
+        void RefreshDisassembly(const rage::scrProgram& program);
+        void UpdateCurrentScript();
 
-        uint32_t m_LastScriptHash;
+        uint32_t m_LastThreadId;
         std::unique_ptr<ScriptLayout> m_Layout;
 
         QLabel* m_State;

@@ -5,12 +5,12 @@ class QTableWidget;
 
 namespace scrDbg
 {
-    class XrefDialog : public QDialog
+    class XrefsDialog : public QDialog
     {
         Q_OBJECT
 
     public:
-        explicit XrefDialog(const std::vector<std::pair<uint32_t, std::string>>& xrefs, QWidget* parent = nullptr);
+        explicit XrefsDialog(const std::vector<std::pair<uint32_t, std::string>>& xrefs, QWidget* parent = nullptr);
 
     signals:
         void XrefDoubleClicked(uint32_t address);

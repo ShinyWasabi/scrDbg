@@ -6,12 +6,11 @@
 
 namespace scrDbg
 {
-    XrefDialog::XrefDialog(const std::vector<std::pair<uint32_t, std::string>>& xrefs, QWidget* parent)
-        : QDialog(parent)
+    XrefsDialog::XrefsDialog(const std::vector<std::pair<uint32_t, std::string>>& xrefs, QWidget* parent) :
+        QDialog(parent)
     {
         setWindowTitle("Xrefs");
         resize(500, 350);
-        setAttribute(Qt::WA_DeleteOnClose);
         setWindowFlags(Qt::Dialog | Qt::WindowCloseButtonHint | Qt::WindowTitleHint);
 
         m_Table = new QTableWidget(this);
@@ -20,7 +19,7 @@ namespace scrDbg
         m_Table->horizontalHeader()->setStretchLastSection(true);
         m_Table->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_Table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        connect(m_Table, &QTableWidget::cellDoubleClicked, this, &XrefDialog::OnItemDoubleClicked);
+        connect(m_Table, &QTableWidget::cellDoubleClicked, this, &XrefsDialog::OnItemDoubleClicked);
 
         for (const auto& [addr, insn] : xrefs)
         {
@@ -35,7 +34,7 @@ namespace scrDbg
         setLayout(layout);
     }
 
-    void XrefDialog::OnItemDoubleClicked(int row, int column)
+    void XrefsDialog::OnItemDoubleClicked(int row, int column)
     {
         Q_UNUSED(column);
         if (row < 0)

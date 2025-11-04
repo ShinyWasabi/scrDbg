@@ -12,7 +12,7 @@ namespace scrDbg
 
     int DisassemblyModel::rowCount(const QModelIndex& parent) const
     {
-        return static_cast<int>(m_Layout.GetInstructions().size());
+        return m_Layout.GetInstructionCount();
     }
 
     int DisassemblyModel::columnCount(const QModelIndex&) const
@@ -34,8 +34,8 @@ namespace scrDbg
         if (!index.isValid() || role != Qt::DisplayRole)
             return QVariant();
 
-        const auto& entry = m_Layout.GetInstructions()[index.row()];
         const auto& code = m_Layout.GetCode();
+        const auto entry = m_Layout.GetInstruction(index.row());
 
         int funcIndex = entry.FuncIndex;
         if (code[entry.Pc] == rage::scrOpcode::CALL)

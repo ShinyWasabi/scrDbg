@@ -13,7 +13,6 @@ namespace scrDbg
     {
         setWindowTitle("Breakpoints");
         resize(400, 300);
-        setAttribute(Qt::WA_DeleteOnClose);
         setWindowFlags(Qt::Dialog | Qt::WindowCloseButtonHint | Qt::WindowTitleHint);
 
         m_Table = new QTableWidget(this);

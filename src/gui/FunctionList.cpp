@@ -12,7 +12,7 @@ namespace scrDbg
 
     int FunctionListModel::rowCount(const QModelIndex&) const
     {
-        return static_cast<int>(m_Layout.GetFunctions().size());
+        return m_Layout.GetFunctionCount();
     }
 
     int FunctionListModel::columnCount(const QModelIndex&) const
@@ -34,7 +34,7 @@ namespace scrDbg
         if (!index.isValid() || role != Qt::DisplayRole)
             return QVariant();
 
-        const auto& func = m_Layout.GetFunctions()[index.row()];
+        auto func = m_Layout.GetFunction(index.row());
 
         switch (index.column())
         {
@@ -43,7 +43,7 @@ namespace scrDbg
         case 2: return QString("0x%1").arg(QString::number(func.End, 16).toUpper());
         case 3: return func.Length;
         case 4: return func.ArgCount;
-        case 5: return func.LocalCount - (func.ArgCount + 2); // args, return address, last fp, locals
+        case 5: return func.FrameSize - (func.ArgCount + 2); // args, return address, last fp, locals
         case 6: return func.RetCount;
         }
 

@@ -34,7 +34,7 @@ namespace scrDbg
 {
     ScriptThreadsWidget::ScriptThreadsWidget(QWidget* parent) :
         QWidget(parent),
-        m_LastScriptHash(0),
+        m_LastThreadId(0),
         m_Layout(nullptr),
         m_FunctionFilter(nullptr)
     {
@@ -116,7 +116,7 @@ namespace scrDbg
         m_FunctionList->setStyleSheet("QTableView { font-family: Consolas; font-size: 11pt; }");
         connect(m_FunctionList, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
             QModelIndex idx = m_FunctionFilter->mapToSource(index);
-            uint32_t pc = m_Layout->GetFunctionStart(idx.row());
+            uint32_t pc = m_Layout->GetFunction(idx.row()).Start;
             ScrollToAddress(pc);
         });
 
@@ -185,7 +185,7 @@ namespace scrDbg
         QModelIndex idx;
         for (int i = 0; i < m_Disassembly->model()->rowCount(); ++i)
         {
-            uint32_t pc = m_Layout->GetInstructionPc(i);
+            uint32_t pc = m_Layout->GetInstruction(i).Pc;
             uint32_t size = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
 
             if (address >= pc && address < pc + size)
@@ -229,11 +229,74 @@ namespace scrDbg
         file.close();
     }
 
+    void ScriptThreadsWidget::UpdateDisassemblyInfo(int row, bool includeDesc)
+    {
+        auto& code = m_Layout->GetCode();
+        uint32_t pc = m_Layout->GetInstruction(row).Pc;
+        int index = m_Layout->GetFunctionIndexForPc(pc);
+
+        auto func = m_Layout->GetFunction(index);
+
+        QString name = QString::fromStdString(func.Name);
+        uint32_t offset = pc - func.Start;
+
+        QString desc;
+        if (includeDesc)
+            desc = QString::fromStdString(ScriptDisassembler::GetInstructionDesc(code[pc]));
+
+        QString text = QString("%1+%2").arg(name).arg(offset);
+        if (!desc.isEmpty())
+            text += QString(" | %1").arg(desc);
+
+        m_DisassemblyInfo->setText(text);
+    }
+
+    void ScriptThreadsWidget::CleanupDisassembly()
+    {
+        m_Layout.reset();
+
+        if (m_Disassembly->model())
+            m_Disassembly->setModel(nullptr);
+
+        if (m_FunctionFilter)
+        {
+            m_FunctionList->setModel(nullptr);
+            delete m_FunctionFilter;
+            m_FunctionFilter = nullptr;
+        }
+
+        m_DisassemblyInfo->setText("- <none>");
+        m_FunctionSearch->clear();
+    }
+
+    void ScriptThreadsWidget::RefreshDisassembly(const rage::scrProgram& program)
+    {
+        CleanupDisassembly();
+
+        m_Layout = std::make_unique<ScriptLayout>(program);
+
+        auto disasmModel = new DisassemblyModel(*m_Layout, m_Disassembly);
+        m_Disassembly->setModel(disasmModel);
+        m_Disassembly->setColumnWidth(0, 100);
+        m_Disassembly->setColumnWidth(1, 150);
+        m_Disassembly->setColumnWidth(2, 400);
+
+        // Fire once to initialize
+        OnUpdateDisassemblyInfoByScroll();
+        connect(m_Disassembly->verticalScrollBar(), &QScrollBar::valueChanged, this, &ScriptThreadsWidget::OnUpdateDisassemblyInfoByScroll);
+        connect(m_Disassembly->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ScriptThreadsWidget::OnUpdateDisassemblyInfoBySelection);
+
+        auto funcModel = new FunctionListModel(*m_Layout, m_FunctionList);
+        m_FunctionFilter = new QSortFilterProxyModel(this);
+        m_FunctionFilter->setSourceModel(funcModel);
+        m_FunctionFilter->setFilterCaseSensitivity(Qt::CaseInsensitive);
+        m_FunctionFilter->setFilterKeyColumn(0);
+        m_FunctionList->setModel(m_FunctionFilter);
+    }
+
     void ScriptThreadsWidget::UpdateCurrentScript()
     {
-        uint32_t hash = GetCurrentScriptHash();
-
-        auto thread = rage::scrThread::GetThread(hash);
+        auto thread = rage::scrThread::GetThread(GetCurrentScriptHash());
         if (!thread)
             return;
 
@@ -274,51 +337,12 @@ namespace scrDbg
         m_NativeCount->setText(QString("Native Count: %1").arg(program.GetNativeCount()));
         m_StringCount->setText(QString("String Count: %1").arg(program.GetStringCount()));
 
-        if (hash != m_LastScriptHash)
+        uint32_t id = thread.GetId();
+        if (m_LastThreadId != id)
         {
-            m_LastScriptHash = hash;
-            OnRefreshDisassembly(program, true);
+            m_LastThreadId = id;
+            RefreshDisassembly(program);
         }
-    }
-
-    void ScriptThreadsWidget::UpdateDisassemblyInfo(int row, bool includeDesc)
-    {
-        auto& code = m_Layout->GetCode();
-        uint32_t pc = m_Layout->GetInstructionPc(row);
-        int index = m_Layout->GetFunctionIndexForPc(pc);
-
-        const auto& funcs = m_Layout->GetFunctions();
-
-        QString name = QString::fromStdString(funcs[index].Name);
-        uint32_t offset = pc - funcs[index].Start;
-
-        QString desc;
-        if (includeDesc)
-            desc = QString::fromStdString(ScriptDisassembler::GetInstructionDesc(code[pc]));
-
-        QString text = QString("%1+%2").arg(name).arg(offset);
-        if (!desc.isEmpty())
-            text += QString(" | %1").arg(desc);
-
-        m_DisassemblyInfo->setText(text);
-    }
-
-    void ScriptThreadsWidget::ClearViews()
-    {
-        m_Layout.reset();
-
-        if (m_Disassembly->model())
-            m_Disassembly->setModel(nullptr);
-
-        if (m_FunctionFilter)
-        {
-            m_FunctionList->setModel(nullptr);
-            delete m_FunctionFilter;
-            m_FunctionFilter = nullptr;
-        }
-
-        m_DisassemblyInfo->setText("- <none>");
-        m_FunctionSearch->clear();
     }
 
     void ScriptThreadsWidget::OnUpdateScripts()
@@ -375,40 +399,11 @@ namespace scrDbg
 
         if (aliveScripts.empty())
         {
-            ClearViews();
+            CleanupDisassembly();
             return;
         }
 
         UpdateCurrentScript();
-    }
-
-    void ScriptThreadsWidget::OnRefreshDisassembly(const rage::scrProgram& program, bool resetScroll)
-    {
-        ClearViews();
-
-        m_Layout = std::make_unique<ScriptLayout>(program);
-
-        auto disasmModel = new DisassemblyModel(*m_Layout, m_Disassembly);
-        m_Disassembly->setModel(disasmModel);
-        m_Disassembly->setColumnWidth(0, 100);
-        m_Disassembly->setColumnWidth(1, 150);
-        m_Disassembly->setColumnWidth(2, 400);
-        if (resetScroll)
-            m_Disassembly->scrollToTop();
-
-        // Fire once to initialize
-        OnUpdateDisassemblyInfoByScroll();
-        connect(m_Disassembly->verticalScrollBar(), &QScrollBar::valueChanged, this, &ScriptThreadsWidget::OnUpdateDisassemblyInfoByScroll);
-        connect(m_Disassembly->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ScriptThreadsWidget::OnUpdateDisassemblyInfoBySelection);
-
-        auto funcModel = new FunctionListModel(*m_Layout, m_FunctionList);
-        m_FunctionFilter = new QSortFilterProxyModel(this);
-        m_FunctionFilter->setSourceModel(funcModel);
-        m_FunctionFilter->setFilterCaseSensitivity(Qt::CaseInsensitive);
-        m_FunctionFilter->setFilterKeyColumn(0);
-        m_FunctionList->setModel(m_FunctionFilter);
-        if (resetScroll)
-            m_FunctionList->scrollToTop();
     }
 
     void ScriptThreadsWidget::OnTogglePauseScript()
@@ -550,7 +545,7 @@ namespace scrDbg
         const uint32_t count = program.GetStaticCount();
         if (count == 0)
         {
-            QMessageBox::warning(this, "Export Statics", "This script has no statics.");
+            QMessageBox::warning(this, "No Statics", "This script has no statics.");
             return;
         }
 
@@ -594,7 +589,7 @@ namespace scrDbg
 
             if (lastValidBlock == -1)
             {
-                QMessageBox::warning(this, "Export Globals", "No valid global blocks found.");
+                QMessageBox::warning(this, "No Blocks", "No valid global blocks found.");
                 return;
             }
 
@@ -638,7 +633,7 @@ namespace scrDbg
             const uint32_t count = program.GetGlobalCount();
             if (count == 0)
             {
-                QMessageBox::warning(this, "Export Globals", "This script has no globals.");
+                QMessageBox::warning(this, "No Globals", "This script has no globals.");
                 return;
             }
 
@@ -675,7 +670,7 @@ namespace scrDbg
             const uint32_t count = static_cast<uint32_t>(allNatives.size());
             if (count == 0)
             {
-                QMessageBox::warning(this, "Export Natives", "No natives found.");
+                QMessageBox::warning(this, "No Natives", "No natives found.");
                 return;
             }
 
@@ -713,7 +708,7 @@ namespace scrDbg
             const uint32_t count = program.GetNativeCount();
             if (count == 0)
             {
-                QMessageBox::warning(this, "Export Natives", "This script has no natives.");
+                QMessageBox::warning(this, "No Natives", "This script has no natives.");
                 return;
             }
 
@@ -754,7 +749,7 @@ namespace scrDbg
         const int count = static_cast<int>(strings.size());
         if (count == 0)
         {
-            QMessageBox::warning(this, "Export Strings", "This script has no strings.");
+            QMessageBox::warning(this, "No Strings", "This script has no strings.");
             return;
         }
 
@@ -894,8 +889,8 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnBreakpointsDialog()
     {
-        auto* dlg = new BreakpointsDialog(this);
-        connect(dlg, &BreakpointsDialog::BreakpointDoubleClicked, this, [this, dlg](uint32_t script, uint32_t pc) {
+        BreakpointsDialog dlg(this);
+        connect(&dlg, &BreakpointsDialog::BreakpointDoubleClicked, this, [this, &dlg](uint32_t script, uint32_t pc) {
             int idx = m_ScriptNames->findData(script);
             if (idx != -1)
                 m_ScriptNames->setCurrentIndex(idx);
@@ -904,9 +899,9 @@ namespace scrDbg
             QTimer::singleShot(100, this, [this, pc]() {
                 ScrollToAddress(pc);
             });
-            dlg->close();
+            dlg.close();
         });
-        dlg->show();
+        dlg.exec();
     }
 
     void ScriptThreadsWidget::OnUpdateDisassemblyInfoByScroll()
@@ -957,7 +952,7 @@ namespace scrDbg
         });
 
         auto& code = m_Layout->GetCode();
-        uint32_t pc = m_Layout->GetInstructionPc(index.row());
+        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
 
         if (ScriptDisassembler::IsJumpInstruction(code[pc]) || code[pc] == rage::scrOpcode::CALL)
         {
@@ -1004,26 +999,27 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnNopInstruction(const QModelIndex& index)
     {
-        uint32_t pc = m_Layout->GetInstructionPc(index.row());
+        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
         uint32_t size = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
         for (uint32_t i = 0; i < size; ++i)
             m_Layout->GetProgram().SetCode(pc + i, rage::scrOpcode::NOP);
 
-        OnRefreshDisassembly(m_Layout->GetProgram(), false);
+        m_Layout->Refresh();
+        static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
     }
 
     void ScriptThreadsWidget::OnPatchInstruction(const QModelIndex& index)
     {
-        uint32_t pc = m_Layout->GetInstructionPc(index.row());
+        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
         uint32_t instrSize = ScriptDisassembler::GetInstructionSize(m_Layout->GetCode(), pc);
 
         bool ok = false;
-        QString input = QInputDialog::getText(this, "Custom Patch", QString("Enter %1 bytes in hex (space or comma separated):").arg(instrSize), QLineEdit::Normal, "", &ok);
+        QString input = QInputDialog::getText(this, "Custom Patch", QString("Enter up to %1 bytes in hex (space separated):").arg(instrSize), QLineEdit::Normal, "", &ok);
         if (!ok || input.isEmpty())
             return;
 
         QByteArray newBytes;
-        QStringList parts = input.split(QRegularExpression("[,\\s]+"), Qt::SkipEmptyParts);
+        QStringList parts = input.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
         if (parts.size() > instrSize)
         {
             QMessageBox::warning(this, "Too Long", "Too many bytes entered!");
@@ -1042,14 +1038,25 @@ namespace scrDbg
             newBytes.append(byte);
         }
 
-        // Fill the rest with nops?
-        while (newBytes.size() < instrSize)
-            newBytes.append(rage::scrOpcode::NOP);
+        bool fillWithNops = false;
+        if (newBytes.size() < instrSize)
+            fillWithNops = QMessageBox::question(this, "Fill Remaining?", QString("You entered %1 of %2 bytes.\nFill remaining %3 bytes with NOPs?").arg(newBytes.size()).arg(instrSize).arg(instrSize - newBytes.size()), QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
 
-        for (int i = 0; i < newBytes.size(); ++i)
-            m_Layout->GetProgram().SetCode(pc + i, static_cast<uint8_t>(newBytes[i]));
+        for (int i = 0; i < instrSize; i++)
+        {
+            uint8_t value;
+            if (i < newBytes.size())
+                value = static_cast<uint8_t>(newBytes[i]);
+            else if (fillWithNops)
+                value = rage::scrOpcode::NOP;
+            else
+                continue; // Leave as is
 
-        OnRefreshDisassembly(m_Layout->GetProgram(), false);
+            m_Layout->GetProgram().SetCode(pc + i, value);
+        }
+
+        m_Layout->Refresh();
+        static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
     }
 
     // TO-DO: Refactor this shit
@@ -1059,7 +1066,7 @@ namespace scrDbg
             return;
 
         auto& code = m_Layout->GetCode();
-        uint32_t pc = m_Layout->GetInstructionPc(index.row());
+        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
 
         if (pc >= code.size())
             return;
@@ -1180,7 +1187,7 @@ namespace scrDbg
 
         if (uniquePattern.empty())
         {
-            QMessageBox::warning(this, "Generate Pattern", "Failed to generate pattern.");
+            QMessageBox::warning(this, "Failed", "Failed to generate pattern.");
             return;
         }
 
@@ -1191,7 +1198,7 @@ namespace scrDbg
     void ScriptThreadsWidget::OnViewXrefsDialog(const QModelIndex& index)
     {
         auto& code = m_Layout->GetCode();
-        uint32_t targetPc = m_Layout->GetInstructionPc(index.row());
+        uint32_t targetPc = m_Layout->GetInstruction(index.row()).Pc;
 
         std::vector<std::pair<uint32_t, std::string>> xrefs;
 
@@ -1226,12 +1233,12 @@ namespace scrDbg
             return;
         }
 
-        auto* dlg = new XrefDialog(xrefs, this);
-        connect(dlg, &XrefDialog::XrefDoubleClicked, this, [this, dlg](uint32_t addr) {
+        XrefsDialog dlg(xrefs, this);
+        connect(&dlg, &XrefsDialog::XrefDoubleClicked, this, [this, &dlg](uint32_t addr) {
             ScrollToAddress(addr);
-            dlg->close();
+            dlg.close();
         });
-        dlg->show();
+        dlg.exec();
     }
 
     void ScriptThreadsWidget::OnJumpToInstructionAddress(const QModelIndex& index)
@@ -1239,7 +1246,7 @@ namespace scrDbg
         int32_t targetAddress = -1;
 
         auto& code = m_Layout->GetCode();
-        uint32_t pc = m_Layout->GetInstructionPc(index.row());
+        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
 
         if (code[pc] == rage::scrOpcode::CALL)
             targetAddress = ScriptDisassembler::ReadU24(code, pc + 1);
@@ -1255,7 +1262,7 @@ namespace scrDbg
     void ScriptThreadsWidget::OnSetBreakpoint(const QModelIndex& index, bool set)
     {
         uint32_t script = GetCurrentScriptHash();
-        uint32_t pc = m_Layout->GetInstructionPc(index.row());
+        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
         PipeCommands::SetBreakpoint(script, pc, set);
     }
 }
