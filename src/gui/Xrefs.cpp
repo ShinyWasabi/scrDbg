@@ -17,7 +17,9 @@ namespace scrDbg
         m_Table->setColumnCount(2);
         m_Table->setHorizontalHeaderLabels({ "Address", "Instruction" });
         m_Table->horizontalHeader()->setStretchLastSection(true);
+        m_Table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         m_Table->setSelectionBehavior(QAbstractItemView::SelectRows);
+        m_Table->setSelectionMode(QAbstractItemView::SingleSelection);
         m_Table->setEditTriggers(QAbstractItemView::NoEditTriggers);
         connect(m_Table, &QTableWidget::cellDoubleClicked, this, &XrefsDialog::OnItemDoubleClicked);
 

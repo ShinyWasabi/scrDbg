@@ -1,6 +1,7 @@
 #include "ScriptThreads.hpp"
 #include "FunctionList.hpp"
 #include "Disassembly.hpp"
+#include "Stack.hpp"
 #include "Breakpoints.hpp"
 #include "Xrefs.hpp"
 #include "script/ScriptDisassembler.hpp"
@@ -72,7 +73,6 @@ namespace scrDbg
 
         QHBoxLayout* columnsLayout = new QHBoxLayout();
         columnsLayout->addLayout(leftLayout);
-        columnsLayout->addSpacing(50);
         columnsLayout->addLayout(rightLayout);
 
         m_TogglePauseScript = new QPushButton("Pause Script");
@@ -85,6 +85,8 @@ namespace scrDbg
         connect(m_JumpToAddress, &QPushButton::clicked, this, &ScriptThreadsWidget::OnJumpToAddress);
         m_BinarySearch = new QPushButton("Binary Search");
         connect(m_BinarySearch, &QPushButton::clicked, this, &ScriptThreadsWidget::OnBinarySearch);
+        m_ViewStack = new QPushButton("View Stack");
+        connect(m_ViewStack, &QPushButton::clicked, this, &ScriptThreadsWidget::OnViewStack);
         m_ViewBreakpoints = new QPushButton("View Breakpoints");
         m_ViewBreakpoints->setEnabled(g_BreakpointsSupported);
         if (g_BreakpointsSupported)
@@ -96,6 +98,7 @@ namespace scrDbg
         buttonLayout->addWidget(m_ExportOptions);
         buttonLayout->addWidget(m_JumpToAddress);
         buttonLayout->addWidget(m_BinarySearch);
+        buttonLayout->addWidget(m_ViewStack);
         buttonLayout->addWidget(m_ViewBreakpoints);
         buttonLayout->addStretch();
 
@@ -301,25 +304,31 @@ namespace scrDbg
         if (!thread)
             return;
 
-        if (thread.GetState() == rage::scrThreadState::PAUSED)
+        auto state = thread.GetState();
+        if (g_BreakpointsSupported && PipeCommands::BreakpointActive())
+            m_TogglePauseScript->setText("Resume Breakpoint");
+        else if (state == rage::scrThreadState::PAUSED)
             m_TogglePauseScript->setText("Resume Script");
         else
             m_TogglePauseScript->setText("Pause Script");
 
         m_State->setText("State: " +
-            QString((thread.GetState() == rage::scrThreadState::RUNNING) ? "RUNNING" :
-                (thread.GetState() == rage::scrThreadState::IDLE) ? "IDLE" :
-                (thread.GetState() == rage::scrThreadState::PAUSED) ? "PAUSED" : "KILLED"
+            QString((state == rage::scrThreadState::RUNNING) ? "RUNNING" :
+                (state == rage::scrThreadState::IDLE) ? "IDLE" :
+                (state == rage::scrThreadState::PAUSED) ? "PAUSED" : "KILLED"
         ));
 
+        auto priority = thread.GetPriority();
         m_Priority->setText("Priority: " +
-            QString((thread.GetPriority() == rage::scrThreadPriority::HIGHEST) ? "HIGHEST" :
-                (thread.GetPriority() == rage::scrThreadPriority::NORMAL) ? "NORMAL" :
-                (thread.GetPriority() == rage::scrThreadPriority::LOWEST) ? "LOWEST" : "MANUAL_UPDATE"
+            QString((priority == rage::scrThreadPriority::HIGHEST) ? "HIGHEST" :
+                (priority == rage::scrThreadPriority::NORMAL) ? "NORMAL" :
+                (priority == rage::scrThreadPriority::LOWEST) ? "LOWEST" : "MANUAL_UPDATE"
         ));
+
+        uint32_t id = thread.GetId();
 
         m_Program->setText(QString("Program: %1").arg(thread.GetProgram()));
-        m_ThreadId->setText(QString("Thread ID: %1").arg(thread.GetId()));
+        m_ThreadId->setText(QString("Thread ID: %1").arg(id));
         m_ProgramCounter->setText(QString("Program Counter: 0x%1").arg(QString::number(thread.GetProgramCounter(), 16).toUpper()));
         m_FramePointer->setText(QString("Frame Pointer: 0x%1").arg(QString::number(thread.GetFramePointer(), 16).toUpper()));
         m_StackPointer->setText(QString("Stack Pointer: 0x%1").arg(QString::number(thread.GetStackPointer(), 16).toUpper()));
@@ -338,7 +347,6 @@ namespace scrDbg
         m_NativeCount->setText(QString("Native Count: %1").arg(program.GetNativeCount()));
         m_StringCount->setText(QString("String Count: %1").arg(program.GetStringCount()));
 
-        uint32_t id = thread.GetId();
         if (m_LastThreadId != id)
         {
             m_LastThreadId = id;
@@ -411,17 +419,12 @@ namespace scrDbg
     {
         if (auto thread = rage::scrThread::GetThread(GetCurrentScriptHash()))
         {
-            if (thread.GetState() == rage::scrThreadState::PAUSED)
-            {
-                if (PipeCommands::BreakpointActive())
-                    PipeCommands::ResumeBreakpoint();
-                else
-                    thread.SetState(rage::scrThreadState::RUNNING);
-            }
+            if (PipeCommands::BreakpointActive())
+                PipeCommands::ResumeBreakpoint();
+            else if (thread.GetState() == rage::scrThreadState::PAUSED)
+                thread.SetState(rage::scrThreadState::RUNNING);
             else
-            {
                 thread.SetState(rage::scrThreadState::PAUSED);
-            }
         }
     }
 
@@ -866,13 +869,28 @@ namespace scrDbg
         QMessageBox::information(this, "Binary Search Results", msg);
     }
 
+    void ScriptThreadsWidget::OnViewStack()
+    {
+        auto thread = rage::scrThread::GetThread(GetCurrentScriptHash());
+        if (!thread)
+            return;
+
+        StackDialog dlg(thread, *m_Layout, this);
+        dlg.exec();
+    }
+
     void ScriptThreadsWidget::OnBreakpointsDialog()
     {
         BreakpointsDialog dlg(this);
         connect(&dlg, &BreakpointsDialog::BreakpointDoubleClicked, this, [this, &dlg](uint32_t script, uint32_t pc) {
             int idx = m_ScriptNames->findData(script);
-            if (idx != -1)
-                m_ScriptNames->setCurrentIndex(idx);
+            if (idx == -1)
+            {
+                QMessageBox::warning(this, "Script not found", "Script does not exist.");
+                return;
+            }
+
+            m_ScriptNames->setCurrentIndex(idx);
 
             // wait a bit
             QTimer::singleShot(100, this, [this, pc]() {

@@ -3,6 +3,8 @@
 #include "ScriptStatics.hpp"
 #include "ScriptGlobals.hpp"
 #include "core/Process.hpp"
+#include "util/Misc.hpp"
+#include "resource/scrDbg.h"
 #include <QVBoxLayout>
 
 namespace scrDbg
@@ -10,7 +12,7 @@ namespace scrDbg
     GUIWidget::GUIWidget(QWidget* parent)
         : QWidget(parent)
     {
-        setWindowTitle("scrDbg");
+        setWindowTitle(QString("scrDbg %1 - %2 %3").arg(SCRDBG_FILE_VERSION).arg(Process::GetName()).arg(Misc::GetGameBuild()));
         resize(900, 780);
 
         m_MainWidget = new QTabWidget(this);

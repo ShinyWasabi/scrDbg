@@ -123,6 +123,8 @@ namespace rage
         float GetWaitTimer() const;
         uint32_t GetStackSize() const;
         scrThreadPriority GetPriority() const;
+        uint8_t GetCallDepth() const;
+        uint32_t GetCallStack(uint32_t index) const;
         uint64_t GetStack(uint64_t index) const;
         void SetStack(uint64_t index, uint64_t value) const;
         std::string GetErrorMessage() const;

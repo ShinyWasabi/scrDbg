@@ -3,25 +3,7 @@
 #include "GUI/GUI.hpp"
 #include "pipe/PipeCommands.hpp"
 #include "game/gta/Natives.hpp"
-
-namespace scrDbg
-{
-    static std::string GetGameBuild()
-    {
-        if (!g_Pointers.GameBuild || !g_Pointers.OnlineBuild)
-            return {};
-
-        char gameBuild[64]{};
-        Process::ReadRaw(g_Pointers.GameBuild, gameBuild, sizeof(gameBuild));
-
-        char onlineBuild[64]{};
-        Process::ReadRaw(g_Pointers.OnlineBuild, onlineBuild, sizeof(onlineBuild));
-
-        char result[128]{};
-        std::snprintf(result, sizeof(result), "%s-%s", gameBuild, onlineBuild);
-        return result;
-    }
-}
+#include "util/Misc.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -52,7 +34,7 @@ int main(int argc, char* argv[])
         std::string message = "Failed to initialize pointers. Please make sure BattlEye is disabled.";
 
         const auto target = g_IsEnhanced ? ENHANCED_TARGET_BUILD : LEGACY_TARGET_BUILD;
-        const auto build = GetGameBuild();
+        const auto build = Misc::GetGameBuild();
         if (!build.empty() && build != target)
         {
             char note[256]{};

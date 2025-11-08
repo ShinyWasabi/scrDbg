@@ -19,9 +19,10 @@ namespace scrDbg
         m_Table->setColumnCount(2);
         m_Table->setHorizontalHeaderLabels({ "Script", "Address" });
         m_Table->horizontalHeader()->setStretchLastSection(true);
+        m_Table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         m_Table->setSelectionBehavior(QAbstractItemView::SelectRows);
+        m_Table->setSelectionMode(QAbstractItemView::SingleSelection);
         m_Table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
         connect(m_Table, &QTableWidget::cellDoubleClicked, this, &BreakpointsDialog::OnItemDoubleClicked);
 
         m_RemoveAll = new QPushButton("Remove All", this);
@@ -52,8 +53,6 @@ namespace scrDbg
     void BreakpointsDialog::OnItemDoubleClicked(int row, int column)
     {
         Q_UNUSED(column);
-        if (row < 0)
-            return;
 
         bool ok1, ok2;
         uint32_t script = m_Table->item(row, 0)->text().toUInt(&ok1, 16);

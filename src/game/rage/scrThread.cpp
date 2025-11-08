@@ -112,6 +112,24 @@ namespace rage
 		return scrDbg::Process::Read<scrThreadPriority>(m_Address + offset);
 	}
 
+	uint8_t scrThread::GetCallDepth() const
+	{
+		size_t offset = scrDbg::g_IsEnhanced
+			? offsetof(Enhanced, m_Context) + offsetof(Enhanced::Context, m_CallDepth)
+			: offsetof(Legacy, m_Context) + offsetof(Legacy::Context, m_CallDepth);
+
+		return scrDbg::Process::Read<uint8_t>(m_Address + offset);
+	}
+
+	uint32_t scrThread::GetCallStack(uint32_t index) const
+	{
+		size_t offset = scrDbg::g_IsEnhanced
+			? offsetof(Enhanced, m_Context) + offsetof(Enhanced::Context, m_CallStack)
+			: offsetof(Legacy, m_Context) + offsetof(Legacy::Context, m_CallStack);
+
+		return scrDbg::Process::Read<uint32_t>(m_Address + offset + (index * sizeof(uint32_t)));
+	}
+
 	uint64_t scrThread::GetStack(uint64_t index) const
 	{
 		size_t offset = scrDbg::g_IsEnhanced

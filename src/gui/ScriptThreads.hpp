@@ -37,6 +37,7 @@ namespace scrDbg
         void OnExportStrings(bool onlyTextLabels);
         void OnJumpToAddress();
         void OnBinarySearch();
+        void OnViewStack();
         void OnBreakpointsDialog();
         void OnUpdateDisassemblyInfoByScroll();
         void OnUpdateDisassemblyInfoBySelection();
@@ -83,6 +84,7 @@ namespace scrDbg
         QPushButton* m_ExportOptions;
         QPushButton* m_JumpToAddress;
         QPushButton* m_BinarySearch;
+        QPushButton* m_ViewStack;
         QPushButton* m_ViewBreakpoints;
         QLineEdit* m_FunctionSearch;
         QSortFilterProxyModel* m_FunctionFilter;
