@@ -11,6 +11,7 @@ class QSortFilterProxyModel;
 class QTableView;
 class QTextStream;
 class QProgressDialog;
+class QCheckBox;
 namespace rage
 {
     class scrProgram;
@@ -86,6 +87,7 @@ namespace scrDbg
         QPushButton* m_BinarySearch;
         QPushButton* m_ViewStack;
         QPushButton* m_ViewBreakpoints;
+        QCheckBox* m_BreakpointsPauseGame;
         QLineEdit* m_FunctionSearch;
         QSortFilterProxyModel* m_FunctionFilter;
         QTableView* m_FunctionList;

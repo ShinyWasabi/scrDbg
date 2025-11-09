@@ -41,12 +41,23 @@ namespace scrDbg
         m_Table->setRowCount(0);
 
         auto breakpoints = PipeCommands::GetAllBreakpoints();
+        auto active = PipeCommands::GetActiveBreakpoint();
         for (const auto& [script, pc] : breakpoints)
         {
             int row = m_Table->rowCount();
             m_Table->insertRow(row);
-            m_Table->setItem(row, 0, new QTableWidgetItem(QString::number(script, 16).toUpper()));
-            m_Table->setItem(row, 1, new QTableWidgetItem(QString::number(pc, 16).toUpper()));
+
+            auto scriptItem = new QTableWidgetItem(QString::number(script, 16).toUpper());
+            auto pcItem = new QTableWidgetItem(QString::number(pc, 16).toUpper());
+            if (active.has_value() && active->first == script && active->second == pc)
+            {
+                QBrush brush(Qt::green);
+                scriptItem->setBackground(brush);
+                pcItem->setBackground(brush);
+            }
+
+            m_Table->setItem(row, 0, scriptItem);
+            m_Table->setItem(row, 1, pcItem);
         }
     }
 

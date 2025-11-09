@@ -8,7 +8,7 @@ namespace scrDbg::PipeCommands
         uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_SET);
         PipeClient::Send(&cmd, sizeof(cmd));
 
-        PipeCommandSetBreakpoint args{ script, pc, set };
+        PipeBreakpointSet args{ script, pc, set };
         PipeClient::Send(&args, sizeof(args));
     }
 
@@ -17,26 +17,13 @@ namespace scrDbg::PipeCommands
         uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_EXISTS);
         PipeClient::Send(&cmd, sizeof(cmd));
 
-        PipeCommandBreakpointExists args{ script, pc };
+        PipeBreakpoint args{ script, pc };
         PipeClient::Send(&args, sizeof(args));
 
-        uint8_t result = 0;
-        if (!PipeClient::Receive(&result, sizeof(result)))
-            return false;
+        bool result = false;
+        PipeClient::Receive(&result, sizeof(result));
 
-        return result != 0;
-    }
-
-    bool BreakpointActive()
-    {
-        uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_ACTIVE);
-        PipeClient::Send(&cmd, sizeof(cmd));
-
-        uint8_t result = 0;
-        if (!PipeClient::Receive(&result, sizeof(result)))
-            return false;
-
-        return result != 0;
+        return result;
     }
 
     void ResumeBreakpoint()
@@ -45,21 +32,48 @@ namespace scrDbg::PipeCommands
         PipeClient::Send(&cmd, sizeof(cmd));
     }
 
+    void SetBreakpointPauseGame(bool pause)
+    {
+        uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_PAUSE_GAME);
+        PipeClient::Send(&cmd, sizeof(cmd));
+
+        PipeClient::Send(&pause, sizeof(pause));
+    }
+
+    std::optional<std::pair<uint32_t, uint32_t>> GetActiveBreakpoint()
+    {
+        uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_GET_ACTIVE);
+        PipeClient::Send(&cmd, sizeof(cmd));
+
+        bool active = false;
+        PipeClient::Receive(&active, sizeof(active));
+
+        if (!active)
+            return std::nullopt;
+
+        PipeBreakpoint breakpoint{};
+        PipeClient::Receive(&breakpoint, sizeof(breakpoint));
+
+        return std::make_pair(breakpoint.Script, breakpoint.Pc);
+    }
+
     std::vector<std::pair<uint32_t, uint32_t>> GetAllBreakpoints()
     {
         uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_GET_ALL);
         PipeClient::Send(&cmd, sizeof(cmd));
 
         uint32_t count = 0;
-        if (!PipeClient::Receive(&count, sizeof(count)) || count == 0)
+        PipeClient::Receive(&count, sizeof(count));
+
+        if (count == 0)
             return {};
 
         std::vector<std::pair<uint32_t, uint32_t>> result;
         result.reserve(count);
 
-        for (uint32_t i = 0; i < count; ++i)
+        for (uint32_t i = 0; i < count; i++)
         {
-            PipeCommandBreakpointGetAll entry{};
+            PipeBreakpoint entry{};
             if (!PipeClient::Receive(&entry, sizeof(entry)))
                 break;
 

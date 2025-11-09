@@ -71,6 +71,7 @@ int main(int argc, char* argv[])
 
     Process::Destroy();
     PipeCommands::RemoveAllBreakpoints();
+    PipeCommands::SetBreakpointPauseGame(false);
     PipeClient::Destroy();
 
     return ret;

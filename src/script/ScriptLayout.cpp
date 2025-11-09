@@ -17,6 +17,7 @@ namespace scrDbg
         m_Functions.clear();
 
         m_Code = m_Program.GetFullCode();
+        m_Hash = m_Program.GetHash();
 
         int strIndex = -1;
         int funcIndex = -1;
@@ -57,6 +58,11 @@ namespace scrDbg
     const int ScriptLayout::GetFunctionCount() const
     {
         return static_cast<int>(m_Functions.size());
+    }
+
+    const uint32_t ScriptLayout::GetHash() const
+    {
+        return m_Hash;
     }
 
     ScriptLayout::InstructionEntry ScriptLayout::GetInstruction(int index) const

@@ -2,6 +2,7 @@
 #include "script/ScriptDisassembler.hpp"
 #include "util/ScriptHelpers.hpp"
 #include "game/rage/scrOpcode.hpp"
+#include "pipe/PipeCommands.hpp"
 
 namespace scrDbg
 {
@@ -32,11 +33,28 @@ namespace scrDbg
 
     QVariant DisassemblyModel::data(const QModelIndex& index, int role) const
     {
-        if (!index.isValid() || role != Qt::DisplayRole)
+        if (!index.isValid())
             return QVariant();
 
         const auto& code = m_Layout.GetCode();
         const auto entry = m_Layout.GetInstruction(index.row());
+
+        if (g_BreakpointsSupported && role == Qt::BackgroundRole)
+        {
+            auto hash = m_Layout.GetHash();
+
+            auto active = PipeCommands::GetActiveBreakpoint();
+            if (active && active->first == hash && active->second == entry.Pc)
+                return QBrush(Qt::green);
+
+            if (PipeCommands::BreakpointExists(hash, entry.Pc))
+                return QBrush(Qt::red);
+
+            return QVariant();
+        }
+
+        if (role != Qt::DisplayRole)
+            return QVariant();
 
         int funcIndex = entry.FuncIndex;
         if (code[entry.Pc] == rage::scrOpcode::CALL)

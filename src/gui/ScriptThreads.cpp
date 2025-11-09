@@ -88,9 +88,16 @@ namespace scrDbg
         m_ViewStack = new QPushButton("View Stack");
         connect(m_ViewStack, &QPushButton::clicked, this, &ScriptThreadsWidget::OnViewStack);
         m_ViewBreakpoints = new QPushButton("View Breakpoints");
+        m_BreakpointsPauseGame = new QCheckBox("Breakpoints pause game");
         m_ViewBreakpoints->setEnabled(g_BreakpointsSupported);
+        m_BreakpointsPauseGame->setEnabled(g_BreakpointsSupported);
         if (g_BreakpointsSupported)
+        {
             connect(m_ViewBreakpoints, &QPushButton::clicked, this, &ScriptThreadsWidget::OnBreakpointsDialog);
+            connect(m_BreakpointsPauseGame, &QCheckBox::toggled, this, [](bool checked) {
+                PipeCommands::SetBreakpointPauseGame(checked);
+            });
+        }
 
         QHBoxLayout* buttonLayout = new QHBoxLayout();
         buttonLayout->addWidget(m_TogglePauseScript);
@@ -100,6 +107,7 @@ namespace scrDbg
         buttonLayout->addWidget(m_BinarySearch);
         buttonLayout->addWidget(m_ViewStack);
         buttonLayout->addWidget(m_ViewBreakpoints);
+        buttonLayout->addWidget(m_BreakpointsPauseGame);
         buttonLayout->addStretch();
 
         m_FunctionSearch = new QLineEdit(this);
@@ -300,23 +308,37 @@ namespace scrDbg
 
     void ScriptThreadsWidget::UpdateCurrentScript()
     {
-        auto thread = rage::scrThread::GetThread(GetCurrentScriptHash());
+        uint32_t hash = GetCurrentScriptHash();
+
+        auto thread = rage::scrThread::GetThread(hash);
         if (!thread)
             return;
 
         auto state = thread.GetState();
-        if (g_BreakpointsSupported && PipeCommands::BreakpointActive())
+
+        std::optional<std::pair<uint32_t, uint32_t>> activeBp;
+        if (g_BreakpointsSupported)
+        {
+            activeBp = PipeCommands::GetActiveBreakpoint();
+            m_BreakpointsPauseGame->setEnabled(!activeBp.has_value());
+        }
+
+        bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame->isChecked();
+        bool isLocalBreakpoint = activeBp.has_value() && activeBp->first == hash;
+
+        if (isGlobalBreakpointPause || isLocalBreakpoint)
             m_TogglePauseScript->setText("Resume Breakpoint");
         else if (state == rage::scrThreadState::PAUSED)
             m_TogglePauseScript->setText("Resume Script");
         else
             m_TogglePauseScript->setText("Pause Script");
 
-        m_State->setText("State: " +
-            QString((state == rage::scrThreadState::RUNNING) ? "RUNNING" :
-                (state == rage::scrThreadState::IDLE) ? "IDLE" :
-                (state == rage::scrThreadState::PAUSED) ? "PAUSED" : "KILLED"
-        ));
+        QString stateStr = (state == rage::scrThreadState::RUNNING) ? "RUNNING" :
+            (state == rage::scrThreadState::IDLE) ? "IDLE" :
+            (state == rage::scrThreadState::PAUSED) ? "PAUSED" : "KILLED";
+
+        bool showBreakpointActive = isGlobalBreakpointPause || isLocalBreakpoint;
+        m_State->setText("State: " + stateStr + (showBreakpointActive ? " (breakpoint active)" : ""));
 
         auto priority = thread.GetPriority();
         m_Priority->setText("Priority: " +
@@ -417,15 +439,25 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnTogglePauseScript()
     {
-        if (auto thread = rage::scrThread::GetThread(GetCurrentScriptHash()))
-        {
-            if (PipeCommands::BreakpointActive())
-                PipeCommands::ResumeBreakpoint();
-            else if (thread.GetState() == rage::scrThreadState::PAUSED)
-                thread.SetState(rage::scrThreadState::RUNNING);
-            else
-                thread.SetState(rage::scrThreadState::PAUSED);
-        }
+        auto hash = GetCurrentScriptHash();
+
+        auto thread = rage::scrThread::GetThread(GetCurrentScriptHash());
+        if (!thread)
+            return;
+
+        std::optional<std::pair<uint32_t, uint32_t>> activeBp;
+        if (g_BreakpointsSupported)
+            activeBp = PipeCommands::GetActiveBreakpoint();
+
+        bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame->isChecked();
+        bool isLocalBreakpoint = activeBp.has_value() && activeBp->first == hash;
+
+        if (isGlobalBreakpointPause || isLocalBreakpoint)
+            PipeCommands::ResumeBreakpoint();
+        else if (thread.GetState() == rage::scrThreadState::PAUSED)
+            thread.SetState(rage::scrThreadState::RUNNING);
+        else
+            thread.SetState(rage::scrThreadState::PAUSED);
     }
 
     void ScriptThreadsWidget::OnKillScript()
