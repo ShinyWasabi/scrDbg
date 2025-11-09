@@ -34,7 +34,7 @@ namespace scrDbg
         auto* callstackWidget = new QWidget();
         callstackWidget->setLayout(callstackLayout);
 
-        auto* stackFrameLabel = new QLabel("Stack Frame (double-click to modify):");
+        auto* stackFrameLabel = new QLabel("Stack Frame (double-click to edit):");
         m_StackFrame = new QTableWidget(this);
         m_StackFrame->setColumnCount(3);
         m_StackFrame->setHorizontalHeaderLabels({ "Type", "Index", "Value" });

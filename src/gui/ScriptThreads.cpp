@@ -44,13 +44,21 @@ namespace scrDbg
         m_ScriptNames->setEditable(false);
 
         m_State = new QLabel("State: RUNNING");
+        m_State->setToolTip("Current state of this script thread.\n(RUNNING, IDLE, KILLED, PAUSED)");
         m_Priority = new QLabel("Priority: HIGHEST");
+        m_Priority->setToolTip("Execution priority of this script thread.\n(HIGHEST, NORMAL, LOWEST, MANUAL_UPDATE)");
         m_Program = new QLabel("Program: 0");
+        m_Program->setToolTip("JOAAT hash of the name of this script thread's program.");
         m_ThreadId = new QLabel("Thread ID: 0");
+        m_ThreadId->setToolTip("Unique identifier for this script thread.");
         m_ProgramCounter = new QLabel("Program Counter: 0x0000");
+        m_ProgramCounter->setToolTip("Current program counter of the last called native command in this script thread.");
         m_FramePointer = new QLabel("Frame Pointer: 0x0000");
+        m_FramePointer->setToolTip("Base of the current stack frame for this script thread.");
         m_StackPointer = new QLabel("Stack Pointer: 0x0000");
+        m_StackPointer->setToolTip("Current top of the stack for this script thread.");
         m_StackSize = new QLabel("Stack Size: 0");
+        m_StackSize->setToolTip("Total stack size this script thread needs.");
 
         QVector<QLabel*> leftLabels = { m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_StackSize };
         QVBoxLayout* leftLayout = new QVBoxLayout();
@@ -58,13 +66,21 @@ namespace scrDbg
             leftLayout->addWidget(lbl);
 
         m_GlobalVersion = new QLabel("Global Version: 0");
+        m_GlobalVersion->setToolTip("Unused. Checks whether two script programs have incompatible globals variables.");
         m_CodeSize = new QLabel("Code Size: 0");
+        m_CodeSize->setToolTip("Total size, in bytes, of the bytecode for this script program.");
         m_ArgCount = new QLabel("Arg Count: 0");
+        m_ArgCount->setToolTip("Number of arguments this script program's entry function expects.");
         m_StaticCount = new QLabel("Static Count: 0");
+        m_StaticCount->setToolTip("Number of static variables defined in this script program.");
         m_GlobalCount = new QLabel("Global Count: 0");
+        m_GlobalCount->setToolTip("Number of global variables defined in this script program.");
         m_GlobalBlock = new QLabel("Global Block: 0");
+        m_GlobalCount->setToolTip("The global block index of this script program's global variables.");
         m_NativeCount = new QLabel("Native Count: 0");
+        m_NativeCount->setToolTip("Number of native commands that this script program uses.");
         m_StringCount = new QLabel("String Count: 0");
+        m_StringCount->setToolTip("Total size, in bytes, of all string literals defined in this script program.");
 
         QVector<QLabel*> rightLabels = { m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_StringCount };
         QVBoxLayout* rightLayout = new QVBoxLayout();
@@ -78,17 +94,24 @@ namespace scrDbg
         m_TogglePauseScript = new QPushButton("Pause Script");
         connect(m_TogglePauseScript, &QPushButton::clicked, this, &ScriptThreadsWidget::OnTogglePauseScript);
         m_KillScript = new QPushButton("Kill Script");
+        m_KillScript->setToolTip("Terminate this script thread.");
         connect(m_KillScript, &QPushButton::clicked, this, &ScriptThreadsWidget::OnKillScript);
         m_ExportOptions = new QPushButton("Export Options");
+        m_ExportOptions->setToolTip("View export options.");
         connect(m_ExportOptions, &QPushButton::clicked, this, &ScriptThreadsWidget::OnExportOptionsDialog);
         m_JumpToAddress = new QPushButton("Jump to Address");
+        m_JumpToAddress->setToolTip("Jump to a raw address in the disassembly.");
         connect(m_JumpToAddress, &QPushButton::clicked, this, &ScriptThreadsWidget::OnJumpToAddress);
         m_BinarySearch = new QPushButton("Binary Search");
+        m_BinarySearch->setToolTip("Search for a byte sequence in the disassembly.");
         connect(m_BinarySearch, &QPushButton::clicked, this, &ScriptThreadsWidget::OnBinarySearch);
         m_ViewStack = new QPushButton("View Stack");
+        m_ViewStack->setToolTip("View the current callstack and stack frame of this script thread.");
         connect(m_ViewStack, &QPushButton::clicked, this, &ScriptThreadsWidget::OnViewStack);
         m_ViewBreakpoints = new QPushButton("View Breakpoints");
+        m_ViewBreakpoints->setToolTip("View currently set breakpoints.");
         m_BreakpointsPauseGame = new QCheckBox("Breakpoints pause game");
+        m_BreakpointsPauseGame->setToolTip("Choose whether a breakpoint should pause the entire game or only its script thread.");
         m_ViewBreakpoints->setEnabled(g_BreakpointsSupported);
         m_BreakpointsPauseGame->setEnabled(g_BreakpointsSupported);
         if (g_BreakpointsSupported)
@@ -327,11 +350,20 @@ namespace scrDbg
         bool isLocalBreakpoint = activeBp.has_value() && activeBp->first == hash;
 
         if (isGlobalBreakpointPause || isLocalBreakpoint)
+        {
             m_TogglePauseScript->setText("Resume Breakpoint");
+            m_TogglePauseScript->setToolTip("Resume the active breakpoint.");
+        }
         else if (state == rage::scrThreadState::PAUSED)
+        {
             m_TogglePauseScript->setText("Resume Script");
+            m_TogglePauseScript->setToolTip("Resume the execution of this script thread.");
+        }
         else
+        {
             m_TogglePauseScript->setText("Pause Script");
+            m_TogglePauseScript->setToolTip("Pause the execution of this script thread.");
+        }
 
         QString stateStr = (state == rage::scrThreadState::RUNNING) ? "RUNNING" :
             (state == rage::scrThreadState::IDLE) ? "IDLE" :
@@ -482,6 +514,12 @@ namespace scrDbg
         QPushButton* exportNatives = new QPushButton("Export Natives");
         QPushButton* exportStrings = new QPushButton("Export Strings");
 
+        exportDisassembly->setToolTip("Export the disassembly of this script program.");
+        exportStatics->setToolTip("Export the static variables of this script program.");
+        exportGlobals->setToolTip("Export the global variables of this script program.");
+        exportNatives->setToolTip("Export the native commands of this script program.");
+        exportStrings->setToolTip("Export the string literals of this script program.");
+
         int maxButtonWidth = std::max({
             exportDisassembly->sizeHint().width(),
             exportStatics->sizeHint().width(),
@@ -499,6 +537,10 @@ namespace scrDbg
         QCheckBox* exportAllGlobals = new QCheckBox("Export all");
         QCheckBox* exportAllNatives = new QCheckBox("Export all");
         QCheckBox* onlyTextLabels = new QCheckBox("Only text labels");
+
+        exportAllGlobals->setToolTip("Export all the global blocks.");
+        exportAllNatives->setToolTip("Export all the native commands in the game.");
+        onlyTextLabels->setToolTip("Export only text labels with their translations.");
 
         QGridLayout* grid = new QGridLayout(&dlg);
 
