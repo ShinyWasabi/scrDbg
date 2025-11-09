@@ -148,8 +148,8 @@ namespace scrDbg::ScriptHelpers
         case rage::scrOpcode::F2I: return 1;
         case rage::scrOpcode::F2V: return 1;
         case rage::scrOpcode::PUSH_CONST_U8: return 2;
-        case rage::scrOpcode::PUSH_CONST_U8_U8: return 2;
-        case rage::scrOpcode::PUSH_CONST_U8_U8_U8: return 3;
+        case rage::scrOpcode::PUSH_CONST_U8_U8: return 3;
+        case rage::scrOpcode::PUSH_CONST_U8_U8_U8: return 4;
         case rage::scrOpcode::PUSH_CONST_U32: return 5;
         case rage::scrOpcode::PUSH_CONST_F: return 5;
         case rage::scrOpcode::DUP: return 1;

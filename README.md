@@ -13,6 +13,9 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
 - Pause scripts
 - Kill scripts
 - Export disassembly, strings, statics, globals, and natives
+- View stack
+  - View callstack
+  - Edit function arguments and locals
 - View disassembly
   - Jump to a raw address
   - Binary search
@@ -45,6 +48,24 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
 <p align="center">
   <img src="resources/scrDbgScreenshot5.png" alt="Screenshot"/>
 </p>
+
+<p align="center">
+  <img src="resources/scrDbgScreenshot6.png" alt="Screenshot"/>
+</p>
+
+<p align="center">
+  <img src="resources/scrDbgScreenshot7.png" alt="Screenshot"/>
+</p>
+
+<p align="center">
+  <img src="resources/scrDbgScreenshot8.png" alt="Screenshot"/>
+</p>
+
+## Usage
+
+- Disable BattlEye from Rockstar Games Launcher.
+- Launch the game.
+- Run scrDbg.exe.
 
 ## Building
 
