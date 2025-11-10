@@ -23,7 +23,7 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
   - Apply custom patches
   - Generate patterns
   - View xrefs
-  - Set breakpoints (Enhanced only, requires [ScriptVM.asi](https://github.com/ShinyWasabi/ScriptVM))
+  - Set breakpoints (requires [ScriptVM.asi](https://github.com/ShinyWasabi/ScriptVM))
 - Statics editor
 - Globals editor
 
