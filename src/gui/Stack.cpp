@@ -1,17 +1,17 @@
 #include "Stack.hpp"
+#include <QHeaderView>
+#include <QInputDialog>
 #include <QLabel>
+#include <QSplitter>
 #include <QTableWidget>
 #include <QVBoxLayout>
-#include <QHeaderView>
-#include <QSplitter>
-#include <QInputDialog>
 
 namespace scrDbg
 {
-    StackDialog::StackDialog(rage::scrThread thread, ScriptLayout& layout, QWidget* parent) :
-        QDialog(parent),
-        m_Thread(thread),
-        m_Layout(layout)
+    StackDialog::StackDialog(rage::scrThread thread, ScriptLayout& layout, QWidget* parent)
+        : QDialog(parent),
+          m_Thread(thread),
+          m_Layout(layout)
     {
         setWindowTitle("Stack");
         resize(700, 500);
@@ -20,7 +20,7 @@ namespace scrDbg
         auto* callStackLabel = new QLabel("Call Stack:");
         m_CallStack = new QTableWidget(this);
         m_CallStack->setColumnCount(2);
-        m_CallStack->setHorizontalHeaderLabels({ "Address", "Function" });
+        m_CallStack->setHorizontalHeaderLabels({"Address", "Function"});
         m_CallStack->horizontalHeader()->setStretchLastSection(true);
         m_CallStack->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         m_CallStack->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -37,7 +37,7 @@ namespace scrDbg
         auto* stackFrameLabel = new QLabel("Stack Frame (double-click to edit):");
         m_StackFrame = new QTableWidget(this);
         m_StackFrame->setColumnCount(3);
-        m_StackFrame->setHorizontalHeaderLabels({ "Type", "Index", "Value" });
+        m_StackFrame->setHorizontalHeaderLabels({"Type", "Index", "Value"});
         m_StackFrame->horizontalHeader()->setStretchLastSection(true);
         m_StackFrame->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         m_StackFrame->setSelectionBehavior(QAbstractItemView::SelectRows);

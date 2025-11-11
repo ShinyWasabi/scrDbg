@@ -1,12 +1,12 @@
 #include "ScriptStatics.hpp"
-#include "game/rage/scrThread.hpp"
-#include "game/rage/scrProgram.hpp"
 #include "game/rage/Joaat.hpp"
-#include <QVBoxLayout>
-#include <QLineEdit>
+#include "game/rage/scrProgram.hpp"
+#include "game/rage/scrThread.hpp"
 #include <QIntValidator>
-#include <QPushButton>
+#include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
+#include <QVBoxLayout>
 
 namespace scrDbg
 {
@@ -26,11 +26,11 @@ namespace scrDbg
         return true;
     }
 
-	ScriptStaticsWidget::ScriptStaticsWidget(QWidget* parent) :
-		QWidget(parent)
-	{
-		m_StaticScriptName = new QLineEdit();
-		m_StaticScriptName->setPlaceholderText("Script Name");
+    ScriptStaticsWidget::ScriptStaticsWidget(QWidget* parent)
+        : QWidget(parent)
+    {
+        m_StaticScriptName = new QLineEdit();
+        m_StaticScriptName->setPlaceholderText("Script Name");
 
         m_StaticIndex = new QLineEdit();
         m_StaticIndex->setValidator(new QIntValidator(0, INT_MAX, this));
@@ -80,7 +80,7 @@ namespace scrDbg
         scriptStaticsLayout->addWidget(m_WriteStatic);
         scriptStaticsLayout->addStretch();
         setLayout(scriptStaticsLayout);
-	}
+    }
 
     int ScriptStaticsWidget::ComputeStaticAddress()
     {

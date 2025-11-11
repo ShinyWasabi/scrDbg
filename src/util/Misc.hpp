@@ -2,5 +2,5 @@
 
 namespace scrDbg::Misc
 {
-	extern std::string GetGameBuild();
+    extern std::string GetGameBuild();
 }

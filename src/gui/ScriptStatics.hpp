@@ -7,28 +7,28 @@ class QLineEdit;
 
 namespace scrDbg
 {
-	class ScriptStaticsWidget : public QWidget
-	{
-		Q_OBJECT
+    class ScriptStaticsWidget : public QWidget
+    {
+        Q_OBJECT
 
-	public:
-		explicit ScriptStaticsWidget(QWidget* parent = nullptr);
+    public:
+        explicit ScriptStaticsWidget(QWidget* parent = nullptr);
 
-	private slots:
-		void OnWriteNewStaticValue();
-		void OnUpdateCurrentStaticValue();
+    private slots:
+        void OnWriteNewStaticValue();
+        void OnUpdateCurrentStaticValue();
 
-	private:
-		int ComputeStaticAddress();
+    private:
+        int ComputeStaticAddress();
 
-		QLineEdit* m_StaticScriptName;
-		QLineEdit* m_StaticIndex;
-		QVector<QLineEdit*> m_StaticOffsets;
-		QVector<QLineEdit*> m_StaticSizes;
-		QLineEdit* m_StaticNewValue;
-		QLineEdit* m_StaticCurrentValue;
-		QPushButton* m_WriteStatic;
+        QLineEdit* m_StaticScriptName;
+        QLineEdit* m_StaticIndex;
+        QVector<QLineEdit*> m_StaticOffsets;
+        QVector<QLineEdit*> m_StaticSizes;
+        QLineEdit* m_StaticNewValue;
+        QLineEdit* m_StaticCurrentValue;
+        QPushButton* m_WriteStatic;
 
-		QTimer* m_UpdateTimer;
-	};
+        QTimer* m_UpdateTimer;
+    };
 }

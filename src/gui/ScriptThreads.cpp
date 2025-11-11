@@ -1,44 +1,44 @@
 #include "ScriptThreads.hpp"
-#include "FunctionList.hpp"
-#include "Disassembly.hpp"
-#include "Stack.hpp"
 #include "Breakpoints.hpp"
-#include "Xrefs.hpp"
-#include "script/ScriptDisassembler.hpp"
-#include "pipe/PipeCommands.hpp"
+#include "Disassembly.hpp"
+#include "FunctionList.hpp"
 #include "Pointers.hpp"
-#include "util/ScriptHelpers.hpp"
+#include "Stack.hpp"
+#include "Xrefs.hpp"
 #include "game/gta/Natives.hpp"
 #include "game/gta/TextLabels.hpp"
-#include "game/rage/scrThread.hpp"
 #include "game/rage/Joaat.hpp"
 #include "game/rage/scrOpcode.hpp"
-#include <QComboBox>
-#include <QLabel>
-#include <QPushButton>
-#include <QTableView>
-#include <QScrollBar>
-#include <QHeaderView>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QSplitter>
-#include <QTimer>
-#include <QFileDialog>
-#include <QProgressDialog>
+#include "game/rage/scrThread.hpp"
+#include "pipe/PipeCommands.hpp"
+#include "script/ScriptDisassembler.hpp"
+#include "util/ScriptHelpers.hpp"
 #include <QCheckBox>
-#include <QInputDialog>
-#include <QMessageBox>
-#include <QMenu>
-#include <QGuiApplication>
 #include <QClipboard>
+#include <QComboBox>
+#include <QFileDialog>
+#include <QGuiApplication>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QInputDialog>
+#include <QLabel>
+#include <QMenu>
+#include <QMessageBox>
+#include <QProgressDialog>
+#include <QPushButton>
+#include <QScrollBar>
+#include <QSplitter>
+#include <QTableView>
+#include <QTimer>
+#include <QVBoxLayout>
 
 namespace scrDbg
 {
-    ScriptThreadsWidget::ScriptThreadsWidget(QWidget* parent) :
-        QWidget(parent),
-        m_LastThreadId(0),
-        m_Layout(nullptr),
-        m_FunctionFilter(nullptr)
+    ScriptThreadsWidget::ScriptThreadsWidget(QWidget* parent)
+        : QWidget(parent),
+          m_LastThreadId(0),
+          m_Layout(nullptr),
+          m_FunctionFilter(nullptr)
     {
         m_ScriptNames = new QComboBox(this);
         m_ScriptNames->setEditable(false);
@@ -60,7 +60,7 @@ namespace scrDbg
         m_StackSize = new QLabel("Stack Size: 0");
         m_StackSize->setToolTip("Total stack size this script thread needs.");
 
-        QVector<QLabel*> leftLabels = { m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_StackSize };
+        QVector<QLabel*> leftLabels = {m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_StackSize};
         QVBoxLayout* leftLayout = new QVBoxLayout();
         for (auto* lbl : leftLabels)
             leftLayout->addWidget(lbl);
@@ -82,7 +82,7 @@ namespace scrDbg
         m_StringCount = new QLabel("String Count: 0");
         m_StringCount->setToolTip("Total size, in bytes, of all string literals defined in this script program.");
 
-        QVector<QLabel*> rightLabels = { m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_StringCount };
+        QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_StringCount};
         QVBoxLayout* rightLayout = new QVBoxLayout();
         for (auto* lbl : rightLabels)
             rightLayout->addWidget(lbl);
@@ -365,19 +365,18 @@ namespace scrDbg
             m_TogglePauseScript->setToolTip("Pause the execution of this script thread.");
         }
 
-        QString stateStr = (state == rage::scrThreadState::RUNNING) ? "RUNNING" :
-            (state == rage::scrThreadState::IDLE) ? "IDLE" :
-            (state == rage::scrThreadState::PAUSED) ? "PAUSED" : "KILLED";
+        QString stateStr = (state == rage::scrThreadState::RUNNING) ? "RUNNING" : (state == rage::scrThreadState::IDLE) ? "IDLE"
+                                                                              : (state == rage::scrThreadState::PAUSED) ? "PAUSED"
+                                                                                                                        : "KILLED";
 
         bool showBreakpointActive = isGlobalBreakpointPause || isLocalBreakpoint;
         m_State->setText("State: " + stateStr + (showBreakpointActive ? " (breakpoint active)" : ""));
 
         auto priority = thread.GetPriority();
         m_Priority->setText("Priority: " +
-            QString((priority == rage::scrThreadPriority::HIGHEST) ? "HIGHEST" :
-                (priority == rage::scrThreadPriority::NORMAL) ? "NORMAL" :
-                (priority == rage::scrThreadPriority::LOWEST) ? "LOWEST" : "MANUAL_UPDATE"
-        ));
+                            QString((priority == rage::scrThreadPriority::HIGHEST) ? "HIGHEST" : (priority == rage::scrThreadPriority::NORMAL) ? "NORMAL"
+                                                                                             : (priority == rage::scrThreadPriority::LOWEST)   ? "LOWEST"
+                                                                                                                                               : "MANUAL_UPDATE"));
 
         uint32_t id = thread.GetId();
 
@@ -520,13 +519,11 @@ namespace scrDbg
         exportNatives->setToolTip("Export the native commands of this script program.");
         exportStrings->setToolTip("Export the string literals of this script program.");
 
-        int maxButtonWidth = std::max({
-            exportDisassembly->sizeHint().width(),
+        int maxButtonWidth = std::max({exportDisassembly->sizeHint().width(),
             exportStatics->sizeHint().width(),
             exportGlobals->sizeHint().width(),
             exportNatives->sizeHint().width(),
-            exportStrings->sizeHint().width()
-        });
+            exportStrings->sizeHint().width()});
 
         exportDisassembly->setMinimumWidth(maxButtonWidth);
         exportStatics->setMinimumWidth(maxButtonWidth);

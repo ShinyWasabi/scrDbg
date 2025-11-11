@@ -1,8 +1,8 @@
+#include "GUI/GUI.hpp"
 #include "Pointers.hpp"
 #include "core/PipeClient.hpp"
-#include "GUI/GUI.hpp"
-#include "pipe/PipeCommands.hpp"
 #include "game/gta/Natives.hpp"
+#include "pipe/PipeCommands.hpp"
 #include "util/Misc.hpp"
 
 int main(int argc, char* argv[])

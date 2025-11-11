@@ -9,7 +9,7 @@ namespace scrDbg
     class BreakpointsDialog : public QDialog
     {
         Q_OBJECT
-    
+
     public:
         explicit BreakpointsDialog(QWidget* parent = nullptr);
 

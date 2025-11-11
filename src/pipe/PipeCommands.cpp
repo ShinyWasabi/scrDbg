@@ -8,7 +8,7 @@ namespace scrDbg::PipeCommands
         uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_SET);
         PipeClient::Send(&cmd, sizeof(cmd));
 
-        PipeBreakpointSet args{ script, pc, set };
+        PipeBreakpointSet args{script, pc, set};
         PipeClient::Send(&args, sizeof(args));
     }
 
@@ -17,7 +17,7 @@ namespace scrDbg::PipeCommands
         uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_EXISTS);
         PipeClient::Send(&cmd, sizeof(cmd));
 
-        PipeBreakpoint args{ script, pc };
+        PipeBreakpoint args{script, pc};
         PipeClient::Send(&args, sizeof(args));
 
         bool result = false;

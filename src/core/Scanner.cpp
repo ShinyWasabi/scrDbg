@@ -3,8 +3,8 @@
 
 namespace scrDbg
 {
-	static std::vector<std::optional<uint8_t>> CompilePattern(const std::string& pattern)
-	{
+    static std::vector<std::optional<uint8_t>> CompilePattern(const std::string& pattern)
+    {
         std::vector<std::optional<uint8_t>> compiled;
 
         size_t len = pattern.size();
@@ -48,7 +48,7 @@ namespace scrDbg
         }
 
         return compiled;
-	}
+    }
 
     std::optional<uint64_t> Scanner::ScanPattern(const std::string& pattern)
     {
@@ -103,7 +103,7 @@ namespace scrDbg
 
     void Scanner::Add(const std::string& name, const std::string& pattern, const ScanFunc& func)
     {
-        m_Patterns.push_back({ name, pattern, func });
+        m_Patterns.push_back({name, pattern, func});
     }
 
     bool Scanner::Scan()

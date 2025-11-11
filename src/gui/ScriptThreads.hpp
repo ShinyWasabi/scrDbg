@@ -19,12 +19,12 @@ namespace rage
 
 namespace scrDbg
 {
-	class ScriptThreadsWidget : public QWidget
-	{
-		Q_OBJECT
+    class ScriptThreadsWidget : public QWidget
+    {
+        Q_OBJECT
 
-	public:
-		explicit ScriptThreadsWidget(QWidget* parent = nullptr);
+    public:
+        explicit ScriptThreadsWidget(QWidget* parent = nullptr);
 
     private slots:
         void OnUpdateScripts();
@@ -51,7 +51,7 @@ namespace scrDbg
         void OnJumpToInstructionAddress(const QModelIndex& index);
         void OnSetBreakpoint(const QModelIndex& index, bool set);
 
-	private:
+    private:
         uint32_t GetCurrentScriptHash();
         bool ScrollToAddress(uint32_t address);
         void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
@@ -94,5 +94,5 @@ namespace scrDbg
         QLabel* m_DisassemblyInfo;
         QTableView* m_Disassembly;
         QTimer* m_UpdateTimer;
-	};
+    };
 }

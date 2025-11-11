@@ -2,5 +2,5 @@
 
 namespace gta::TextLabels
 {
-	extern std::string GetTextLabel(uint32_t hash);
+    extern std::string GetTextLabel(uint32_t hash);
 }

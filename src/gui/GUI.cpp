@@ -1,10 +1,10 @@
 #include "GUI.hpp"
-#include "ScriptThreads.hpp"
-#include "ScriptStatics.hpp"
 #include "ScriptGlobals.hpp"
+#include "ScriptStatics.hpp"
+#include "ScriptThreads.hpp"
 #include "core/Process.hpp"
-#include "util/Misc.hpp"
 #include "resource/scrDbg.h"
+#include "util/Misc.hpp"
 #include <QVBoxLayout>
 
 namespace scrDbg

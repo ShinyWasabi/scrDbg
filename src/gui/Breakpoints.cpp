@@ -1,15 +1,15 @@
 #include "Breakpoints.hpp"
 #include "pipe/PipeCommands.hpp"
-#include <QTableWidget>
-#include <QPushButton>
-#include <QVBoxLayout>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QPushButton>
+#include <QTableWidget>
+#include <QVBoxLayout>
 
 namespace scrDbg
 {
-    BreakpointsDialog::BreakpointsDialog(QWidget* parent) :
-        QDialog(parent)
+    BreakpointsDialog::BreakpointsDialog(QWidget* parent)
+        : QDialog(parent)
     {
         setWindowTitle("Breakpoints");
         resize(400, 300);
@@ -17,7 +17,7 @@ namespace scrDbg
 
         m_Table = new QTableWidget(this);
         m_Table->setColumnCount(2);
-        m_Table->setHorizontalHeaderLabels({ "Script", "Address" });
+        m_Table->setHorizontalHeaderLabels({"Script", "Address"});
         m_Table->horizontalHeader()->setStretchLastSection(true);
         m_Table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         m_Table->setSelectionBehavior(QAbstractItemView::SelectRows);

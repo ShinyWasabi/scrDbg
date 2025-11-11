@@ -1,14 +1,14 @@
 #include "Disassembly.hpp"
-#include "script/ScriptDisassembler.hpp"
-#include "util/ScriptHelpers.hpp"
 #include "game/rage/scrOpcode.hpp"
 #include "pipe/PipeCommands.hpp"
+#include "script/ScriptDisassembler.hpp"
+#include "util/ScriptHelpers.hpp"
 
 namespace scrDbg
 {
-    DisassemblyModel::DisassemblyModel(ScriptLayout& layout, QObject* parent) :
-        QAbstractTableModel(parent),
-        m_Layout(layout)
+    DisassemblyModel::DisassemblyModel(ScriptLayout& layout, QObject* parent)
+        : QAbstractTableModel(parent),
+          m_Layout(layout)
     {
     }
 
@@ -27,7 +27,7 @@ namespace scrDbg
         if (role != Qt::DisplayRole || orientation != Qt::Horizontal)
             return QVariant();
 
-        static const char* headers[] = { "Address", "Bytes", "Instruction" };
+        static const char* headers[] = {"Address", "Bytes", "Instruction"};
         return section < 3 ? headers[section] : QVariant();
     }
 
@@ -70,9 +70,12 @@ namespace scrDbg
 
         switch (index.column())
         {
-        case 0: return QString::fromStdString(insn.Address);
-        case 1: return QString::fromStdString(insn.Bytes);
-        case 2: return QString::fromStdString(insn.Instruction);
+        case 0:
+            return QString::fromStdString(insn.Address);
+        case 1:
+            return QString::fromStdString(insn.Bytes);
+        case 2:
+            return QString::fromStdString(insn.Instruction);
         }
 
         return QVariant();

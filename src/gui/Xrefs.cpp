@@ -1,13 +1,13 @@
 #include "Xrefs.hpp"
-#include <QTableWidget>
-#include <QPushButton>
-#include <QVBoxLayout>
 #include <QHeaderView>
+#include <QPushButton>
+#include <QTableWidget>
+#include <QVBoxLayout>
 
 namespace scrDbg
 {
-    XrefsDialog::XrefsDialog(const std::vector<std::pair<uint32_t, std::string>>& xrefs, QWidget* parent) :
-        QDialog(parent)
+    XrefsDialog::XrefsDialog(const std::vector<std::pair<uint32_t, std::string>>& xrefs, QWidget* parent)
+        : QDialog(parent)
     {
         setWindowTitle("Xrefs");
         resize(500, 350);
@@ -15,7 +15,7 @@ namespace scrDbg
 
         m_Table = new QTableWidget(this);
         m_Table->setColumnCount(2);
-        m_Table->setHorizontalHeaderLabels({ "Address", "Instruction" });
+        m_Table->setHorizontalHeaderLabels({"Address", "Instruction"});
         m_Table->horizontalHeader()->setStretchLastSection(true);
         m_Table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         m_Table->setSelectionBehavior(QAbstractItemView::SelectRows);

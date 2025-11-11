@@ -1,10 +1,10 @@
 #include "ScriptGlobals.hpp"
 #include "game/rage/scrProgram.hpp"
-#include <QVBoxLayout>
-#include <QLineEdit>
 #include <QIntValidator>
-#include <QPushButton>
+#include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
+#include <QVBoxLayout>
 
 namespace scrDbg
 {
@@ -25,9 +25,9 @@ namespace scrDbg
         return true;
     }
 
-	ScriptGlobalsWidget::ScriptGlobalsWidget(QWidget* parent) :
-		QWidget(parent)
-	{
+    ScriptGlobalsWidget::ScriptGlobalsWidget(QWidget* parent)
+        : QWidget(parent)
+    {
         m_GlobalIndex = new QLineEdit();
         m_GlobalIndex->setValidator(new QIntValidator(0, INT_MAX, this));
         m_GlobalIndex->setPlaceholderText("Base Address");
@@ -67,15 +67,15 @@ namespace scrDbg
         connect(m_UpdateTimer, &QTimer::timeout, this, &ScriptGlobalsWidget::OnUpdateCurrentGlobalValue);
         m_UpdateTimer->start();
 
-		QVBoxLayout* scriptGlobalsLayout = new QVBoxLayout(this);
+        QVBoxLayout* scriptGlobalsLayout = new QVBoxLayout(this);
         scriptGlobalsLayout->addWidget(m_GlobalIndex);
         scriptGlobalsLayout->addLayout(offsetsLayout);
         scriptGlobalsLayout->addWidget(m_GlobalNewValue);
         scriptGlobalsLayout->addWidget(m_GlobalCurrentValue);
         scriptGlobalsLayout->addWidget(m_WriteGlobal);
-		scriptGlobalsLayout->addStretch();
-		setLayout(scriptGlobalsLayout);
-	}
+        scriptGlobalsLayout->addStretch();
+        setLayout(scriptGlobalsLayout);
+    }
 
     int ScriptGlobalsWidget::ComputeGlobalAddress()
     {

@@ -20,14 +20,14 @@ namespace scrDbg
             uint32_t RetCount;
             std::string Name;
         };
-        
+
         struct DecodedInstruction
         {
             std::string Address;
             std::string Bytes;
             std::string Instruction;
         };
-        
+
         static const char* GetInstructionDescription(uint8_t opcode);
         static std::optional<int> UpdateStringIndex(const std::vector<uint8_t>& code, uint32_t pc);
         static std::string GetFunctionName(const std::vector<uint8_t>& code, uint32_t pc, uint32_t size, int funcIndex);

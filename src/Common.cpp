@@ -2,6 +2,6 @@
 
 namespace scrDbg
 {
-	bool g_IsEnhanced = false;
-	bool g_BreakpointsSupported = false;
+    bool g_IsEnhanced = false;
+    bool g_BreakpointsSupported = false;
 }

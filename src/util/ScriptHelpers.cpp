@@ -110,137 +110,268 @@ namespace scrDbg::ScriptHelpers
 
         switch (opcode)
         {
-        case rage::scrOpcode::NOP: return 1;
-        case rage::scrOpcode::IADD: return 1;
-        case rage::scrOpcode::ISUB: return 1;
-        case rage::scrOpcode::IMUL: return 1;
-        case rage::scrOpcode::IDIV: return 1;
-        case rage::scrOpcode::IMOD: return 1;
-        case rage::scrOpcode::INOT: return 1;
-        case rage::scrOpcode::INEG: return 1;
-        case rage::scrOpcode::IEQ: return 1;
-        case rage::scrOpcode::INE: return 1;
-        case rage::scrOpcode::IGT: return 1;
-        case rage::scrOpcode::IGE: return 1;
-        case rage::scrOpcode::ILT: return 1;
-        case rage::scrOpcode::ILE: return 1;
-        case rage::scrOpcode::FADD: return 1;
-        case rage::scrOpcode::FSUB: return 1;
-        case rage::scrOpcode::FMUL: return 1;
-        case rage::scrOpcode::FDIV: return 1;
-        case rage::scrOpcode::FMOD: return 1;
-        case rage::scrOpcode::FNEG: return 1;
-        case rage::scrOpcode::FEQ: return 1;
-        case rage::scrOpcode::FNE: return 1;
-        case rage::scrOpcode::FGT: return 1;
-        case rage::scrOpcode::FGE: return 1;
-        case rage::scrOpcode::FLT: return 1;
-        case rage::scrOpcode::FLE: return 1;
-        case rage::scrOpcode::VADD: return 1;
-        case rage::scrOpcode::VSUB: return 1;
-        case rage::scrOpcode::VMUL: return 1;
-        case rage::scrOpcode::VDIV: return 1;
-        case rage::scrOpcode::VNEG: return 1;
-        case rage::scrOpcode::IAND: return 1;
-        case rage::scrOpcode::IOR: return 1;
-        case rage::scrOpcode::IXOR: return 1;
-        case rage::scrOpcode::I2F: return 1;
-        case rage::scrOpcode::F2I: return 1;
-        case rage::scrOpcode::F2V: return 1;
-        case rage::scrOpcode::PUSH_CONST_U8: return 2;
-        case rage::scrOpcode::PUSH_CONST_U8_U8: return 3;
-        case rage::scrOpcode::PUSH_CONST_U8_U8_U8: return 4;
-        case rage::scrOpcode::PUSH_CONST_U32: return 5;
-        case rage::scrOpcode::PUSH_CONST_F: return 5;
-        case rage::scrOpcode::DUP: return 1;
-        case rage::scrOpcode::DROP: return 1;
-        case rage::scrOpcode::NATIVE: return 4;
-        case rage::scrOpcode::ENTER: return 5 + code[pc + 4];
-        case rage::scrOpcode::LEAVE: return 3;
-        case rage::scrOpcode::LOAD: return 1;
-        case rage::scrOpcode::STORE: return 1;
-        case rage::scrOpcode::STORE_REV: return 1;
-        case rage::scrOpcode::LOAD_N: return 1;
-        case rage::scrOpcode::STORE_N: return 1;
-        case rage::scrOpcode::ARRAY_U8: return 2;
-        case rage::scrOpcode::ARRAY_U8_LOAD: return 2;
-        case rage::scrOpcode::ARRAY_U8_STORE: return 2;
-        case rage::scrOpcode::LOCAL_U8: return 2;
-        case rage::scrOpcode::LOCAL_U8_LOAD: return 2;
-        case rage::scrOpcode::LOCAL_U8_STORE: return 2;
-        case rage::scrOpcode::STATIC_U8: return 2;
-        case rage::scrOpcode::STATIC_U8_LOAD: return 2;
-        case rage::scrOpcode::STATIC_U8_STORE: return 2;
-        case rage::scrOpcode::IADD_U8: return 2;
-        case rage::scrOpcode::IMUL_U8: return 2;
-        case rage::scrOpcode::IOFFSET: return 1;
-        case rage::scrOpcode::IOFFSET_U8: return 2;
-        case rage::scrOpcode::IOFFSET_U8_LOAD: return 2;
-        case rage::scrOpcode::IOFFSET_U8_STORE: return 2;
-        case rage::scrOpcode::PUSH_CONST_S16: return 3;
-        case rage::scrOpcode::IADD_S16: return 3;
-        case rage::scrOpcode::IMUL_S16: return 3;
-        case rage::scrOpcode::IOFFSET_S16: return 3;
-        case rage::scrOpcode::IOFFSET_S16_LOAD: return 3;
-        case rage::scrOpcode::IOFFSET_S16_STORE: return 3;
-        case rage::scrOpcode::ARRAY_U16: return 3;
-        case rage::scrOpcode::ARRAY_U16_LOAD: return 3;
-        case rage::scrOpcode::ARRAY_U16_STORE: return 3;
-        case rage::scrOpcode::LOCAL_U16: return 3;
-        case rage::scrOpcode::LOCAL_U16_LOAD: return 3;
-        case rage::scrOpcode::LOCAL_U16_STORE: return 3;
-        case rage::scrOpcode::STATIC_U16: return 3;
-        case rage::scrOpcode::STATIC_U16_LOAD: return 3;
-        case rage::scrOpcode::STATIC_U16_STORE: return 3;
-        case rage::scrOpcode::GLOBAL_U16: return 3;
-        case rage::scrOpcode::GLOBAL_U16_LOAD: return 3;
-        case rage::scrOpcode::GLOBAL_U16_STORE: return 3;
-        case rage::scrOpcode::J: return 3;
-        case rage::scrOpcode::JZ: return 3;
-        case rage::scrOpcode::IEQ_JZ: return 3;
-        case rage::scrOpcode::INE_JZ: return 3;
-        case rage::scrOpcode::IGT_JZ: return 3;
-        case rage::scrOpcode::IGE_JZ: return 3;
-        case rage::scrOpcode::ILT_JZ: return 3;
-        case rage::scrOpcode::ILE_JZ: return 3;
-        case rage::scrOpcode::CALL: return 4;
-        case rage::scrOpcode::STATIC_U24: return 4;
-        case rage::scrOpcode::STATIC_U24_LOAD: return 4;
-        case rage::scrOpcode::STATIC_U24_STORE: return 4;
-        case rage::scrOpcode::GLOBAL_U24: return 4;
-        case rage::scrOpcode::GLOBAL_U24_LOAD: return 4;
-        case rage::scrOpcode::GLOBAL_U24_STORE: return 4;
-        case rage::scrOpcode::PUSH_CONST_U24: return 4;
-        case rage::scrOpcode::SWITCH: return 2 + code[pc + 1] * 6;
-        case rage::scrOpcode::STRING: return 1;
-        case rage::scrOpcode::STRINGHASH: return 1;
-        case rage::scrOpcode::TEXT_LABEL_ASSIGN_STRING: return 2;
-        case rage::scrOpcode::TEXT_LABEL_ASSIGN_INT: return 2;
-        case rage::scrOpcode::TEXT_LABEL_APPEND_STRING: return 2;
-        case rage::scrOpcode::TEXT_LABEL_APPEND_INT: return 2;
-        case rage::scrOpcode::TEXT_LABEL_COPY: return 1;
-        case rage::scrOpcode::CATCH: return 1;
-        case rage::scrOpcode::THROW: return 1;
-        case rage::scrOpcode::CALLINDIRECT: return 1;
-        case rage::scrOpcode::PUSH_CONST_M1: return 1;
-        case rage::scrOpcode::PUSH_CONST_0: return 1;
-        case rage::scrOpcode::PUSH_CONST_1: return 1;
-        case rage::scrOpcode::PUSH_CONST_2: return 1;
-        case rage::scrOpcode::PUSH_CONST_3: return 1;
-        case rage::scrOpcode::PUSH_CONST_4: return 1;
-        case rage::scrOpcode::PUSH_CONST_5: return 1;
-        case rage::scrOpcode::PUSH_CONST_6: return 1;
-        case rage::scrOpcode::PUSH_CONST_7: return 1;
-        case rage::scrOpcode::PUSH_CONST_FM1: return 1;
-        case rage::scrOpcode::PUSH_CONST_F0: return 1;
-        case rage::scrOpcode::PUSH_CONST_F1: return 1;
-        case rage::scrOpcode::PUSH_CONST_F2: return 1;
-        case rage::scrOpcode::PUSH_CONST_F3: return 1;
-        case rage::scrOpcode::PUSH_CONST_F4: return 1;
-        case rage::scrOpcode::PUSH_CONST_F5: return 1;
-        case rage::scrOpcode::PUSH_CONST_F6: return 1;
-        case rage::scrOpcode::PUSH_CONST_F7: return 1;
-        case rage::scrOpcode::IS_BIT_SET: return 1;
+        case rage::scrOpcode::NOP:
+            return 1;
+        case rage::scrOpcode::IADD:
+            return 1;
+        case rage::scrOpcode::ISUB:
+            return 1;
+        case rage::scrOpcode::IMUL:
+            return 1;
+        case rage::scrOpcode::IDIV:
+            return 1;
+        case rage::scrOpcode::IMOD:
+            return 1;
+        case rage::scrOpcode::INOT:
+            return 1;
+        case rage::scrOpcode::INEG:
+            return 1;
+        case rage::scrOpcode::IEQ:
+            return 1;
+        case rage::scrOpcode::INE:
+            return 1;
+        case rage::scrOpcode::IGT:
+            return 1;
+        case rage::scrOpcode::IGE:
+            return 1;
+        case rage::scrOpcode::ILT:
+            return 1;
+        case rage::scrOpcode::ILE:
+            return 1;
+        case rage::scrOpcode::FADD:
+            return 1;
+        case rage::scrOpcode::FSUB:
+            return 1;
+        case rage::scrOpcode::FMUL:
+            return 1;
+        case rage::scrOpcode::FDIV:
+            return 1;
+        case rage::scrOpcode::FMOD:
+            return 1;
+        case rage::scrOpcode::FNEG:
+            return 1;
+        case rage::scrOpcode::FEQ:
+            return 1;
+        case rage::scrOpcode::FNE:
+            return 1;
+        case rage::scrOpcode::FGT:
+            return 1;
+        case rage::scrOpcode::FGE:
+            return 1;
+        case rage::scrOpcode::FLT:
+            return 1;
+        case rage::scrOpcode::FLE:
+            return 1;
+        case rage::scrOpcode::VADD:
+            return 1;
+        case rage::scrOpcode::VSUB:
+            return 1;
+        case rage::scrOpcode::VMUL:
+            return 1;
+        case rage::scrOpcode::VDIV:
+            return 1;
+        case rage::scrOpcode::VNEG:
+            return 1;
+        case rage::scrOpcode::IAND:
+            return 1;
+        case rage::scrOpcode::IOR:
+            return 1;
+        case rage::scrOpcode::IXOR:
+            return 1;
+        case rage::scrOpcode::I2F:
+            return 1;
+        case rage::scrOpcode::F2I:
+            return 1;
+        case rage::scrOpcode::F2V:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_U8:
+            return 2;
+        case rage::scrOpcode::PUSH_CONST_U8_U8:
+            return 3;
+        case rage::scrOpcode::PUSH_CONST_U8_U8_U8:
+            return 4;
+        case rage::scrOpcode::PUSH_CONST_U32:
+            return 5;
+        case rage::scrOpcode::PUSH_CONST_F:
+            return 5;
+        case rage::scrOpcode::DUP:
+            return 1;
+        case rage::scrOpcode::DROP:
+            return 1;
+        case rage::scrOpcode::NATIVE:
+            return 4;
+        case rage::scrOpcode::ENTER:
+            return 5 + code[pc + 4];
+        case rage::scrOpcode::LEAVE:
+            return 3;
+        case rage::scrOpcode::LOAD:
+            return 1;
+        case rage::scrOpcode::STORE:
+            return 1;
+        case rage::scrOpcode::STORE_REV:
+            return 1;
+        case rage::scrOpcode::LOAD_N:
+            return 1;
+        case rage::scrOpcode::STORE_N:
+            return 1;
+        case rage::scrOpcode::ARRAY_U8:
+            return 2;
+        case rage::scrOpcode::ARRAY_U8_LOAD:
+            return 2;
+        case rage::scrOpcode::ARRAY_U8_STORE:
+            return 2;
+        case rage::scrOpcode::LOCAL_U8:
+            return 2;
+        case rage::scrOpcode::LOCAL_U8_LOAD:
+            return 2;
+        case rage::scrOpcode::LOCAL_U8_STORE:
+            return 2;
+        case rage::scrOpcode::STATIC_U8:
+            return 2;
+        case rage::scrOpcode::STATIC_U8_LOAD:
+            return 2;
+        case rage::scrOpcode::STATIC_U8_STORE:
+            return 2;
+        case rage::scrOpcode::IADD_U8:
+            return 2;
+        case rage::scrOpcode::IMUL_U8:
+            return 2;
+        case rage::scrOpcode::IOFFSET:
+            return 1;
+        case rage::scrOpcode::IOFFSET_U8:
+            return 2;
+        case rage::scrOpcode::IOFFSET_U8_LOAD:
+            return 2;
+        case rage::scrOpcode::IOFFSET_U8_STORE:
+            return 2;
+        case rage::scrOpcode::PUSH_CONST_S16:
+            return 3;
+        case rage::scrOpcode::IADD_S16:
+            return 3;
+        case rage::scrOpcode::IMUL_S16:
+            return 3;
+        case rage::scrOpcode::IOFFSET_S16:
+            return 3;
+        case rage::scrOpcode::IOFFSET_S16_LOAD:
+            return 3;
+        case rage::scrOpcode::IOFFSET_S16_STORE:
+            return 3;
+        case rage::scrOpcode::ARRAY_U16:
+            return 3;
+        case rage::scrOpcode::ARRAY_U16_LOAD:
+            return 3;
+        case rage::scrOpcode::ARRAY_U16_STORE:
+            return 3;
+        case rage::scrOpcode::LOCAL_U16:
+            return 3;
+        case rage::scrOpcode::LOCAL_U16_LOAD:
+            return 3;
+        case rage::scrOpcode::LOCAL_U16_STORE:
+            return 3;
+        case rage::scrOpcode::STATIC_U16:
+            return 3;
+        case rage::scrOpcode::STATIC_U16_LOAD:
+            return 3;
+        case rage::scrOpcode::STATIC_U16_STORE:
+            return 3;
+        case rage::scrOpcode::GLOBAL_U16:
+            return 3;
+        case rage::scrOpcode::GLOBAL_U16_LOAD:
+            return 3;
+        case rage::scrOpcode::GLOBAL_U16_STORE:
+            return 3;
+        case rage::scrOpcode::J:
+            return 3;
+        case rage::scrOpcode::JZ:
+            return 3;
+        case rage::scrOpcode::IEQ_JZ:
+            return 3;
+        case rage::scrOpcode::INE_JZ:
+            return 3;
+        case rage::scrOpcode::IGT_JZ:
+            return 3;
+        case rage::scrOpcode::IGE_JZ:
+            return 3;
+        case rage::scrOpcode::ILT_JZ:
+            return 3;
+        case rage::scrOpcode::ILE_JZ:
+            return 3;
+        case rage::scrOpcode::CALL:
+            return 4;
+        case rage::scrOpcode::STATIC_U24:
+            return 4;
+        case rage::scrOpcode::STATIC_U24_LOAD:
+            return 4;
+        case rage::scrOpcode::STATIC_U24_STORE:
+            return 4;
+        case rage::scrOpcode::GLOBAL_U24:
+            return 4;
+        case rage::scrOpcode::GLOBAL_U24_LOAD:
+            return 4;
+        case rage::scrOpcode::GLOBAL_U24_STORE:
+            return 4;
+        case rage::scrOpcode::PUSH_CONST_U24:
+            return 4;
+        case rage::scrOpcode::SWITCH:
+            return 2 + code[pc + 1] * 6;
+        case rage::scrOpcode::STRING:
+            return 1;
+        case rage::scrOpcode::STRINGHASH:
+            return 1;
+        case rage::scrOpcode::TEXT_LABEL_ASSIGN_STRING:
+            return 2;
+        case rage::scrOpcode::TEXT_LABEL_ASSIGN_INT:
+            return 2;
+        case rage::scrOpcode::TEXT_LABEL_APPEND_STRING:
+            return 2;
+        case rage::scrOpcode::TEXT_LABEL_APPEND_INT:
+            return 2;
+        case rage::scrOpcode::TEXT_LABEL_COPY:
+            return 1;
+        case rage::scrOpcode::CATCH:
+            return 1;
+        case rage::scrOpcode::THROW:
+            return 1;
+        case rage::scrOpcode::CALLINDIRECT:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_M1:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_0:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_1:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_2:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_3:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_4:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_5:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_6:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_7:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_FM1:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_F0:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_F1:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_F2:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_F3:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_F4:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_F5:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_F6:
+            return 1;
+        case rage::scrOpcode::PUSH_CONST_F7:
+            return 1;
+        case rage::scrOpcode::IS_BIT_SET:
+            return 1;
         }
 
         return 1;

@@ -1,11 +1,11 @@
 #include "ScriptLayout.hpp"
-#include "util/ScriptHelpers.hpp"
 #include "game/rage/scrOpcode.hpp"
+#include "util/ScriptHelpers.hpp"
 
 namespace scrDbg
 {
-    ScriptLayout::ScriptLayout(const rage::scrProgram& program) :
-        m_Program(program)
+    ScriptLayout::ScriptLayout(const rage::scrProgram& program)
+        : m_Program(program)
     {
         Refresh();
     }
@@ -29,13 +29,13 @@ namespace scrDbg
             if (opcode == rage::scrOpcode::ENTER)
             {
                 auto info = ScriptDisassembler::GetFunctionInfo(m_Code, pc, ++funcIndex);
-                m_Functions.push_back({ info });
+                m_Functions.push_back({info});
             }
 
             if (auto newIndex = ScriptDisassembler::UpdateStringIndex(m_Code, pc))
                 strIndex = *newIndex;
 
-            m_Instructions.push_back({ pc, strIndex, std::max(funcIndex, 0) });
+            m_Instructions.push_back({pc, strIndex, std::max(funcIndex, 0)});
             pc += ScriptHelpers::GetInstructionSize(m_Code, pc);
         }
     }

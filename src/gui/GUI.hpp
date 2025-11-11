@@ -1,9 +1,9 @@
 #pragma once
 #include <QApplication>
-#include <QStyleFactory>
 #include <QMessageBox>
-#include <QWidget>
+#include <QStyleFactory>
 #include <QTabWidget>
+#include <QWidget>
 
 namespace scrDbg
 {

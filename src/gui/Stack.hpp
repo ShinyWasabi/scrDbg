@@ -1,7 +1,7 @@
 #pragma once
-#include <QDialog>
 #include "game/rage/scrThread.hpp"
 #include "script/ScriptLayout.hpp"
+#include <QDialog>
 
 class QTableWidget;
 

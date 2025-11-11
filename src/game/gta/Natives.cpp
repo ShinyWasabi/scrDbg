@@ -36,8 +36,10 @@ namespace gta
 
             uint64_t hash;
             uint16_t len;
-            memcpy(&hash, ptr, sizeof(hash)); ptr += sizeof(hash);
-            memcpy(&len, ptr, sizeof(len)); ptr += sizeof(len);
+            memcpy(&hash, ptr, sizeof(hash));
+            ptr += sizeof(hash);
+            memcpy(&len, ptr, sizeof(len));
+            ptr += sizeof(len);
 
             if (end - ptr < len)
                 break;

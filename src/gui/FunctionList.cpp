@@ -2,9 +2,9 @@
 
 namespace scrDbg
 {
-    FunctionListModel::FunctionListModel(const ScriptLayout& layout, QObject* parent) :
-        QAbstractTableModel(parent),
-        m_Layout(layout)
+    FunctionListModel::FunctionListModel(const ScriptLayout& layout, QObject* parent)
+        : QAbstractTableModel(parent),
+          m_Layout(layout)
     {
     }
 
@@ -23,7 +23,7 @@ namespace scrDbg
         if (role != Qt::DisplayRole || orientation != Qt::Horizontal)
             return QVariant();
 
-        static const char* headers[] = { "Name", "Start", "End", "Length", "Args", "Locals", "Rets" };
+        static const char* headers[] = {"Name", "Start", "End", "Length", "Args", "Locals", "Rets"};
         return section < 7 ? headers[section] : QVariant();
     }
 
@@ -36,13 +36,20 @@ namespace scrDbg
 
         switch (index.column())
         {
-        case 0: return QString::fromStdString(func.Name);
-        case 1: return QString("0x%1").arg(QString::number(func.Start, 16).toUpper());
-        case 2: return QString("0x%1").arg(QString::number(func.End, 16).toUpper());
-        case 3: return func.Length;
-        case 4: return func.ArgCount;
-        case 5: return func.FrameSize - (func.ArgCount + 2); // args, return address, last fp, locals
-        case 6: return func.RetCount;
+        case 0:
+            return QString::fromStdString(func.Name);
+        case 1:
+            return QString("0x%1").arg(QString::number(func.Start, 16).toUpper());
+        case 2:
+            return QString("0x%1").arg(QString::number(func.End, 16).toUpper());
+        case 3:
+            return func.Length;
+        case 4:
+            return func.ArgCount;
+        case 5:
+            return func.FrameSize - (func.ArgCount + 2); // args, return address, last fp, locals
+        case 6:
+            return func.RetCount;
         }
 
         return QVariant();
