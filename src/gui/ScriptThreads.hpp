@@ -9,8 +9,6 @@ class QPushButton;
 class QLineEdit;
 class QSortFilterProxyModel;
 class QTableView;
-class QTextStream;
-class QProgressDialog;
 class QCheckBox;
 namespace rage
 {
@@ -54,7 +52,6 @@ namespace scrDbg
     private:
         uint32_t GetCurrentScriptHash();
         bool ScrollToAddress(uint32_t address);
-        void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
         void UpdateDisassemblyInfo(int row, bool includeDesc);
         void CleanupDisassembly();
         void RefreshDisassembly(const rage::scrProgram& program);

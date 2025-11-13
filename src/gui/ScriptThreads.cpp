@@ -3,8 +3,8 @@
 #include "Disassembly.hpp"
 #include "FunctionList.hpp"
 #include "Pointers.hpp"
+#include "Results.hpp"
 #include "Stack.hpp"
-#include "Xrefs.hpp"
 #include "game/gta/Natives.hpp"
 #include "game/gta/TextLabels.hpp"
 #include "game/rage/Joaat.hpp"
@@ -12,11 +12,11 @@
 #include "game/rage/scrThread.hpp"
 #include "pipe/PipeCommands.hpp"
 #include "script/ScriptDisassembler.hpp"
+#include "util/GUIHelpers.hpp"
 #include "util/ScriptHelpers.hpp"
 #include <QCheckBox>
 #include <QClipboard>
 #include <QComboBox>
-#include <QFileDialog>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -26,6 +26,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QScrollBar>
 #include <QSplitter>
 #include <QTableView>
@@ -237,31 +238,6 @@ namespace scrDbg
         m_Disassembly->setCurrentIndex(idx);
         m_Disassembly->setFocus(Qt::OtherFocusReason);
         return true;
-    }
-
-    void ScriptThreadsWidget::ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb)
-    {
-        QString name = QFileDialog::getSaveFileName(this, title, filename, "Text Files (*.txt);;All Files (*)");
-        if (name.isEmpty())
-            return;
-
-        QFile file(name);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-        {
-            QMessageBox::critical(this, title, "Failed to open file for writing.");
-            return;
-        }
-
-        QTextStream out(&file);
-        out.setEncoding(QStringConverter::Utf8);
-
-        QProgressDialog progress(QString("Exporting %1...").arg(title), "Cancel", 0, count, this);
-        progress.setWindowModality(Qt::ApplicationModal);
-        progress.setMinimumDuration(200);
-        progress.setValue(0);
-
-        cb(out, progress);
-        file.close();
     }
 
     void ScriptThreadsWidget::UpdateDisassemblyInfo(int row, bool includeDesc)
@@ -578,7 +554,7 @@ namespace scrDbg
         auto disassembly = m_Disassembly->model();
 
         const int count = disassembly->rowCount();
-        ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+        GUIHelpers::ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
             for (int row = 0; row < count; ++row)
             {
                 if (progress.wasCanceled())
@@ -624,7 +600,7 @@ namespace scrDbg
             return;
         }
 
-        ExportToFile("Statics", "statics.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+        GUIHelpers::ExportToFile("Statics", "statics.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
             for (int i = 0; i < count; i++)
             {
                 if (progress.wasCanceled())
@@ -668,7 +644,7 @@ namespace scrDbg
                 return;
             }
 
-            ExportToFile("Globals", "globals.txt", totalGlobalCount, [&](QTextStream& out, QProgressDialog& progress) {
+            GUIHelpers::ExportToFile("Globals", "globals.txt", totalGlobalCount, [&](QTextStream& out, QProgressDialog& progress) {
                 for (int block = 0; block <= lastValidBlock; block++)
                 {
                     int blockCount = rage::scrProgram::GetGlobalBlockCount(block);
@@ -712,7 +688,7 @@ namespace scrDbg
                 return;
             }
 
-            ExportToFile("Globals", "globals.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            GUIHelpers::ExportToFile("Globals", "globals.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
                 for (uint32_t i = 0; i < count; i++)
                 {
                     if (progress.wasCanceled())
@@ -749,7 +725,7 @@ namespace scrDbg
                 return;
             }
 
-            ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            GUIHelpers::ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
                 uint32_t index = 0;
                 for (auto& [hash, handler] : allNatives)
                 {
@@ -787,7 +763,7 @@ namespace scrDbg
                 return;
             }
 
-            ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            GUIHelpers::ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
                 for (uint32_t i = 0; i < count; i++)
                 {
                     if (progress.wasCanceled())
@@ -829,7 +805,7 @@ namespace scrDbg
         }
 
         int exportedCount = 0;
-        ExportToFile("Strings", "strings.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+        GUIHelpers::ExportToFile("Strings", "strings.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
             for (int i = 0; i < count; ++i)
             {
                 if (progress.wasCanceled())
@@ -892,52 +868,72 @@ namespace scrDbg
         if (!GetCurrentScriptHash())
             return;
 
-        bool ok = false;
-        QString input = QInputDialog::getText(this, "Binary Search", "Enter byte pattern (? for wildcard):", QLineEdit::Normal, "", &ok);
-        if (!ok || input.isEmpty())
+        QDialog dlg(this);
+        dlg.setWindowTitle("Binary Search");
+
+        QVBoxLayout* layout = new QVBoxLayout(&dlg);
+        QLineEdit* edit = new QLineEdit();
+        layout->addWidget(edit);
+
+        QRadioButton* patternBtn = new QRadioButton("Pattern");
+        patternBtn->setChecked(true);
+        QRadioButton* hexadecimalBtn = new QRadioButton("Hexadecimal");
+        QRadioButton* decimalBtn = new QRadioButton("Decimal");
+        layout->addWidget(patternBtn);
+        layout->addWidget(hexadecimalBtn);
+        layout->addWidget(decimalBtn);
+
+        QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+        layout->addWidget(buttons);
+        connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+        connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+        if (dlg.exec() != QDialog::Accepted)
             return;
 
-        QStringList parts = input.split(QRegularExpression("[,\\s]+"), Qt::SkipEmptyParts);
+        auto type = GUIHelpers::BinarySearchType::PATTERN;
+        if (hexadecimalBtn->isChecked())
+            type = GUIHelpers::BinarySearchType::HEXADECIMAL;
+        else if (decimalBtn->isChecked())
+            type = GUIHelpers::BinarySearchType::DECIMAL;
 
-        std::vector<std::optional<uint8_t>> pattern;
-        for (const QString& part : parts)
+        auto pattern = GUIHelpers::ParseBinarySearchStr(edit->text(), type);
+        if (pattern.empty())
         {
-            QString token = part.trimmed();
-            if (token == "?")
+            QMessageBox::warning(this, "Invalid String", "Could not parse the string.");
+            return;
+        }
+
+        auto code = m_Layout->GetCode();
+
+        auto addresses = ScriptHelpers::ScanPattern(code, pattern);
+        if (addresses.empty())
+        {
+            QMessageBox::warning(this, "Binary Search", "No matches found.");
+            return;
+        }
+
+        std::vector<ResultsDialog::Entry> results;
+        for (int i = 0; i < m_Layout->GetInstructionCount(); i++)
+        {
+            auto insn = m_Layout->GetInstruction(i);
+            for (uint32_t addr : addresses)
             {
-                pattern.push_back(std::nullopt);
-            }
-            else
-            {
-                bool ok = false;
-                uint8_t byte = static_cast<uint8_t>(token.toUInt(&ok, 16));
-                if (!ok || token.toUInt() > 0xFF)
+                if (addr >= insn.Pc && addr < insn.Pc + ScriptHelpers::GetInstructionSize(code, insn.Pc))
                 {
-                    QMessageBox::warning(this, "Invalid Pattern", "Invalid hex byte: " + token);
-                    return;
+                    auto func = m_Layout->GetFunction(insn.FuncIndex);
+                    auto decoded = ScriptDisassembler::DecodeInstruction(code, insn.Pc, m_Layout->GetProgram(), insn.StringIndex, insn.FuncIndex);
+                    results.push_back({insn.Pc, func.Name, decoded.Instruction});
                 }
-                pattern.push_back(byte);
             }
         }
 
-        auto results = ScriptHelpers::ScanPattern(m_Layout->GetCode(), pattern);
-        if (results.empty())
-        {
-            QMessageBox::information(this, "Binary Search", "No matches found.");
-            return;
-        }
-
-        ScrollToAddress(results.front());
-
-        QString msg = QString("Found %1 matches:\n\n").arg(results.size());
-        int limit = std::min<int>(results.size(), 10);
-
-        for (int i = 0; i < limit; ++i)
-            msg += QString("0x%1\n").arg(QString::number(results[i], 16).toUpper());
-        if (results.size() > 10)
-            msg += QString("\n...and %1 more").arg(results.size() - 10);
-
-        QMessageBox::information(this, "Binary Search Results", msg);
+        ResultsDialog resultDlg("Binary Search", results, this);
+        connect(&resultDlg, &ResultsDialog::EntryDoubleClicked, this, [this, &resultDlg](uint32_t addr) {
+            ScrollToAddress(addr);
+            resultDlg.close();
+        });
+        resultDlg.exec();
     }
 
     void ScriptThreadsWidget::OnViewStack()
@@ -1162,29 +1158,31 @@ namespace scrDbg
         auto& code = m_Layout->GetCode();
         uint32_t targetPc = m_Layout->GetInstruction(index.row()).Pc;
 
-        std::vector<std::pair<uint32_t, std::string>> xrefs;
+        std::vector<ResultsDialog::Entry> results;
 
         uint32_t pc = 0;
         while (pc < code.size())
         {
             if (ScriptHelpers::IsXrefToPc(code, pc, targetPc))
             {
-                int funcIndex = m_Layout->GetFunctionIndexForPc(targetPc);
-                auto insn = ScriptDisassembler::DecodeInstruction(code, pc, rage::scrProgram(), -1, funcIndex);
-                xrefs.emplace_back(pc, insn.Instruction);
+                int xrefFuncIndex = m_Layout->GetFunctionIndexForPc(targetPc);
+                int funcIndex = m_Layout->GetFunctionIndexForPc(pc);
+                auto func = m_Layout->GetFunction(funcIndex);
+                auto decoded = ScriptDisassembler::DecodeInstruction(code, pc, rage::scrProgram(), -1, xrefFuncIndex);
+                results.push_back({pc, func.Name, decoded.Instruction});
             }
 
             pc += ScriptHelpers::GetInstructionSize(code, pc);
         }
 
-        if (xrefs.empty())
+        if (results.empty())
         {
             QMessageBox::warning(this, "No Xrefs", "No xrefs found for this address.");
             return;
         }
 
-        XrefsDialog dlg(xrefs, this);
-        connect(&dlg, &XrefsDialog::XrefDoubleClicked, this, [this, &dlg](uint32_t addr) {
+        ResultsDialog dlg("Xrefs", results, this);
+        connect(&dlg, &ResultsDialog::EntryDoubleClicked, this, [this, &dlg](uint32_t addr) {
             ScrollToAddress(addr);
             dlg.close();
         });
