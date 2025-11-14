@@ -877,11 +877,25 @@ namespace scrDbg
 
         QRadioButton* patternBtn = new QRadioButton("Pattern");
         patternBtn->setChecked(true);
+        patternBtn->setToolTip("Search for a IDA-style pattern (e.g., 61 ? ? ? 41 16 56).");
+
         QRadioButton* hexadecimalBtn = new QRadioButton("Hexadecimal");
+        hexadecimalBtn->setToolTip("Search for a hexadecimal value (e.g., 0x99B507EA).");
+
         QRadioButton* decimalBtn = new QRadioButton("Decimal");
+        decimalBtn->setToolTip("Search for a decimal value (e.g., 2578778090).");
+
+        QRadioButton* floatBtn = new QRadioButton("Float");
+        floatBtn->setToolTip("Search for a float value, (e.g., 3.14).");
+
+        QRadioButton* stringBtn = new QRadioButton("String");
+        stringBtn->setToolTip("Search for a string inside the string table.");
+
         layout->addWidget(patternBtn);
         layout->addWidget(hexadecimalBtn);
         layout->addWidget(decimalBtn);
+        layout->addWidget(floatBtn);
+        layout->addWidget(stringBtn);
 
         QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
         layout->addWidget(buttons);
@@ -896,18 +910,46 @@ namespace scrDbg
             type = GUIHelpers::BinarySearchType::HEXADECIMAL;
         else if (decimalBtn->isChecked())
             type = GUIHelpers::BinarySearchType::DECIMAL;
+        else if (floatBtn->isChecked())
+            type = GUIHelpers::BinarySearchType::FLOAT;
+        else if (stringBtn->isChecked())
+            type = GUIHelpers::BinarySearchType::STRING;
 
-        auto pattern = GUIHelpers::ParseBinarySearchStr(edit->text(), type);
-        if (pattern.empty())
-        {
-            QMessageBox::warning(this, "Invalid String", "Could not parse the string.");
+        if (edit->text().isEmpty())
             return;
-        }
 
+        auto program = m_Layout->GetProgram();
         auto code = m_Layout->GetCode();
 
-        auto addresses = ScriptHelpers::ScanPattern(code, pattern);
-        if (addresses.empty())
+        std::vector<std::vector<std::optional<uint8_t>>> patterns;
+        if (type == GUIHelpers::BinarySearchType::STRING)
+        {
+            patterns = GUIHelpers::ParseBinarySearchString(edit->text(), program);
+            if (patterns.empty())
+            {
+                QMessageBox::warning(this, "Binary Search", "No string matches found.");
+                return;
+            }
+        }
+        else
+        {
+            auto pattern = GUIHelpers::ParseBinarySearch(edit->text(), type);
+            if (pattern.empty())
+            {
+                QMessageBox::warning(this, "Binary Search", "Could not parse the input.");
+                return;
+            }
+            patterns.push_back(std::move(pattern));
+        }
+
+        std::vector<uint32_t> allMatches;
+        for (auto& pat : patterns)
+        {
+            auto addrs = ScriptHelpers::ScanPattern(code, pat);
+            allMatches.insert(allMatches.end(), addrs.begin(), addrs.end());
+        }
+
+        if (allMatches.empty())
         {
             QMessageBox::warning(this, "Binary Search", "No matches found.");
             return;
@@ -917,23 +959,37 @@ namespace scrDbg
         for (int i = 0; i < m_Layout->GetInstructionCount(); i++)
         {
             auto insn = m_Layout->GetInstruction(i);
-            for (uint32_t addr : addresses)
+            uint32_t insnSize = ScriptHelpers::GetInstructionSize(code, insn.Pc);
+
+            for (uint32_t addr : allMatches)
             {
-                if (addr >= insn.Pc && addr < insn.Pc + ScriptHelpers::GetInstructionSize(code, insn.Pc))
+                if (addr >= insn.Pc && addr < insn.Pc + insnSize)
                 {
                     auto func = m_Layout->GetFunction(insn.FuncIndex);
-                    auto decoded = ScriptDisassembler::DecodeInstruction(code, insn.Pc, m_Layout->GetProgram(), insn.StringIndex, insn.FuncIndex);
-                    results.push_back({insn.Pc, func.Name, decoded.Instruction});
+
+                    uint32_t displayPc = insn.Pc;
+                    int stringIndex = insn.StringIndex;
+
+                    // Only for STRING searches, advance to the next instruction
+                    if (type == GUIHelpers::BinarySearchType::STRING && i + 1 < m_Layout->GetInstructionCount())
+                    {
+                        auto nextInsn = m_Layout->GetInstruction(i + 1);
+                        displayPc = nextInsn.Pc;
+                        stringIndex = nextInsn.StringIndex;
+                    }
+
+                    auto decoded = ScriptDisassembler::DecodeInstruction(code, displayPc, program, stringIndex, insn.FuncIndex);
+
+                    results.push_back({displayPc, func.Name, decoded.Instruction});
                 }
             }
         }
 
-        ResultsDialog resultDlg("Binary Search", results, this);
-        connect(&resultDlg, &ResultsDialog::EntryDoubleClicked, this, [this, &resultDlg](uint32_t addr) {
+        ResultsDialog resDlg("Binary Search", results, this);
+        connect(&resDlg, &ResultsDialog::EntryDoubleClicked, this, [this](uint32_t addr) {
             ScrollToAddress(addr);
-            resultDlg.close();
         });
-        resultDlg.exec();
+        resDlg.exec();
     }
 
     void ScriptThreadsWidget::OnViewStack()
@@ -1184,7 +1240,6 @@ namespace scrDbg
         ResultsDialog dlg("Xrefs", results, this);
         connect(&dlg, &ResultsDialog::EntryDoubleClicked, this, [this, &dlg](uint32_t addr) {
             ScrollToAddress(addr);
-            dlg.close();
         });
         dlg.exec();
     }

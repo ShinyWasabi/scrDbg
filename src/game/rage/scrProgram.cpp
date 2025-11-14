@@ -212,6 +212,27 @@ namespace rage
         return str;
     }
 
+    std::vector<uint32_t> scrProgram::FindScriptIndex(const std::string& string) const
+    {
+        std::vector<uint32_t> result;
+
+        uint32_t count = GetStringCount();
+
+        uint32_t index = 0;
+        while (index < count)
+        {
+            std::string str = GetString(index);
+            std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+
+            if (str.find(string) != std::string::npos)
+                result.push_back(index);
+
+            index += static_cast<uint32_t>(str.size()) + 1;
+        }
+
+        return result;
+    }
+
     uint32_t scrProgram::GetStringCount() const
     {
         size_t offset = offsetof(_scrProgram, m_StringCount);

@@ -41,6 +41,13 @@ namespace scrDbg
             return 7;
         case rage::scrOpcode::PUSH_CONST_U8:
             return ScriptHelpers::ReadByte(code, pc + 1);
+
+        // Handle peephole optimizations
+        case rage::scrOpcode::PUSH_CONST_U8_U8:
+            return ScriptHelpers::ReadByte(code, pc + 2);
+        case rage::scrOpcode::PUSH_CONST_U8_U8_U8:
+            return ScriptHelpers::ReadByte(code, pc + 3);
+
         case rage::scrOpcode::PUSH_CONST_S16:
             return ScriptHelpers::ReadS16(code, pc + 1);
         case rage::scrOpcode::PUSH_CONST_U24:

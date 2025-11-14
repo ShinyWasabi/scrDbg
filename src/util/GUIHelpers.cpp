@@ -1,4 +1,6 @@
 #include "GUIHelpers.hpp"
+#include "game/rage/scrOpcode.hpp"
+#include "game/rage/scrProgram.hpp"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
@@ -31,7 +33,7 @@ namespace scrDbg::GUIHelpers
         file.close();
     }
 
-    std::vector<std::optional<uint8_t>> ParseBinarySearchStr(const QString& input, BinarySearchType type)
+    std::vector<std::optional<uint8_t>> ParseBinarySearch(const QString& input, BinarySearchType type)
     {
         std::vector<std::optional<uint8_t>> result;
         QString str = input.trimmed();
@@ -42,6 +44,20 @@ namespace scrDbg::GUIHelpers
         {
         case BinarySearchType::PATTERN: {
             QStringList parts = str.split(' ', Qt::SkipEmptyParts);
+
+            // Reject patterns that are only wildcards
+            bool allWildcards = true;
+            for (const QString& part : parts)
+            {
+                if (part.trimmed() != "?")
+                {
+                    allWildcards = false;
+                    break;
+                }
+            }
+            if (allWildcards)
+                return {};
+
             for (const QString& part : parts)
             {
                 QString token = part.trimmed();
@@ -99,6 +115,121 @@ namespace scrDbg::GUIHelpers
 
             break;
         }
+        case BinarySearchType::FLOAT: {
+            bool ok = false;
+            float value = str.toFloat(&ok);
+            if (!ok)
+                return {}; // invalid
+
+            // Push all bytes (little-endian)
+            uint8_t* p = reinterpret_cast<uint8_t*>(&value);
+            for (int i = 0; i < 4; ++i)
+                result.push_back(p[i]);
+
+            // Remove zeros
+            while (result.size() > 1 && result.back() == 0)
+                result.pop_back();
+
+            break;
+        }
+        }
+
+        return result;
+    }
+
+    std::vector<std::vector<std::optional<uint8_t>>> ParseBinarySearchString(const QString& input, const rage::scrProgram& program)
+    {
+        using OptByte = std::optional<uint8_t>;
+
+        std::vector<std::vector<OptByte>> result;
+
+        if (!program)
+            return result;
+
+        std::string value = input.toStdString();
+        std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+
+        auto indexes = program.FindScriptIndex(value);
+        if (indexes.empty())
+            return result;
+
+        auto buildNormal = [&](uint32_t index) {
+            std::vector<OptByte> p;
+
+            auto pushLE = [&](uint32_t value, int bytes) {
+                for (int i = 0; i < bytes; i++)
+                    p.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
+            };
+
+            if (index <= 7)
+            {
+                p.push_back(rage::scrOpcode::PUSH_CONST_0 + index);
+            }
+            else if (index <= 0xFF)
+            {
+                p.push_back(rage::scrOpcode::PUSH_CONST_U8);
+                pushLE(index, 1);
+            }
+            else if (index <= 0xFFFF)
+            {
+                p.push_back(rage::scrOpcode::PUSH_CONST_S16);
+                pushLE(index, 2);
+            }
+            else if (index <= 0xFFFFFF)
+            {
+                p.push_back(rage::scrOpcode::PUSH_CONST_U24);
+                pushLE(index, 3);
+            }
+            else
+            {
+                p.push_back(rage::scrOpcode::PUSH_CONST_U32);
+                pushLE(index, 4);
+            }
+
+            p.push_back(static_cast<uint8_t>(rage::scrOpcode::STRING));
+            return p;
+        };
+
+        auto buildPeephole = [&](uint32_t index) {
+            std::vector<std::vector<OptByte>> out;
+
+            if (index > 0xFF) // only U8 constants
+                return out;
+
+            uint8_t idx = static_cast<uint8_t>(index);
+
+            // PUSH_CONST_U8_U8 <wild> <index> STRING
+            {
+                std::vector<OptByte> p;
+                p.push_back(static_cast<uint8_t>(rage::scrOpcode::PUSH_CONST_U8_U8));
+                p.push_back(std::nullopt); // first U8 (unknown)
+                p.push_back(idx);          // second U8 = string index
+                p.push_back(static_cast<uint8_t>(rage::scrOpcode::STRING));
+                out.push_back(std::move(p));
+            }
+
+            // PUSH_CONST_U8_U8_U8 <wild> <wild> <index> STRING
+            {
+                std::vector<OptByte> p;
+                p.push_back(static_cast<uint8_t>(rage::scrOpcode::PUSH_CONST_U8_U8_U8));
+                p.push_back(std::nullopt); // first U8 (unknown)
+                p.push_back(std::nullopt); // second U8 (unknown)
+                p.push_back(idx);          // third U8 = string index
+                p.push_back(static_cast<uint8_t>(rage::scrOpcode::STRING));
+                out.push_back(std::move(p));
+            }
+
+            return out;
+        };
+
+        // Build all pattern variants
+        for (uint32_t idx : indexes)
+        {
+            result.push_back(buildNormal(idx));
+
+            // peephole variants (if any)
+            auto p = buildPeephole(idx);
+            result.insert(result.end(), p.begin(), p.end());
         }
 
         return result;

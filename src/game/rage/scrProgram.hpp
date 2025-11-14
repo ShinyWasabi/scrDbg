@@ -52,6 +52,7 @@ namespace rage
         uint32_t GetRefCount() const;
         std::vector<std::string> GetAllStrings() const;
         std::string GetString(uint32_t index) const;
+        std::vector<uint32_t> FindScriptIndex(const std::string& string) const;
         uint32_t GetStringCount() const;
 
         static uint64_t GetGlobal(uint32_t index);
