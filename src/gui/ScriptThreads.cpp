@@ -5,8 +5,7 @@
 #include "Pointers.hpp"
 #include "Results.hpp"
 #include "Stack.hpp"
-#include "game/gta/Natives.hpp"
-#include "game/gta/TextLabels.hpp"
+#include "ScriptExport.hpp"
 #include "game/rage/Joaat.hpp"
 #include "game/rage/scrOpcode.hpp"
 #include "game/rage/scrThread.hpp"
@@ -46,18 +45,25 @@ namespace scrDbg
 
         m_State = new QLabel("State: RUNNING");
         m_State->setToolTip("Current state of this script thread.\n(RUNNING, IDLE, KILLED, PAUSED)");
+
         m_Priority = new QLabel("Priority: HIGHEST");
         m_Priority->setToolTip("Execution priority of this script thread.\n(HIGHEST, NORMAL, LOWEST, MANUAL_UPDATE)");
+
         m_Program = new QLabel("Program: 0");
         m_Program->setToolTip("JOAAT hash of the name of this script thread's program.");
+
         m_ThreadId = new QLabel("Thread ID: 0");
         m_ThreadId->setToolTip("Unique identifier for this script thread.");
+
         m_ProgramCounter = new QLabel("Program Counter: 0x0000");
         m_ProgramCounter->setToolTip("Current program counter of the last called native command in this script thread.");
+
         m_FramePointer = new QLabel("Frame Pointer: 0x0000");
         m_FramePointer->setToolTip("Base of the current stack frame for this script thread.");
+
         m_StackPointer = new QLabel("Stack Pointer: 0x0000");
         m_StackPointer->setToolTip("Current top of the stack for this script thread.");
+
         m_StackSize = new QLabel("Stack Size: 0");
         m_StackSize->setToolTip("Total stack size this script thread needs.");
 
@@ -68,18 +74,25 @@ namespace scrDbg
 
         m_GlobalVersion = new QLabel("Global Version: 0");
         m_GlobalVersion->setToolTip("Unused. Checks whether two script programs have incompatible globals variables.");
+
         m_CodeSize = new QLabel("Code Size: 0");
         m_CodeSize->setToolTip("Total size, in bytes, of the bytecode for this script program.");
+
         m_ArgCount = new QLabel("Arg Count: 0");
         m_ArgCount->setToolTip("Number of arguments this script program's entry function expects.");
+
         m_StaticCount = new QLabel("Static Count: 0");
         m_StaticCount->setToolTip("Number of static variables defined in this script program.");
+
         m_GlobalCount = new QLabel("Global Count: 0");
         m_GlobalCount->setToolTip("Number of global variables defined in this script program.");
+
         m_GlobalBlock = new QLabel("Global Block: 0");
-        m_GlobalCount->setToolTip("The global block index of this script program's global variables.");
+        m_GlobalBlock->setToolTip("The global block index of this script program's global variables.");
+
         m_NativeCount = new QLabel("Native Count: 0");
         m_NativeCount->setToolTip("Number of native commands that this script program uses.");
+
         m_StringCount = new QLabel("String Count: 0");
         m_StringCount->setToolTip("Total size, in bytes, of all string literals defined in this script program.");
 
@@ -94,21 +107,27 @@ namespace scrDbg
 
         m_TogglePauseScript = new QPushButton("Pause Script");
         connect(m_TogglePauseScript, &QPushButton::clicked, this, &ScriptThreadsWidget::OnTogglePauseScript);
+
         m_KillScript = new QPushButton("Kill Script");
         m_KillScript->setToolTip("Terminate this script thread.");
         connect(m_KillScript, &QPushButton::clicked, this, &ScriptThreadsWidget::OnKillScript);
+
         m_ExportOptions = new QPushButton("Export Options");
         m_ExportOptions->setToolTip("View export options.");
         connect(m_ExportOptions, &QPushButton::clicked, this, &ScriptThreadsWidget::OnExportOptionsDialog);
+
         m_JumpToAddress = new QPushButton("Jump to Address");
         m_JumpToAddress->setToolTip("Jump to a raw address in the disassembly.");
         connect(m_JumpToAddress, &QPushButton::clicked, this, &ScriptThreadsWidget::OnJumpToAddress);
+
         m_BinarySearch = new QPushButton("Binary Search");
         m_BinarySearch->setToolTip("Search for a byte sequence in the disassembly.");
         connect(m_BinarySearch, &QPushButton::clicked, this, &ScriptThreadsWidget::OnBinarySearch);
+
         m_ViewStack = new QPushButton("View Stack");
         m_ViewStack->setToolTip("View the current callstack and stack frame of this script thread.");
         connect(m_ViewStack, &QPushButton::clicked, this, &ScriptThreadsWidget::OnViewStack);
+
         m_ViewBreakpoints = new QPushButton("View Breakpoints");
         m_ViewBreakpoints->setToolTip("View currently set breakpoints.");
         m_BreakpointsPauseGame = new QCheckBox("Breakpoints pause game");
@@ -123,23 +142,16 @@ namespace scrDbg
             });
         }
 
-        QHBoxLayout* buttonLayout = new QHBoxLayout();
-        buttonLayout->addWidget(m_TogglePauseScript);
-        buttonLayout->addWidget(m_KillScript);
-        buttonLayout->addWidget(m_ExportOptions);
-        buttonLayout->addWidget(m_JumpToAddress);
-        buttonLayout->addWidget(m_BinarySearch);
-        buttonLayout->addWidget(m_ViewStack);
-        buttonLayout->addWidget(m_ViewBreakpoints);
-        buttonLayout->addWidget(m_BreakpointsPauseGame);
-        buttonLayout->addStretch();
-
-        m_FunctionSearch = new QLineEdit(this);
-        m_FunctionSearch->setPlaceholderText("Search function...");
-        connect(m_FunctionSearch, &QLineEdit::textChanged, this, [this](const QString& text) {
-            if (m_FunctionFilter)
-                m_FunctionFilter->setFilterFixedString(text);
-        });
+        QHBoxLayout* buttonsLayout = new QHBoxLayout();
+        buttonsLayout->addWidget(m_TogglePauseScript);
+        buttonsLayout->addWidget(m_KillScript);
+        buttonsLayout->addWidget(m_ExportOptions);
+        buttonsLayout->addWidget(m_JumpToAddress);
+        buttonsLayout->addWidget(m_BinarySearch);
+        buttonsLayout->addWidget(m_ViewStack);
+        buttonsLayout->addWidget(m_ViewBreakpoints);
+        buttonsLayout->addWidget(m_BreakpointsPauseGame);
+        buttonsLayout->addStretch();
 
         m_FunctionList = new QTableView(this);
         m_FunctionList->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -154,6 +166,13 @@ namespace scrDbg
             QModelIndex idx = m_FunctionFilter->mapToSource(index);
             uint32_t pc = m_Layout->GetFunction(idx.row()).Start;
             ScrollToAddress(pc);
+        });
+
+        m_FunctionSearch = new QLineEdit(this);
+        m_FunctionSearch->setPlaceholderText("Search function...");
+        connect(m_FunctionSearch, &QLineEdit::textChanged, this, [this](const QString& text) {
+            if (m_FunctionFilter)
+                m_FunctionFilter->setFilterFixedString(text);
         });
 
         QVBoxLayout* functionLayout = new QVBoxLayout();
@@ -202,7 +221,7 @@ namespace scrDbg
         QVBoxLayout* scriptThreadsLayout = new QVBoxLayout(this);
         scriptThreadsLayout->addWidget(m_ScriptNames);
         scriptThreadsLayout->addLayout(columnsLayout);
-        scriptThreadsLayout->addLayout(buttonLayout);
+        scriptThreadsLayout->addLayout(buttonsLayout);
         scriptThreadsLayout->addWidget(splitter, 1);
         scriptThreadsLayout->addStretch();
         setLayout(scriptThreadsLayout);
@@ -219,7 +238,7 @@ namespace scrDbg
     bool ScriptThreadsWidget::ScrollToAddress(uint32_t address)
     {
         QModelIndex idx;
-        for (int i = 0; i < m_Disassembly->model()->rowCount(); ++i)
+        for (int i = 0; i < m_Disassembly->model()->rowCount(); i++)
         {
             uint32_t pc = m_Layout->GetInstruction(i).Pc;
             uint32_t size = ScriptHelpers::GetInstructionSize(m_Layout->GetCode(), pc);
@@ -243,9 +262,9 @@ namespace scrDbg
     void ScriptThreadsWidget::UpdateDisassemblyInfo(int row, bool includeDesc)
     {
         auto& code = m_Layout->GetCode();
+
         uint32_t pc = m_Layout->GetInstruction(row).Pc;
         int index = m_Layout->GetFunctionIndexForPc(pc);
-
         auto func = m_Layout->GetFunction(index);
 
         QString name = QString::fromStdString(func.Name);
@@ -341,18 +360,16 @@ namespace scrDbg
             m_TogglePauseScript->setToolTip("Pause the execution of this script thread.");
         }
 
-        QString stateStr = (state == rage::scrThreadState::RUNNING) ? "RUNNING" : (state == rage::scrThreadState::IDLE) ? "IDLE"
-                                                                              : (state == rage::scrThreadState::PAUSED) ? "PAUSED"
-                                                                                                                        : "KILLED";
-
+        // clang-format off
+        QString stateStr = (state == rage::scrThreadState::RUNNING) ? "RUNNING" : (state == rage::scrThreadState::IDLE) ? "IDLE" : (state == rage::scrThreadState::PAUSED) ? "PAUSED" : "KILLED";
         bool showBreakpointActive = isGlobalBreakpointPause || isLocalBreakpoint;
         m_State->setText("State: " + stateStr + (showBreakpointActive ? " (breakpoint active)" : ""));
 
         auto priority = thread.GetPriority();
-        m_Priority->setText("Priority: " +
-                            QString((priority == rage::scrThreadPriority::HIGHEST) ? "HIGHEST" : (priority == rage::scrThreadPriority::NORMAL) ? "NORMAL"
-                                                                                             : (priority == rage::scrThreadPriority::LOWEST)   ? "LOWEST"
-                                                                                                                                               : "MANUAL_UPDATE"));
+
+        QString priorityStr = (priority == rage::scrThreadPriority::HIGHEST) ? "HIGHEST" : (priority == rage::scrThreadPriority::NORMAL) ? "NORMAL" : (priority == rage::scrThreadPriority::LOWEST) ? "LOWEST" : "MANUAL_UPDATE";
+        m_Priority->setText("Priority: " + priorityStr);
+        // clang-format on
 
         uint32_t id = thread.GetId();
 
@@ -480,19 +497,20 @@ namespace scrDbg
     {
         QDialog dlg(this);
         dlg.setWindowTitle("Export Options");
-        dlg.setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowCloseButtonHint);
-        dlg.setModal(true);
 
         QPushButton* exportDisassembly = new QPushButton("Export Disassembly");
-        QPushButton* exportStatics = new QPushButton("Export Statics");
-        QPushButton* exportGlobals = new QPushButton("Export Globals");
-        QPushButton* exportNatives = new QPushButton("Export Natives");
-        QPushButton* exportStrings = new QPushButton("Export Strings");
-
         exportDisassembly->setToolTip("Export the disassembly of this script program.");
+
+        QPushButton* exportStatics = new QPushButton("Export Statics");
         exportStatics->setToolTip("Export the static variables of this script program.");
+
+        QPushButton* exportGlobals = new QPushButton("Export Globals");
         exportGlobals->setToolTip("Export the global variables of this script program.");
+
+        QPushButton* exportNatives = new QPushButton("Export Natives");
         exportNatives->setToolTip("Export the native commands of this script program.");
+
+        QPushButton* exportStrings = new QPushButton("Export Strings");
         exportStrings->setToolTip("Export the string literals of this script program.");
 
         int maxButtonWidth = std::max({exportDisassembly->sizeHint().width(),
@@ -508,11 +526,12 @@ namespace scrDbg
         exportStrings->setMinimumWidth(maxButtonWidth);
 
         QCheckBox* exportAllGlobals = new QCheckBox("Export all");
-        QCheckBox* exportAllNatives = new QCheckBox("Export all");
-        QCheckBox* onlyTextLabels = new QCheckBox("Only text labels");
-
         exportAllGlobals->setToolTip("Export all the global blocks.");
+
+        QCheckBox* exportAllNatives = new QCheckBox("Export all");
         exportAllNatives->setToolTip("Export all the native commands in the game.");
+
+        QCheckBox* onlyTextLabels = new QCheckBox("Only text labels");
         onlyTextLabels->setToolTip("Export only text labels with their translations.");
 
         QGridLayout* grid = new QGridLayout(&dlg);
@@ -548,297 +567,32 @@ namespace scrDbg
 
     void ScriptThreadsWidget::OnExportDisassembly()
     {
-        if (!GetCurrentScriptHash())
-            return;
-
-        auto disassembly = m_Disassembly->model();
-
-        const int count = disassembly->rowCount();
-        GUIHelpers::ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
-            for (int row = 0; row < count; ++row)
-            {
-                if (progress.wasCanceled())
-                    return;
-
-                if (disassembly != m_Disassembly->model())
-                {
-                    QMessageBox::critical(this, "Error", "Disassembly changed during export.");
-                    return;
-                }
-
-                QString addr = disassembly->data(disassembly->index(row, 0), Qt::DisplayRole).toString();
-                QString bytes = disassembly->data(disassembly->index(row, 1), Qt::DisplayRole).toString();
-                QString instr = disassembly->data(disassembly->index(row, 2), Qt::DisplayRole).toString();
-
-                out << QString("%1  %2  %3\n").arg(addr, -10).arg(bytes, -25).arg(instr);
-
-                if (row % 50 == 0)
-                {
-                    progress.setValue(row);
-                    QCoreApplication::processEvents();
-                }
-            }
-
-            progress.setValue(count);
-            QMessageBox::information(this, "Export Disassembly", QString("Exported %1 instructions.").arg(count));
-        });
+        if (auto view = m_Disassembly)
+            ScriptExport::ExportDisassembly(view);
     }
 
     void ScriptThreadsWidget::OnExportStatics()
     {
-        const uint32_t hash = GetCurrentScriptHash();
-
-        auto thread = rage::scrThread::GetThread(hash);
-        auto program = rage::scrProgram::GetProgram(hash);
-        if (!thread || !program)
-            return;
-
-        const uint32_t count = program.GetStaticCount();
-        if (count == 0)
-        {
-            QMessageBox::warning(this, "No Statics", "This script has no statics.");
-            return;
-        }
-
-        GUIHelpers::ExportToFile("Statics", "statics.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
-            for (int i = 0; i < count; i++)
-            {
-                if (progress.wasCanceled())
-                    return;
-
-                int currentVal = static_cast<int>(thread.GetStack(i));
-                int defaultVal = static_cast<int>(program.GetStatic(i));
-                out << "Static_" << i << " = " << currentVal << " // Default: " << defaultVal << "\n";
-
-                if (i % 50 == 0)
-                {
-                    progress.setValue(i);
-                    QCoreApplication::processEvents();
-                }
-            }
-
-            progress.setValue(count);
-            QMessageBox::information(this, "Export Statics", QString("Exported %1 statics.").arg(count));
-        });
+        if (auto hash = GetCurrentScriptHash())
+            ScriptExport::ExportStatics(hash);
     }
 
     void ScriptThreadsWidget::OnExportGlobals(bool exportAll)
     {
-        if (exportAll)
-        {
-            int lastValidBlock = -1;
-            int totalGlobalCount = 0;
-            for (int i = 0; i < 64; i++)
-            {
-                int blockCount = rage::scrProgram::GetGlobalBlockCount(i);
-                if (blockCount > 0)
-                {
-                    lastValidBlock = i;
-                    totalGlobalCount += blockCount;
-                }
-            }
-
-            if (lastValidBlock == -1)
-            {
-                QMessageBox::warning(this, "No Blocks", "No valid global blocks found.");
-                return;
-            }
-
-            GUIHelpers::ExportToFile("Globals", "globals.txt", totalGlobalCount, [&](QTextStream& out, QProgressDialog& progress) {
-                for (int block = 0; block <= lastValidBlock; block++)
-                {
-                    int blockCount = rage::scrProgram::GetGlobalBlockCount(block);
-                    if (blockCount == 0)
-                        continue;
-
-                    out << "// Block " << block << " (Count " << blockCount << ")\n";
-
-                    for (int i = 0; i < blockCount; i++)
-                    {
-                        if (progress.wasCanceled())
-                            return;
-
-                        int globalIndex = (block << 18) + i;
-                        int value = static_cast<int>(rage::scrProgram::GetGlobal(globalIndex));
-                        out << "Global_" << globalIndex << " = " << value << "\n";
-
-                        if (globalIndex % 50 == 0)
-                        {
-                            progress.setValue(globalIndex);
-                            QCoreApplication::processEvents();
-                        }
-                    }
-                }
-
-                progress.setValue(totalGlobalCount);
-                QMessageBox::information(this, "Export Globals", QString("Exported %1 blocks (%2 globals total).").arg(lastValidBlock).arg(totalGlobalCount));
-            });
-        }
-        else
-        {
-            auto program = rage::scrProgram::GetProgram(GetCurrentScriptHash());
-            if (!program)
-                return;
-
-            const uint32_t block = program.GetGlobalBlockIndex();
-            const uint32_t count = program.GetGlobalCount();
-            if (count == 0)
-            {
-                QMessageBox::warning(this, "No Globals", "This script has no globals.");
-                return;
-            }
-
-            GUIHelpers::ExportToFile("Globals", "globals.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
-                for (uint32_t i = 0; i < count; i++)
-                {
-                    if (progress.wasCanceled())
-                        return;
-
-                    int globalIndex = (block << 0x12) + i;
-                    int currentVal = static_cast<int>(rage::scrProgram::GetGlobal(globalIndex));
-                    int defaultVal = static_cast<int>(program.GetProgramGlobal(i));
-                    out << "Global_" << globalIndex << " = " << currentVal << " // Default: " << defaultVal << "\n";
-
-                    if (i % 50 == 0)
-                    {
-                        progress.setValue(i);
-                        QCoreApplication::processEvents();
-                    }
-                }
-
-                progress.setValue(count);
-                QMessageBox::information(this, "Export Globals", QString("Exported %1 globals.").arg(count));
-            });
-        }
+        if (auto hash = GetCurrentScriptHash())
+            ScriptExport::ExportGlobals(hash, exportAll);
     }
 
     void ScriptThreadsWidget::OnExportNatives(bool exportAll)
     {
-        if (exportAll)
-        {
-            auto allNatives = gta::Natives::GetAll();
-
-            const uint32_t count = static_cast<uint32_t>(allNatives.size());
-            if (count == 0)
-            {
-                QMessageBox::warning(this, "No Natives", "No natives found.");
-                return;
-            }
-
-            GUIHelpers::ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
-                uint32_t index = 0;
-                for (auto& [hash, handler] : allNatives)
-                {
-                    if (progress.wasCanceled())
-                        return;
-
-                    out << "0x" << QString::number(hash, 16).toUpper();
-                    out << ":" << QString::fromStdString(Process::GetName()) << "+0x" << QString::number(handler - Process::GetBaseAddress(), 16).toUpper();
-
-                    auto name = std::string(gta::Natives::GetNameByHash(hash));
-                    out << " // " << (name.empty() ? "UNKNOWN_NATIVE" : QString::fromStdString(name)) << "\n";
-
-                    if (index % 50 == 0)
-                    {
-                        progress.setValue(index);
-                        QCoreApplication::processEvents();
-                    }
-                    index++;
-                }
-
-                progress.setValue(count);
-                QMessageBox::information(this, "Export Natives", QString("Exported %1 natives.").arg(count));
-            });
-        }
-        else
-        {
-            auto program = rage::scrProgram::GetProgram(GetCurrentScriptHash());
-            if (!program)
-                return;
-
-            const uint32_t count = program.GetNativeCount();
-            if (count == 0)
-            {
-                QMessageBox::warning(this, "No Natives", "This script has no natives.");
-                return;
-            }
-
-            GUIHelpers::ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
-                for (uint32_t i = 0; i < count; i++)
-                {
-                    if (progress.wasCanceled())
-                        return;
-
-                    uint64_t handler = program.GetNative(i);
-                    uint64_t hash = gta::Natives::GetHashByHandler(handler);
-                    out << "0x" << QString::number(hash, 16).toUpper();
-                    out << ":" << QString::fromStdString(Process::GetName()) << "+0x" << QString::number(handler - Process::GetBaseAddress(), 16).toUpper();
-
-                    auto name = std::string(gta::Natives::GetNameByHash(hash));
-                    out << " // " << (name.empty() ? "UNKNOWN_NATIVE" : QString::fromStdString(name)) << "\n";
-
-                    if (i % 50 == 0)
-                    {
-                        progress.setValue(i);
-                        QCoreApplication::processEvents();
-                    }
-                }
-
-                progress.setValue(count);
-                QMessageBox::information(this, "Export Natives", QString("Exported %1 natives.").arg(count));
-            });
-        }
+        if (auto hash = GetCurrentScriptHash())
+            ScriptExport::ExportNatives(hash, exportAll);
     }
 
     void ScriptThreadsWidget::OnExportStrings(bool onlyTextLabels)
     {
-        auto program = rage::scrProgram::GetProgram(GetCurrentScriptHash());
-        if (!program)
-            return;
-
-        const auto strings = program.GetAllStrings();
-        const int count = static_cast<int>(strings.size());
-        if (count == 0)
-        {
-            QMessageBox::warning(this, "No Strings", "This script has no strings.");
-            return;
-        }
-
-        int exportedCount = 0;
-        GUIHelpers::ExportToFile("Strings", "strings.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
-            for (int i = 0; i < count; ++i)
-            {
-                if (progress.wasCanceled())
-                    return;
-
-                const std::string& s = strings[i];
-
-                if (onlyTextLabels)
-                {
-                    const uint32_t hash = RAGE_JOAAT(s);
-                    const std::string label = gta::TextLabels::GetTextLabel(hash);
-                    if (!label.empty())
-                    {
-                        out << QString("%1 (0x%2): %3\n").arg(QString::fromStdString(s)).arg(QString::number(hash, 16).toUpper()).arg(QString::fromStdString(label));
-                        ++exportedCount;
-                    }
-                }
-                else
-                {
-                    out << QString::fromStdString(s) << '\n';
-                    ++exportedCount;
-                }
-
-                if (i % 50 == 0)
-                {
-                    progress.setValue(i);
-                    QCoreApplication::processEvents();
-                }
-            }
-
-            progress.setValue(count);
-            QMessageBox::information(this, "Export Strings", QString("Exported %1 strings.").arg(exportedCount));
-        });
+        if (auto hash = GetCurrentScriptHash())
+            ScriptExport::ExportStrings(hash, onlyTextLabels);
     }
 
     void ScriptThreadsWidget::OnJumpToAddress()
@@ -1104,17 +858,12 @@ namespace scrDbg
     {
         auto model = index.model();
         int row = index.row();
-        int columnCount = model->columnCount();
 
         QStringList rowData;
-        for (int col = 0; col < columnCount; ++col)
-        {
-            QModelIndex cellIndex = model->index(row, col);
-            rowData << cellIndex.data(Qt::DisplayRole).toString();
-        }
+        for (int col = 0; col < model->columnCount(); ++col)
+            rowData << model->data(model->index(row, col), Qt::DisplayRole).toString();
 
-        QString text = rowData.join("\t");
-        QGuiApplication::clipboard()->setText(text);
+        QGuiApplication::clipboard()->setText(rowData.join('\t'));
     }
 
     void ScriptThreadsWidget::OnNopInstruction(const QModelIndex& index)
@@ -1138,14 +887,14 @@ namespace scrDbg
         if (!ok || input.isEmpty())
             return;
 
-        QByteArray newBytes;
-        QStringList parts = input.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+        QStringList parts = input.split(' ', Qt::SkipEmptyParts);
         if (parts.size() > instrSize)
         {
             QMessageBox::warning(this, "Too Long", "Too many bytes entered!");
             return;
         }
 
+        QByteArray newBytes;
         for (const QString& part : parts)
         {
             bool okByte;

@@ -397,14 +397,25 @@ namespace scrDbg::ScriptHelpers
             int instrSize = GetInstructionSize(code, start + i);
             int operandSize = instrSize - 1;
 
-            if (IsWildcardInstruction(opcode))
+            if (opcode == rage::scrOpcode::NATIVE)
             {
-                for (int j = 0; j < operandSize && i + 1 + j < len && (start + i + 1 + j) < code.size(); ++j)
+                // Wildcard native index
+                for (int j = 0; j < operandSize; j++)
+                {
+                    if (j >= operandSize - 2)
+                        ss << " ?";
+                    else
+                        ss << ' ' << std::setw(2) << static_cast<int>(code[start + i + 1 + j]);
+                }
+            }
+            else if (IsWildcardInstruction(opcode))
+            {
+                for (int j = 0; j < operandSize && i + 1 + j < len && (start + i + 1 + j) < code.size(); j++)
                     ss << " ?";
             }
             else
             {
-                for (int j = 0; j < operandSize && i + 1 + j < len && (start + i + 1 + j) < code.size(); ++j)
+                for (int j = 0; j < operandSize && i + 1 + j < len && (start + i + 1 + j) < code.size(); j++)
                     ss << ' ' << std::setw(2) << static_cast<int>(code[start + i + 1 + j]);
             }
 
@@ -433,7 +444,9 @@ namespace scrDbg::ScriptHelpers
 
                 for (int k = 0; k < instrSize && j + k < patternLength && (pc + j + k) < code.size() && (i + j + k) < code.size(); ++k)
                 {
-                    if (IsWildcardInstruction(a) && k > 0)
+                    if (a == rage::scrOpcode::NATIVE && k > 1)
+                        continue;
+                    else if (IsWildcardInstruction(a) && k > 0)
                         continue;
 
                     if (code[pc + j + k] != code[i + j + k])

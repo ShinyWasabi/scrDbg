@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 
     if (!g_Pointers.Init())
     {
-        std::string message = "Failed to initialize pointers. Please make sure BattlEye is disabled.";
+        std::string message = "Failed to initialize pointers.";
 
         const auto target = g_IsEnhanced ? ENHANCED_TARGET_BUILD : LEGACY_TARGET_BUILD;
         const auto build = Misc::GetGameBuild();
