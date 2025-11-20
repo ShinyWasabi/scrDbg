@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/scrDbg.png" alt="Logo" width="300"/>
+  <img src="screenshots/scrDbg.png" alt="Logo" width="300"/>
 </p>
 
 # scrDbg
