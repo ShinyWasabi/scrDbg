@@ -39,7 +39,7 @@ namespace scrDbg
         const auto& code = m_Layout.GetCode();
         const auto entry = m_Layout.GetInstruction(index.row());
 
-        if (g_BreakpointsSupported && role == Qt::BackgroundRole)
+        if (role == Qt::BackgroundRole)
         {
             auto hash = m_Layout.GetHash();
 

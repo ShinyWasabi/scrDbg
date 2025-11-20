@@ -42,7 +42,8 @@ namespace scrDbg::GUIHelpers
 
         switch (type)
         {
-        case BinarySearchType::PATTERN: {
+        case BinarySearchType::PATTERN:
+        {
             QStringList parts = str.split(' ', Qt::SkipEmptyParts);
 
             // Reject patterns that are only wildcards
@@ -77,7 +78,8 @@ namespace scrDbg::GUIHelpers
             }
             break;
         }
-        case BinarySearchType::HEXADECIMAL: {
+        case BinarySearchType::HEXADECIMAL:
+        {
             bool ok = false;
             uint32_t value = 0;
 
@@ -99,7 +101,8 @@ namespace scrDbg::GUIHelpers
 
             break;
         }
-        case BinarySearchType::DECIMAL: {
+        case BinarySearchType::DECIMAL:
+        {
             bool ok = false;
             uint32_t value = str.toUInt(&ok, 10);
             if (!ok)
@@ -115,7 +118,8 @@ namespace scrDbg::GUIHelpers
 
             break;
         }
-        case BinarySearchType::FLOAT: {
+        case BinarySearchType::FLOAT:
+        {
             bool ok = false;
             float value = str.toFloat(&ok);
             if (!ok)

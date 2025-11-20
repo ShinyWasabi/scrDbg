@@ -104,6 +104,40 @@ namespace scrDbg
         return found;
     }
 
+    bool Process::InjectModuleImpl(const char* modulePath)
+    {
+        char fullPath[MAX_PATH];
+        GetFullPathNameA(modulePath, MAX_PATH, fullPath, nullptr);
+
+        size_t pathLen = strlen(fullPath) + 1;
+
+        LPVOID path = VirtualAllocEx(m_Handle, 0, pathLen, MEM_COMMIT, PAGE_READWRITE);
+        if (!path)
+            return false;
+
+        WriteProcessMemory(m_Handle, path, fullPath, pathLen, nullptr);
+
+        HMODULE handle = GetModuleHandleA("kernel32.dll");
+        LPTHREAD_START_ROUTINE loadLibrary = (LPTHREAD_START_ROUTINE)GetProcAddress(handle, "LoadLibraryA");
+
+        HANDLE thread = CreateRemoteThread(m_Handle, 0, 0, loadLibrary, path, 0, 0);
+        if (!thread)
+        {
+            VirtualFreeEx(m_Handle, path, 0, MEM_RELEASE);
+            return false;
+        }
+
+        WaitForSingleObject(thread, INFINITE);
+
+        DWORD exitCode = 0;
+        GetExitCodeThread(thread, &exitCode);
+
+        CloseHandle(thread);
+        VirtualFreeEx(m_Handle, path, 0, MEM_RELEASE);
+
+        return exitCode != 0;
+    }
+
     bool Process::ReadRawImpl(uintptr_t base, void* value, size_t size)
     {
         return ReadProcessMemory(m_Handle, reinterpret_cast<const void*>(base), value, size, nullptr);

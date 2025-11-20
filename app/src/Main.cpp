@@ -2,7 +2,6 @@
 #include "Pointers.hpp"
 #include "core/PipeClient.hpp"
 #include "game/gta/Natives.hpp"
-#include "pipe/PipeCommands.hpp"
 #include "util/Misc.hpp"
 
 int main(int argc, char* argv[])
@@ -46,20 +45,21 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (Process::IsModuleLoaded(L"ScriptVM.asi"))
+    if (!Process::IsModuleLoaded(L"scrDbg.dll"))
     {
-        if (PipeClient::Init("scrDbg"))
+        if (!Process::InjectModule("scrDbg.dll"))
         {
-            g_BreakpointsSupported = true;
+            QMessageBox::critical(nullptr, "Injection Failed", "Failed to inject scrDbg.dll.");
+            return 1;
         }
-        else
-        {
-            QMessageBox::warning(nullptr, "Pipe", "Failed to initialize scrDbg pipe.");
-        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // wait for server
     }
-    else
+
+    if (!PipeClient::Init("scrDbg"))
     {
-        QMessageBox::warning(nullptr, "Module Not Found", "ScriptVM.asi not found. Some features will be disabled.");
+        QMessageBox::critical(nullptr, "Pipe", "Failed to initialize scrDbg pipe client.");
+        return 1;
     }
 
     if (!gta::Natives::Init())
@@ -69,10 +69,8 @@ int main(int argc, char* argv[])
     gui.show();
     int ret = app.exec();
 
-    Process::Destroy();
-    PipeCommands::RemoveAllBreakpoints();
-    PipeCommands::SetBreakpointPauseGame(false);
     PipeClient::Destroy();
+    Process::Destroy();
 
     return ret;
 }

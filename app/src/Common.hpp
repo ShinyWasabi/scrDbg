@@ -25,7 +25,6 @@
 namespace scrDbg
 {
     extern bool g_IsEnhanced;
-    extern bool g_BreakpointsSupported;
 }
 
 #define ENHANCED_TARGET_BUILD "889.22-1.71"

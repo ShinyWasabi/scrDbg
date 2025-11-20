@@ -40,6 +40,11 @@ namespace scrDbg
             return GetInstance().IsModuleLoadedImpl(moduleName);
         }
 
+        static bool InjectModule(const char* modulePath)
+        {
+            return GetInstance().InjectModuleImpl(modulePath);
+        }
+
         static bool ReadRaw(uintptr_t base, void* out, size_t size)
         {
             return GetInstance().ReadRawImpl(base, out, size);
@@ -75,6 +80,7 @@ namespace scrDbg
         void DestroyImpl();
         bool IsRunningImpl();
         bool IsModuleLoadedImpl(const wchar_t* moduleName);
+        bool InjectModuleImpl(const char* modulePath);
         bool ReadRawImpl(uintptr_t base, void* value, size_t size);
         bool WriteRawImpl(uintptr_t base, const void* value, size_t size);
 

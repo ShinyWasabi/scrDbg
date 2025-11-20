@@ -4,8 +4,8 @@
 #include "FunctionList.hpp"
 #include "Pointers.hpp"
 #include "Results.hpp"
-#include "Stack.hpp"
 #include "ScriptExport.hpp"
+#include "Stack.hpp"
 #include "game/rage/Joaat.hpp"
 #include "game/rage/scrOpcode.hpp"
 #include "game/rage/scrThread.hpp"
@@ -132,15 +132,10 @@ namespace scrDbg
         m_ViewBreakpoints->setToolTip("View currently set breakpoints.");
         m_BreakpointsPauseGame = new QCheckBox("Breakpoints pause game");
         m_BreakpointsPauseGame->setToolTip("Choose whether a breakpoint should pause the entire game or only its script thread.");
-        m_ViewBreakpoints->setEnabled(g_BreakpointsSupported);
-        m_BreakpointsPauseGame->setEnabled(g_BreakpointsSupported);
-        if (g_BreakpointsSupported)
-        {
-            connect(m_ViewBreakpoints, &QPushButton::clicked, this, &ScriptThreadsWidget::OnBreakpointsDialog);
-            connect(m_BreakpointsPauseGame, &QCheckBox::toggled, this, [](bool checked) {
-                PipeCommands::SetBreakpointPauseGame(checked);
-            });
-        }
+        connect(m_ViewBreakpoints, &QPushButton::clicked, this, &ScriptThreadsWidget::OnBreakpointsDialog);
+        connect(m_BreakpointsPauseGame, &QCheckBox::toggled, this, [](bool checked) {
+            PipeCommands::SetBreakpointPauseGame(checked);
+        });
 
         QHBoxLayout* buttonsLayout = new QHBoxLayout();
         buttonsLayout->addWidget(m_TogglePauseScript);
@@ -334,12 +329,8 @@ namespace scrDbg
 
         auto state = thread.GetState();
 
-        std::optional<std::pair<uint32_t, uint32_t>> activeBp;
-        if (g_BreakpointsSupported)
-        {
-            activeBp = PipeCommands::GetActiveBreakpoint();
-            m_BreakpointsPauseGame->setEnabled(!activeBp.has_value());
-        }
+        auto activeBp = PipeCommands::GetActiveBreakpoint();
+        m_BreakpointsPauseGame->setEnabled(!activeBp.has_value());
 
         bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame->isChecked();
         bool isLocalBreakpoint = activeBp.has_value() && activeBp->first == hash;
@@ -469,9 +460,7 @@ namespace scrDbg
         if (!thread)
             return;
 
-        std::optional<std::pair<uint32_t, uint32_t>> activeBp;
-        if (g_BreakpointsSupported)
-            activeBp = PipeCommands::GetActiveBreakpoint();
+        auto activeBp = PipeCommands::GetActiveBreakpoint();
 
         bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame->isChecked();
         bool isLocalBreakpoint = activeBp.has_value() && activeBp->first == hash;
@@ -836,20 +825,11 @@ namespace scrDbg
             });
         }
 
-        QAction* breakpointAction = nullptr;
-        if (g_BreakpointsSupported)
-        {
-            bool exists = PipeCommands::BreakpointExists(GetCurrentScriptHash(), pc);
-            breakpointAction = exists ? menu.addAction("Remove Breakpoint") : menu.addAction("Set Breakpoint");
-            connect(breakpointAction, &QAction::triggered, [this, index, exists]() {
-                OnSetBreakpoint(index, !exists);
-            });
-        }
-        else
-        {
-            breakpointAction = menu.addAction("Set Breakpoint");
-            breakpointAction->setEnabled(false);
-        }
+        bool exists = PipeCommands::BreakpointExists(GetCurrentScriptHash(), pc);
+        QAction* breakpointAction = exists ? menu.addAction("Remove Breakpoint") : menu.addAction("Set Breakpoint");
+        connect(breakpointAction, &QAction::triggered, [this, index, exists]() {
+            OnSetBreakpoint(index, !exists);
+        });
 
         menu.exec(m_Disassembly->viewport()->mapToGlobal(pos));
     }

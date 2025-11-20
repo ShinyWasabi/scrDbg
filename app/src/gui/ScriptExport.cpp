@@ -1,16 +1,16 @@
 #include "ScriptExport.hpp"
 #include "core/Process.hpp"
-#include "util/GUIHelpers.hpp"
 #include "game/gta/Natives.hpp"
 #include "game/gta/TextLabels.hpp"
-#include "game/rage/scrThread.hpp"
-#include "game/rage/scrProgram.hpp"
 #include "game/rage/Joaat.hpp"
-#include <QTableView>
-#include <QTextStream>
-#include <QProgressDialog>
+#include "game/rage/scrProgram.hpp"
+#include "game/rage/scrThread.hpp"
+#include "util/GUIHelpers.hpp"
 #include <QCoreApplication>
 #include <QMessageBox>
+#include <QProgressDialog>
+#include <QTableView>
+#include <QTextStream>
 
 // TO-DO: a lot of code repetition here, consider refactoring
 
@@ -22,7 +22,7 @@ namespace scrDbg::ScriptExport
 
         auto oldModel = view->model();
 
-        GUIHelpers::ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream & out, QProgressDialog & progress) {
+        GUIHelpers::ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
             for (int row = 0; row < count; row++)
             {
                 if (progress.wasCanceled())

@@ -4,7 +4,7 @@
 
 # scrDbg
 
-ScrDbg is an external script debugger for Grand Theft Auto V (Legacy & Enhanced).
+ScrDbg is a script debugger for Grand Theft Auto V (Legacy & Enhanced).
 It allows you to inspect, manipulate, and debug game scripts in real-time.
 
 ## Features
@@ -23,43 +23,48 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
   - Apply custom patches
   - Generate patterns
   - View xrefs
-  - Set breakpoints (requires [ScriptVM.asi](https://github.com/ShinyWasabi/ScriptVM))
+  - Set breakpoints
 - Statics editor
 - Globals editor
 
 ## Screenshots
 
+<details>
+  <summary>View</summary>
+
 <p align="center">
-  <img src="resources/scrDbgScreenshot1.png" alt="Screenshot"/>
+  <img src="screenshots/scrDbgScreenshot1.png" alt="Screenshot 1" width="400"/>
 </p>
 
 <p align="center">
-  <img src="resources/scrDbgScreenshot2.png" alt="Screenshot"/>
+  <img src="screenshots/scrDbgScreenshot2.png" alt="Screenshot 2" width="400"/>
 </p>
 
 <p align="center">
-  <img src="resources/scrDbgScreenshot3.png" alt="Screenshot"/>
+  <img src="screenshots/scrDbgScreenshot3.png" alt="Screenshot 3" width="400"/>
 </p>
 
 <p align="center">
-  <img src="resources/scrDbgScreenshot4.png" alt="Screenshot"/>
+  <img src="screenshots/scrDbgScreenshot4.png" alt="Screenshot 4" width="400"/>
 </p>
 
 <p align="center">
-  <img src="resources/scrDbgScreenshot5.png" alt="Screenshot"/>
+  <img src="screenshots/scrDbgScreenshot5.png" alt="Screenshot 5" width="400"/>
 </p>
 
 <p align="center">
-  <img src="resources/scrDbgScreenshot6.png" alt="Screenshot"/>
+  <img src="screenshots/scrDbgScreenshot6.png" alt="Screenshot 6" width="400"/>
 </p>
 
 <p align="center">
-  <img src="resources/scrDbgScreenshot7.png" alt="Screenshot"/>
+  <img src="screenshots/scrDbgScreenshot7.png" alt="Screenshot 7" width="400"/>
 </p>
 
 <p align="center">
-  <img src="resources/scrDbgScreenshot8.png" alt="Screenshot"/>
+  <img src="screenshots/scrDbgScreenshot8.png" alt="Screenshot 8" width="400"/>
 </p>
+
+</details>
 
 ## Usage
 

@@ -11,3 +11,4 @@ PointerAlignment: Left
 BreakBeforeBraces: Custom
 BraceWrapping:
     BeforeLambdaBody: false
+    AfterCaseLabel: true
