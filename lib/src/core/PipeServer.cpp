@@ -1,6 +1,7 @@
 #include "PipeServer.hpp"
 #include "PipeCommands.hpp"
 #include "debug/ScriptBreakpoint.hpp"
+#include "debug/ScriptLogger.hpp"
 
 bool PipeServer::InitImpl(const std::string& name)
 {
@@ -103,6 +104,27 @@ void PipeServer::RunImpl()
         case ePipeCommands::BREAKPOINT_REMOVE_ALL:
         {
             ScriptBreakpoint::RemoveAll();
+            break;
+        }
+        case ePipeCommands::LOGGER_SET_TYPE:
+        {
+            int type = 0;
+            Receive(&type, sizeof(type));
+
+            ScriptLogger::SetLogType(static_cast<ScriptLogger::LogType>(type));
+            break;
+        }
+        case ePipeCommands::LOGGER_SET_SCRIPT:
+        {
+            std::uint32_t hash = 0;
+            Receive(&hash, sizeof(hash));
+
+            ScriptLogger::SetScriptHash(hash);
+            break;
+        }
+        case ePipeCommands::LOGGER_CLEAR_FILE:
+        {
+            ScriptLogger::Clear();
             break;
         }
         default:

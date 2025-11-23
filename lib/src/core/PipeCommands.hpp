@@ -8,7 +8,11 @@ enum class ePipeCommands : std::uint8_t
     BREAKPOINT_PAUSE_GAME,
     BREAKPOINT_GET_ACTIVE,
     BREAKPOINT_GET_ALL,
-    BREAKPOINT_REMOVE_ALL
+    BREAKPOINT_REMOVE_ALL,
+
+    LOGGER_SET_TYPE,
+    LOGGER_SET_SCRIPT,
+    LOGGER_CLEAR_FILE
 };
 
 struct PipeBreakpoint

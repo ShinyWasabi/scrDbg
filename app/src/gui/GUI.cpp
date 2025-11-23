@@ -1,4 +1,5 @@
 #include "GUI.hpp"
+#include "Logs.hpp"
 #include "ScriptGlobals.hpp"
 #include "ScriptStatics.hpp"
 #include "ScriptThreads.hpp"
@@ -20,6 +21,7 @@ namespace scrDbg
         m_MainWidget->addTab(new ScriptThreadsWidget(this), "Script Threads");
         m_MainWidget->addTab(new ScriptStaticsWidget(this), "Script Statics");
         m_MainWidget->addTab(new ScriptGlobalsWidget(this), "Script Globals");
+        m_MainWidget->addTab(new LogsWidget(this), "Logs");
 
         QVBoxLayout* mainLayout = new QVBoxLayout(this);
         mainLayout->addWidget(m_MainWidget);

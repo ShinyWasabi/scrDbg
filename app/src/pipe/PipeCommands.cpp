@@ -88,4 +88,26 @@ namespace scrDbg::PipeCommands
         uint8_t cmd = static_cast<uint8_t>(ePipeCommands::BREAKPOINT_REMOVE_ALL);
         PipeClient::Send(&cmd, sizeof(cmd));
     }
+
+    extern void SetLoggerType(int type)
+    {
+        uint8_t cmd = static_cast<uint8_t>(ePipeCommands::LOGGER_SET_TYPE);
+        PipeClient::Send(&cmd, sizeof(cmd));
+
+        PipeClient::Send(&type, sizeof(type));
+    }
+
+    extern void SetLoggerScript(uint32_t hash)
+    {
+        uint8_t cmd = static_cast<uint8_t>(ePipeCommands::LOGGER_SET_SCRIPT);
+        PipeClient::Send(&cmd, sizeof(cmd));
+
+        PipeClient::Send(&hash, sizeof(hash));
+    }
+
+    extern void ClearLoggerFile()
+    {
+        uint8_t cmd = static_cast<uint8_t>(ePipeCommands::LOGGER_CLEAR_FILE);
+        PipeClient::Send(&cmd, sizeof(cmd));
+    }
 }

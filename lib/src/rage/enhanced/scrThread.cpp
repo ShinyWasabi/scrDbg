@@ -1,8 +1,10 @@
 #include "scrThread.hpp"
 #include "core/Memory.hpp"
 #include "debug/ScriptBreakpoint.hpp"
+#include "debug/ScriptLogger.hpp"
+#include "debug/ScriptVariableWriteTracker.hpp"
 #include "rage/shared/Joaat.hpp"
-#include "rage/shared/scrNativeCallContext.hpp"
+#include "rage/shared/scrNativeRegistration.hpp"
 #include "rage/shared/scrOpcode.hpp"
 #include "rage/shared/scrProgram.hpp"
 #include "rage/shared/scrString.hpp"
@@ -11,6 +13,14 @@
 
 namespace rage::enhanced
 {
+    bool scrThread::Init()
+    {
+        if (auto addr = Memory::ScanPattern("48 8B 05 ? ? ? ? 48 89 34 F8 48 FF C7 48 39 FB 75 97"))
+            m_Threads = addr->Add(3).Rip().As<decltype(m_Threads)>();
+
+        return m_Threads != nullptr;
+    }
+
     scrThread* scrThread::GetCurrentThread()
     {
         return tlsContext::Get()->m_CurrentScriptThread;
@@ -18,16 +28,6 @@ namespace rage::enhanced
 
     scrThread* scrThread::GetThread(std::uint32_t hash)
     {
-        static bool init = [] {
-            if (auto addr = Memory::ScanPattern("48 8B 05 ? ? ? ? 48 89 34 F8 48 FF C7 48 39 FB 75 97"))
-                m_Threads = addr->Add(3).Rip().As<shared::atArray<scrThread*>*>();
-
-            return true;
-        }();
-
-        if (!m_Threads)
-            return nullptr;
-
         for (auto& thread : *m_Threads)
         {
             if (thread && thread->m_Context.m_ThreadId && thread->m_ScriptHash == hash)
@@ -152,6 +152,9 @@ namespace rage::enhanced
 
     scrThreadState scrThread::RunThread(shared::scrValue* stack, shared::scrValue** globals, shared::scrProgram* program, scrThreadContext* context)
     {
+        auto frameStart = std::chrono::high_resolution_clock::now();
+        auto thread = GetCurrentThread();
+
         char buffer[16];
         std::uint8_t* opcode;
         std::uint8_t* basePtr;
@@ -171,7 +174,11 @@ namespace rage::enhanced
         if (ProcessBreakpoints())
             return context->m_State; // If we do not return here, the VM will end up executing opcodes until the next NATIVE call.
 
-        switch (GET_BYTE)
+        uint8_t next = GET_BYTE;
+        if (ScriptVariableWriteTracker::ShouldBreak(next))
+            ScriptVariableWriteTracker::Break();
+
+        switch (next)
         {
         case shared::scrOpcode::NOP:
         {
@@ -465,9 +472,21 @@ namespace rage::enhanced
             shared::scrNativeCallContext ctx(retCount ? &stack[context->m_StackPointer - argCount] : 0, argCount, &stack[context->m_StackPointer - argCount]);
             (*handler)(&ctx);
 
+            if (ScriptLogger::GetLogType() == ScriptLogger::LogType::LOG_TYPE_NATIVE_CALLS) // for performance
+            {
+                auto hash = shared::scrNativeRegistration::m_NativeRegistrationTable->GetHashByHandler(handler);
+                ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_NATIVE_CALLS, thread->m_ScriptHash, "[%s] 0x%016llX", thread->m_ScriptName, hash);
+            }
+
             // In case WAIT, TERMINATE_THIS_THREAD, or TERMINATE_THREAD is called
             if (context->m_State != scrThreadState::RUNNING)
+            {
+                auto frameEnd = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration<double, std::milli>(frameEnd - frameStart);
+
+                ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_FRAME_TIME, thread->m_ScriptHash, "[%s] %.3f ms", thread->m_ScriptName, duration.count());
                 return context->m_State;
+            }
 
             ctx.FixVectors();
 
@@ -533,6 +552,7 @@ namespace rage::enhanced
         case shared::scrOpcode::STORE:
         {
             stackPtr -= 2;
+            ScriptVariableWriteTracker::Finalize(thread->m_ScriptHash, thread->m_ScriptName, thread->m_Context.m_ProgramCounter, stackPtr[1].Int);
             stackPtr[2].Reference->Any = stackPtr[1].Any;
             goto NEXT;
         }
@@ -554,6 +574,8 @@ namespace rage::enhanced
         {
             shared::scrValue* data = (stackPtr--)->Reference;
             std::uint32_t itemCount = (stackPtr--)->Int;
+
+            ScriptVariableWriteTracker::Finalize(thread->m_ScriptHash, thread->m_ScriptName, thread->m_Context.m_ProgramCounter, itemCount, true);
             for (std::uint32_t i = 0; i < itemCount; i++)
                 data[itemCount - 1 - i].Any = (stackPtr--)->Any;
             goto NEXT;
@@ -565,7 +587,11 @@ namespace rage::enhanced
             std::uint32_t index = stackPtr[0].Uns;
             if (index >= ref->Uns) [[unlikely]]
                 return OnScriptException("Array access out of bounds: %u >= %u", index, ref->Uns);
-            ref += 1U + index * GET_BYTE;
+
+            std::uint8_t size = GET_BYTE;
+            ScriptVariableWriteTracker::AddArrayIndex(index, size);
+
+            ref += 1U + index * size;
             stackPtr[0].Reference = ref;
             goto NEXT;
         }
@@ -587,7 +613,12 @@ namespace rage::enhanced
             std::uint32_t index = stackPtr[2].Uns;
             if (index >= ref->Uns) [[unlikely]]
                 return OnScriptException("Array access out of bounds: %u >= %u", index, ref->Uns);
-            ref += 1U + index * GET_BYTE;
+
+            std::uint8_t size = GET_BYTE;
+            ScriptVariableWriteTracker::AddArrayIndex(index, size);
+            ScriptVariableWriteTracker::Finalize(thread->m_ScriptHash, thread->m_ScriptName, thread->m_Context.m_ProgramCounter, stackPtr[1].Int);
+
+            ref += 1U + index * size;
             ref->Any = stackPtr[1].Any;
             goto NEXT;
         }
@@ -612,7 +643,9 @@ namespace rage::enhanced
         case shared::scrOpcode::STATIC_U8:
         {
             ++stackPtr;
-            stackPtr[0].Reference = stack + GET_BYTE;
+            std::uint8_t offset = GET_BYTE;
+            ScriptVariableWriteTracker::Begin(offset, false);
+            stackPtr[0].Reference = stack + offset;
             goto NEXT;
         }
         case shared::scrOpcode::STATIC_U8_LOAD:
@@ -624,7 +657,9 @@ namespace rage::enhanced
         case shared::scrOpcode::STATIC_U8_STORE:
         {
             --stackPtr;
-            stack[GET_BYTE].Any = stackPtr[1].Any;
+            std::uint8_t _static = GET_BYTE;
+            ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+            stack[_static].Any = stackPtr[1].Any;
             goto NEXT;
         }
         case shared::scrOpcode::IADD_U8:
@@ -645,7 +680,9 @@ namespace rage::enhanced
         }
         case shared::scrOpcode::IOFFSET_U8:
         {
-            stackPtr[0].Any += GET_BYTE * sizeof(shared::scrValue);
+            std::uint8_t offset = GET_BYTE;
+            ScriptVariableWriteTracker::AddFieldOffset(offset);
+            stackPtr[0].Any += offset * sizeof(shared::scrValue);
             goto NEXT;
         }
         case shared::scrOpcode::IOFFSET_U8_LOAD:
@@ -656,13 +693,18 @@ namespace rage::enhanced
         case shared::scrOpcode::IOFFSET_U8_STORE:
         {
             stackPtr -= 2;
-            stackPtr[2].Reference[GET_BYTE].Any = stackPtr[1].Any;
+            std::uint8_t offset = GET_BYTE;
+            ScriptVariableWriteTracker::AddFieldOffset(offset);
+            ScriptVariableWriteTracker::Finalize(thread->m_ScriptHash, thread->m_ScriptName, thread->m_Context.m_ProgramCounter, stackPtr[1].Int);
+            stackPtr[2].Reference[offset].Any = stackPtr[1].Any;
             goto NEXT;
         }
         case shared::scrOpcode::PUSH_CONST_S16:
         {
             ++stackPtr;
-            stackPtr[0].Int = GET_SWORD;
+            std::int16_t offset = GET_SWORD;
+            ScriptVariableWriteTracker::AddFieldOffset(offset);
+            stackPtr[0].Int = offset;
             goto NEXT;
         }
         case shared::scrOpcode::IADD_S16:
@@ -677,7 +719,9 @@ namespace rage::enhanced
         }
         case shared::scrOpcode::IOFFSET_S16:
         {
-            stackPtr[0].Any += GET_SWORD * sizeof(shared::scrValue);
+            std::int16_t offset = GET_SWORD;
+            ScriptVariableWriteTracker::AddFieldOffset(offset);
+            stackPtr[0].Any += offset * sizeof(shared::scrValue);
             goto NEXT;
         }
         case shared::scrOpcode::IOFFSET_S16_LOAD:
@@ -688,7 +732,10 @@ namespace rage::enhanced
         case shared::scrOpcode::IOFFSET_S16_STORE:
         {
             stackPtr -= 2;
-            stackPtr[2].Reference[GET_SWORD].Any = stackPtr[1].Any;
+            std::int16_t offset = GET_SWORD;
+            ScriptVariableWriteTracker::AddFieldOffset(offset);
+            ScriptVariableWriteTracker::Finalize(thread->m_ScriptHash, thread->m_ScriptName, thread->m_Context.m_ProgramCounter, stackPtr[1].Int);
+            stackPtr[2].Reference[offset].Any = stackPtr[1].Any;
             goto NEXT;
         }
         case shared::scrOpcode::ARRAY_U16:
@@ -698,7 +745,11 @@ namespace rage::enhanced
             std::uint32_t index = stackPtr[0].Uns;
             if (index >= ref->Uns) [[unlikely]]
                 return OnScriptException("Array access out of bounds: %u >= %u", index, ref->Uns);
-            ref += 1U + index * GET_WORD;
+
+            std::uint16_t size = GET_WORD;
+            ScriptVariableWriteTracker::AddArrayIndex(index, size);
+
+            ref += 1U + index * size;
             stackPtr[0].Reference = ref;
             goto NEXT;
         }
@@ -720,7 +771,12 @@ namespace rage::enhanced
             std::uint32_t index = stackPtr[2].Uns;
             if (index >= ref->Uns) [[unlikely]]
                 return OnScriptException("Array access out of bounds: %u >= %u", index, ref->Uns);
-            ref += 1U + index * GET_WORD;
+
+            std::uint16_t size = GET_WORD;
+            ScriptVariableWriteTracker::AddArrayIndex(index, size);
+            ScriptVariableWriteTracker::Finalize(thread->m_ScriptHash, thread->m_ScriptName, thread->m_Context.m_ProgramCounter, stackPtr[1].Int);
+
+            ref += 1U + index * size;
             ref->Any = stackPtr[1].Any;
             goto NEXT;
         }
@@ -745,7 +801,9 @@ namespace rage::enhanced
         case shared::scrOpcode::STATIC_U16:
         {
             ++stackPtr;
-            stackPtr[0].Reference = stack + GET_WORD;
+            std::uint16_t offset = GET_WORD;
+            ScriptVariableWriteTracker::Begin(offset, false);
+            stackPtr[0].Reference = stack + offset;
             goto NEXT;
         }
         case shared::scrOpcode::STATIC_U16_LOAD:
@@ -757,13 +815,17 @@ namespace rage::enhanced
         case shared::scrOpcode::STATIC_U16_STORE:
         {
             --stackPtr;
-            stack[GET_WORD].Any = stackPtr[1].Any;
+            std::uint16_t _static = GET_WORD;
+            ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+            stack[_static].Any = stackPtr[1].Any;
             goto NEXT;
         }
         case shared::scrOpcode::GLOBAL_U16:
         {
             ++stackPtr;
-            stackPtr[0].Reference = globals[0] + GET_WORD;
+            std::uint16_t global = GET_WORD;
+            ScriptVariableWriteTracker::Begin(global, true);
+            stackPtr[0].Reference = globals[0] + global;
             goto NEXT;
         }
         case shared::scrOpcode::GLOBAL_U16_LOAD:
@@ -775,7 +837,9 @@ namespace rage::enhanced
         case shared::scrOpcode::GLOBAL_U16_STORE:
         {
             --stackPtr;
-            globals[0][GET_WORD].Any = stackPtr[1].Any;
+            std::uint16_t global = GET_WORD;
+            ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Global_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, global, stackPtr[1].Int);
+            globals[0][global].Any = stackPtr[1].Any;
             goto NEXT;
         }
         case shared::scrOpcode::J:
@@ -865,7 +929,9 @@ namespace rage::enhanced
         case shared::scrOpcode::STATIC_U24:
         {
             ++stackPtr;
-            stackPtr[0].Reference = stack + GET_24BIT;
+            std::uint32_t offset = GET_24BIT;
+            ScriptVariableWriteTracker::Begin(offset, false);
+            stackPtr[0].Reference = stack + offset;
             goto NEXT;
         }
         case shared::scrOpcode::STATIC_U24_LOAD:
@@ -877,7 +943,9 @@ namespace rage::enhanced
         case shared::scrOpcode::STATIC_U24_STORE:
         {
             --stackPtr;
-            stack[GET_24BIT].Any = stackPtr[1].Any;
+            std::uint32_t _static = GET_24BIT;
+            ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+            stack[_static].Any = stackPtr[1].Any;
             goto NEXT;
         }
         case shared::scrOpcode::GLOBAL_U24:
@@ -889,7 +957,10 @@ namespace rage::enhanced
             if (!globals[block]) [[unlikely]]
                 return OnScriptException("Global block %u (index %u) is not loaded!", block, index);
             else
+            {
+                ScriptVariableWriteTracker::Begin(global, true);
                 stackPtr[0].Reference = &globals[block][index];
+            }
             goto NEXT;
         }
         case shared::scrOpcode::GLOBAL_U24_LOAD:
@@ -913,13 +984,18 @@ namespace rage::enhanced
             if (!globals[block]) [[unlikely]]
                 return OnScriptException("Global block %u (index %u) is not loaded!", block, index);
             else
+            {
+                ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Global_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, global, stackPtr[1].Int);
                 globals[block][index].Any = stackPtr[1].Any;
+            }
             goto NEXT;
         }
         case shared::scrOpcode::PUSH_CONST_U24:
         {
             ++stackPtr;
-            stackPtr[0].Int = GET_24BIT;
+            std::uint32_t offset = GET_24BIT;
+            ScriptVariableWriteTracker::AddFieldOffset(offset);
+            stackPtr[0].Int = offset;
             goto NEXT;
         }
         case shared::scrOpcode::SWITCH:

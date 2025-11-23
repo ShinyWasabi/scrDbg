@@ -10,7 +10,11 @@ namespace scrDbg::PipeCommands
         BREAKPOINT_PAUSE_GAME,
         BREAKPOINT_GET_ACTIVE,
         BREAKPOINT_GET_ALL,
-        BREAKPOINT_REMOVE_ALL
+        BREAKPOINT_REMOVE_ALL,
+
+        LOGGER_SET_TYPE,
+        LOGGER_SET_SCRIPT,
+        LOGGER_CLEAR_FILE
     };
 
     struct PipeBreakpoint
@@ -32,4 +36,8 @@ namespace scrDbg::PipeCommands
     std::optional<std::pair<uint32_t, uint32_t>> GetActiveBreakpoint();
     extern std::vector<std::pair<uint32_t, uint32_t>> GetAllBreakpoints();
     extern void RemoveAllBreakpoints();
+
+    extern void SetLoggerType(int type);
+    extern void SetLoggerScript(uint32_t hash);
+    extern void ClearLoggerFile();
 }

@@ -3,59 +3,52 @@
 #include "rage/enhanced/scrThread.hpp"
 #include "rage/legacy/scrThread.hpp"
 
-void ScriptBreakpoint::PauseGame(bool pause)
+bool ScriptBreakpoint::Init()
 {
-    static void (*PauseGameNow)() = nullptr;
-    static void (*UnpauseGameNow)() = nullptr;
-    static void (*TogglePausedRenderPhases)(bool, int) = nullptr;
-    static std::uint8_t* PauseGameNowPatch = nullptr;
-
-    static bool Init = [] {
-        if (g_IsEnhanced)
-        {
-            if (auto addr = Memory::ScanPattern("56 48 83 EC 20 80 3D ? ? ? ? ? 75 ? 48 8D 0D"))
-                PauseGameNow = addr->As<decltype(PauseGameNow)>();
-
-            if (auto addr = Memory::ScanPattern("56 57 53 48 83 EC 20 48 8D 0D ? ? ? ? E8 ? ? ? ? 48 8D 0D"))
-                UnpauseGameNow = addr->As<decltype(UnpauseGameNow)>();
-
-            if (auto addr = Memory::ScanPattern("80 3D ? ? ? ? ? 74 ? 48 83 3D ? ? ? ? ? 74 ? 89 D0"))
-                TogglePausedRenderPhases = addr->As<decltype(TogglePausedRenderPhases)>();
-
-            if (auto addr = Memory::ScanPattern("80 88 ? ? ? ? ? EB ? E8"))
-                PauseGameNowPatch = addr->Sub(0x1E).As<std::uint8_t*>();
-        }
-        else
-        {
-            if (auto addr = Memory::ScanPattern("C6 05 ? ? ? ? ? 75 ? E8 ? ? ? ? C6 05"))
-                PauseGameNow = addr->Sub(0x43).As<decltype(PauseGameNow)>();
-
-            if (auto addr = Memory::ScanPattern("E8 ? ? ? ? C6 05 ? ? ? ? ? 41 B0 01"))
-                UnpauseGameNow = addr->Add(1).Rip().As<decltype(UnpauseGameNow)>();
-
-            if (auto addr = Memory::ScanPattern("48 83 EC 28 45 33 D2 44 8A C1"))
-                TogglePausedRenderPhases = addr->As<decltype(TogglePausedRenderPhases)>();
-
-            if (auto addr = Memory::ScanPattern("75 ? E8 ? ? ? ? C6 05 ? ? ? ? ? EB ? 48 8B 05"))
-                PauseGameNowPatch = addr->As<std::uint8_t*>();
-        }
-
-        return true;
-    }();
-
-    if (!PauseGameNow || !UnpauseGameNow || !TogglePausedRenderPhases || !PauseGameNowPatch)
-        return;
-
-    if (pause)
+    if (g_IsEnhanced)
     {
-        g_IsEnhanced ? * PauseGameNowPatch = 0xEB : *reinterpret_cast<std::uint16_t*>(PauseGameNowPatch) = 0x9090;
-        PauseGameNow();
+        if (auto addr = Memory::ScanPattern("56 48 83 EC 20 80 3D ? ? ? ? ? 75 ? 48 8D 0D"))
+            m_PauseGameNow = addr->As<decltype(m_PauseGameNow)>();
+
+        if (auto addr = Memory::ScanPattern("56 57 53 48 83 EC 20 48 8D 0D ? ? ? ? E8 ? ? ? ? 48 8D 0D"))
+            m_UnpauseGameNow = addr->As<decltype(m_UnpauseGameNow)>();
+
+        if (auto addr = Memory::ScanPattern("80 3D ? ? ? ? ? 74 ? 48 83 3D ? ? ? ? ? 74 ? 89 D0"))
+            m_TogglePausedRenderPhases = addr->As<decltype(m_TogglePausedRenderPhases)>();
+
+        if (auto addr = Memory::ScanPattern("80 88 ? ? ? ? ? EB ? E8"))
+            m_PauseGameNowPatch = addr->Sub(0x1E).As<std::uint8_t*>();
     }
     else
     {
-        UnpauseGameNow();
-        TogglePausedRenderPhases(true, 0);
-        g_IsEnhanced ? * PauseGameNowPatch = 0x74 : *reinterpret_cast<std::uint16_t*>(PauseGameNowPatch) = 0x0E75;
+        if (auto addr = Memory::ScanPattern("C6 05 ? ? ? ? ? 75 ? E8 ? ? ? ? C6 05"))
+            m_PauseGameNow = addr->Sub(0x43).As<decltype(m_PauseGameNow)>();
+
+        if (auto addr = Memory::ScanPattern("E8 ? ? ? ? C6 05 ? ? ? ? ? 41 B0 01"))
+            m_UnpauseGameNow = addr->Add(1).Rip().As<decltype(m_UnpauseGameNow)>();
+
+        if (auto addr = Memory::ScanPattern("48 83 EC 28 45 33 D2 44 8A C1"))
+            m_TogglePausedRenderPhases = addr->As<decltype(m_TogglePausedRenderPhases)>();
+
+        if (auto addr = Memory::ScanPattern("75 ? E8 ? ? ? ? C6 05 ? ? ? ? ? EB ? 48 8B 05"))
+            m_PauseGameNowPatch = addr->As<std::uint8_t*>();
+    }
+
+    return m_PauseGameNow && m_UnpauseGameNow && m_TogglePausedRenderPhases && m_PauseGameNowPatch;
+}
+
+void ScriptBreakpoint::PauseGame(bool pause)
+{
+    if (pause)
+    {
+        g_IsEnhanced ? * m_PauseGameNowPatch = 0xEB : *reinterpret_cast<std::uint16_t*>(m_PauseGameNowPatch) = 0x9090;
+        m_PauseGameNow();
+    }
+    else
+    {
+        m_UnpauseGameNow();
+        m_TogglePausedRenderPhases(true, 0);
+        g_IsEnhanced ? * m_PauseGameNowPatch = 0x74 : *reinterpret_cast<std::uint16_t*>(m_PauseGameNowPatch) = 0x0E75;
     }
 }
 

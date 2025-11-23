@@ -165,21 +165,21 @@ namespace scrDbg::GUIHelpers
                     p.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
             };
 
-            if (index <= 7)
+            if (index < 0x08)
             {
                 p.push_back(rage::scrOpcode::PUSH_CONST_0 + index);
             }
-            else if (index <= 0xFF)
+            else if (index < 0x100)
             {
                 p.push_back(rage::scrOpcode::PUSH_CONST_U8);
                 pushLE(index, 1);
             }
-            else if (index <= 0xFFFF)
+            else if (index < 0x8000)
             {
                 p.push_back(rage::scrOpcode::PUSH_CONST_S16);
                 pushLE(index, 2);
             }
-            else if (index <= 0xFFFFFF)
+            else if (index < 0x1000000)
             {
                 p.push_back(rage::scrOpcode::PUSH_CONST_U24);
                 pushLE(index, 3);
@@ -190,7 +190,7 @@ namespace scrDbg::GUIHelpers
                 pushLE(index, 4);
             }
 
-            p.push_back(static_cast<uint8_t>(rage::scrOpcode::STRING));
+            p.push_back(rage::scrOpcode::STRING);
             return p;
         };
 
@@ -205,21 +205,21 @@ namespace scrDbg::GUIHelpers
             // PUSH_CONST_U8_U8 <wild> <index> STRING
             {
                 std::vector<OptByte> p;
-                p.push_back(static_cast<uint8_t>(rage::scrOpcode::PUSH_CONST_U8_U8));
+                p.push_back(rage::scrOpcode::PUSH_CONST_U8_U8);
                 p.push_back(std::nullopt); // first U8 (unknown)
                 p.push_back(idx);          // second U8 = string index
-                p.push_back(static_cast<uint8_t>(rage::scrOpcode::STRING));
+                p.push_back(rage::scrOpcode::STRING);
                 out.push_back(std::move(p));
             }
 
             // PUSH_CONST_U8_U8_U8 <wild> <wild> <index> STRING
             {
                 std::vector<OptByte> p;
-                p.push_back(static_cast<uint8_t>(rage::scrOpcode::PUSH_CONST_U8_U8_U8));
+                p.push_back(rage::scrOpcode::PUSH_CONST_U8_U8_U8);
                 p.push_back(std::nullopt); // first U8 (unknown)
                 p.push_back(std::nullopt); // second U8 (unknown)
                 p.push_back(idx);          // third U8 = string index
-                p.push_back(static_cast<uint8_t>(rage::scrOpcode::STRING));
+                p.push_back(rage::scrOpcode::STRING);
                 out.push_back(std::move(p));
             }
 

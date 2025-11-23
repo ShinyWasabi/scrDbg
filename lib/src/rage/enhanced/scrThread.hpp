@@ -30,6 +30,8 @@ namespace rage::enhanced
         std::uint32_t m_ScriptHash;
         char m_ScriptName[64];
 
+        static bool Init();
+
         static scrThread* GetCurrentThread();
         static scrThread* GetThread(std::uint32_t hash);
         static scrThreadState OnScriptException(const char* fmt, ...);

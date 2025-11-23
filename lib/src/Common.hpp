@@ -3,10 +3,15 @@
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
+#include <fstream>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <queue>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <unordered_map>
 #include <vector>
 
 extern HINSTANCE g_DllInstance;
