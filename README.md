@@ -18,12 +18,16 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
   - Edit function arguments and locals
 - View disassembly
   - Jump to a raw address
-  - Binary search
+  - Binary search (pattern, hex, decimal, float, string)
   - NOP instructions
   - Apply custom patches
   - Generate patterns
   - View xrefs
   - Set breakpoints
+- Logging
+  - Log script frame times
+  - Log native calls
+  - Log static and global writes
 - Statics editor
 - Globals editor
 
@@ -64,13 +68,29 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
   <img src="screenshots/scrDbgScreenshot8.png" alt="Screenshot 8" width="400"/>
 </p>
 
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot9.png" alt="Screenshot 9" width="400"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot10.png" alt="Screenshot 10" width="400"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot11.png" alt="Screenshot 11" width="400"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot12.png" alt="Screenshot 12" width="400"/>
+</p>
+
 </details>
 
 ## Usage
 
 - Disable BattlEye from Rockstar Games Launcher.
 - Launch the game.
-- Run scrDbg.exe.
+- Run `scrDbg.exe`.
 
 ## Building
 
