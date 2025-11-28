@@ -4,19 +4,12 @@ namespace scrDbgLib
 {
     class ScriptBreakpoint
     {
-        static inline void (*m_PauseGameNow)();
-        static inline void (*m_UnpauseGameNow)();
-        static inline void (*m_TogglePausedRenderPhases)(bool, int);
-        static inline std::uint8_t* m_PauseGameNowPatch;
-
     public:
         static inline std::optional<std::pair<std::uint32_t, std::uint32_t>> m_ActiveBreakpoint;
         static inline std::vector<std::pair<std::uint32_t, std::uint32_t>> m_Breakpoints;
         static inline bool m_BreakpointsPauseGame;
         static inline bool m_WasGamePausedByBreakpoint;
         static inline bool m_SkipThisBreakpointHit;
-
-        static bool Init();
 
         static void PauseGame(bool pause);
 

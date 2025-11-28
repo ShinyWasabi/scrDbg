@@ -46,9 +46,15 @@ namespace scrDbgLib
 
         std::snprintf(m_PathBuf + m_PathLen, sizeof(m_PathBuf) - m_PathLen, "%s", "");
         if (m_IsGlobal)
-            ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, hash, "[%s+0x%08X] Global_%u%s = %s", name, pc, m_VariableIndex, m_PathBuf, valueBuf);
+        {
+            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, hash))
+                ScriptLogger::Logf("[%s+0x%08X] Global_%u%s = %s", name, pc, m_VariableIndex, m_PathBuf, valueBuf);
+        }
         else
-            ScriptLogger::Logf(ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, hash, "[%s+0x%08X] Static_%u%s = %s", name, pc, m_VariableIndex, m_PathBuf, valueBuf);
+        {
+            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, hash))
+                ScriptLogger::Logf("[%s+0x%08X] Static_%u%s = %s", name, pc, m_VariableIndex, m_PathBuf, valueBuf);
+        }
 
         Break();
     }

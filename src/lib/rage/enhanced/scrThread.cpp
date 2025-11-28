@@ -1,7 +1,9 @@
 #include "scrThread.hpp"
+#include "Pointers.hpp"
 #include "ResourceLoader.hpp"
 #include "core/Memory.hpp"
 #include "debug/ScriptBreakpoint.hpp"
+#include "debug/ScriptFunctionNames.hpp"
 #include "debug/ScriptLogger.hpp"
 #include "debug/ScriptVariableWriteTracker.hpp"
 #include "rage/shared/Joaat.hpp"
@@ -14,14 +16,6 @@
 
 namespace rage::enhanced
 {
-    bool scrThread::Init()
-    {
-        if (auto addr = scrDbgLib::Memory::ScanPattern("48 8B 05 ? ? ? ? 48 89 34 F8 48 FF C7 48 39 FB 75 97"))
-            m_Threads = addr->Add(3).Rip().As<decltype(m_Threads)>();
-
-        return m_Threads != nullptr;
-    }
-
     scrThread* scrThread::GetCurrentThread()
     {
         return tlsContext::Get()->m_CurrentScriptThread;
@@ -29,7 +23,7 @@ namespace rage::enhanced
 
     scrThread* scrThread::GetThread(std::uint32_t hash)
     {
-        for (auto& thread : *m_Threads)
+        for (auto& thread : *scrDbgLib::g_Pointers.ScriptThreadsEnhanced)
         {
             if (thread && thread->m_Context.m_ThreadId && thread->m_ScriptHash == hash)
                 return thread;
@@ -167,7 +161,7 @@ namespace rage::enhanced
         JUMP(context->m_ProgramCounter);
 
     NEXT:
-        // Update these per opcode
+        // Update these per opcode start
         context->m_ProgramCounter = static_cast<std::uint32_t>(opcode - basePtr);
         context->m_StackPointer = static_cast<std::int32_t>(stackPtr - stack + 1);
         context->m_FramePointer = static_cast<std::int32_t>(framePtr - stack);
@@ -473,14 +467,12 @@ namespace rage::enhanced
             shared::scrNativeCallContext ctx(retCount ? &stack[context->m_StackPointer - argCount] : nullptr, argCount, &stack[context->m_StackPointer - argCount]);
             (*handler)(&ctx);
 
-            auto logType = scrDbgLib::ScriptLogger::GetLogType();
-            auto logScript = scrDbgLib::ScriptLogger::GetScriptHash();
-            if (logType == scrDbgLib::ScriptLogger::LogType::LOG_TYPE_NATIVE_CALLS && (logScript == 0 || logScript == thread->m_ScriptHash)) // for performance
+            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_NATIVE_CALLS, thread->m_ScriptHash))
             {
-                auto hash = shared::scrNativeRegistration::m_NativeRegistrationTable->GetHashByHandler(handler);
+                auto hash = scrDbgLib::g_Pointers.NativeRegistrationTable->GetHashByHandler(handler);
                 auto name = scrDbgShared::NativesBin::GetNameByHash(hash);
 
-                std::string argsStr = "(";
+                std::string argsStr = "";
                 if (argCount > 0 && ctx.m_Args)
                 {
                     for (int i = 0; i < argCount; i++)
@@ -490,12 +482,11 @@ namespace rage::enhanced
                             argsStr += ", ";
                     }
                 }
-                argsStr += ")";
 
                 std::string retStr = "";
                 if (retCount > 0 && ctx.m_ReturnValue)
                 {
-                    retStr = " -> (";
+                    retStr += " ->(";
                     for (int i = 0; i < retCount; i++)
                     {
                         retStr += std::to_string(ctx.m_ReturnValue[i].Int);
@@ -506,18 +497,21 @@ namespace rage::enhanced
                 }
 
                 if (!name.empty())
-                    scrDbgLib::ScriptLogger::Logf(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_NATIVE_CALLS, thread->m_ScriptHash, "[%s+0x%08X] %s%s%s", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, name.data(), argsStr.c_str(), retStr.c_str());
+                    scrDbgLib::ScriptLogger::Logf("[%s+0x%08X] %s(%s)%s", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, name.data(), argsStr.c_str(), retStr.c_str());
                 else
-                    scrDbgLib::ScriptLogger::Logf(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_NATIVE_CALLS, thread->m_ScriptHash, "[%s+0x%08X] unk_0x%016llX%s%s", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, hash, argsStr.c_str(), retStr.c_str());
+                    scrDbgLib::ScriptLogger::Logf("[%s+0x%08X] unk_0x%016llX(%s)%s", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, hash, argsStr.c_str(), retStr.c_str());
             }
 
             // In case WAIT, TERMINATE_THIS_THREAD, or TERMINATE_THREAD is called
             if (context->m_State != scrThreadState::RUNNING)
             {
-                auto frameEnd = std::chrono::high_resolution_clock::now();
-                auto duration = std::chrono::duration<double, std::milli>(frameEnd - frameStart);
+                if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_FRAME_TIME, thread->m_ScriptHash))
+                {
+                    auto frameEnd = std::chrono::high_resolution_clock::now();
+                    auto duration = std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
+                    scrDbgLib::ScriptLogger::Logf("[%s] %.3f ms", thread->m_ScriptName, duration);
+                }
 
-                scrDbgLib::ScriptLogger::Logf(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_FRAME_TIME, thread->m_ScriptHash, "[%s] %.3f ms", thread->m_ScriptName, duration.count());
                 return context->m_State;
             }
 
@@ -551,6 +545,22 @@ namespace rage::enhanced
                 (++stackPtr)->Any = 0;
 
             stackPtr -= argCount;
+
+            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_FUNCTION_CALLS, thread->m_ScriptHash))
+            {
+                auto funcName = scrDbgLib::ScriptFunctionNames::GetName(program, thread->m_Context.m_ProgramCounter);
+
+                std::string argsStr = "";
+                for (int i = 0; i < argCount; i++)
+                {
+                    argsStr += std::to_string((framePtr + 1 + i)->Int);
+                    if (i != argCount - 1)
+                        argsStr += ", ";
+                }
+
+                scrDbgLib::ScriptLogger::Logf("[%s+0x%08X] %s(%s)", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, funcName->c_str(), argsStr.c_str());
+            }
+
             goto NEXT;
         }
         case shared::scrOpcode::LEAVE:
@@ -691,7 +701,10 @@ namespace rage::enhanced
         {
             --stackPtr;
             std::uint8_t _static = GET_BYTE;
-            scrDbgLib::ScriptLogger::Logf(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+
+            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash))
+                scrDbgLib::ScriptLogger::Logf("[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+
             stack[_static].Any = stackPtr[1].Any;
             goto NEXT;
         }
@@ -849,7 +862,10 @@ namespace rage::enhanced
         {
             --stackPtr;
             std::uint16_t _static = GET_WORD;
-            scrDbgLib::ScriptLogger::Logf(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+
+            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash))
+                scrDbgLib::ScriptLogger::Logf("[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+
             stack[_static].Any = stackPtr[1].Any;
             goto NEXT;
         }
@@ -871,7 +887,10 @@ namespace rage::enhanced
         {
             --stackPtr;
             std::uint16_t global = GET_WORD;
-            scrDbgLib::ScriptLogger::Logf(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Global_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, global, stackPtr[1].Int);
+
+            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, thread->m_ScriptHash))
+                scrDbgLib::ScriptLogger::Logf("[%s+0x%08X] Global_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, global, stackPtr[1].Int);
+
             globals[0][global].Any = stackPtr[1].Any;
             goto NEXT;
         }
@@ -977,7 +996,10 @@ namespace rage::enhanced
         {
             --stackPtr;
             std::uint32_t _static = GET_24BIT;
-            scrDbgLib::ScriptLogger::Logf(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+
+            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, thread->m_ScriptHash))
+                scrDbgLib::ScriptLogger::Logf("[%s+0x%08X] Static_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, _static, stackPtr[1].Int);
+
             stack[_static].Any = stackPtr[1].Any;
             goto NEXT;
         }
@@ -1018,7 +1040,9 @@ namespace rage::enhanced
                 return OnScriptException("Global block %u (index %u) is not loaded!", block, index);
             else
             {
-                scrDbgLib::ScriptLogger::Logf(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, thread->m_ScriptHash, "[%s+0x%08X] Global_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, global, stackPtr[1].Int);
+                if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, thread->m_ScriptHash))
+                    scrDbgLib::ScriptLogger::Logf("[%s+0x%08X] Global_%u = %d", thread->m_ScriptName, thread->m_Context.m_ProgramCounter, global, stackPtr[1].Int);
+
                 globals[block][index].Any = stackPtr[1].Any;
             }
             goto NEXT;

@@ -86,9 +86,5 @@ namespace rage::shared
             cache[handler] = hash;
             return hash;
         }
-
-        static bool Init();
-
-        static inline scrNativeRegistration* m_NativeRegistrationTable;
     };
 }

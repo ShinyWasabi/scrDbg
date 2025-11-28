@@ -17,7 +17,7 @@ namespace scrDbgApp
         resize(700, 500);
         setWindowFlags(Qt::Dialog | Qt::WindowCloseButtonHint | Qt::WindowTitleHint);
 
-        auto* callStackLabel = new QLabel("Call Stack:");
+        auto callStackLabel = new QLabel("Call Stack:");
         m_CallStack = new QTableWidget(this);
         m_CallStack->setColumnCount(2);
         m_CallStack->setHorizontalHeaderLabels({"Address", "Function"});
@@ -28,13 +28,13 @@ namespace scrDbgApp
         m_CallStack->setEditTriggers(QAbstractItemView::NoEditTriggers);
         connect(m_CallStack, &QTableWidget::cellClicked, this, &StackDialog::OnFrameSelected);
 
-        auto* callstackLayout = new QVBoxLayout();
+        auto callstackLayout = new QVBoxLayout();
         callstackLayout->addWidget(callStackLabel);
         callstackLayout->addWidget(m_CallStack);
-        auto* callstackWidget = new QWidget();
+        auto callstackWidget = new QWidget();
         callstackWidget->setLayout(callstackLayout);
 
-        auto* stackFrameLabel = new QLabel("Stack Frame (double-click to edit):");
+        auto stackFrameLabel = new QLabel("Stack Frame (double-click to edit):");
         m_StackFrame = new QTableWidget(this);
         m_StackFrame->setColumnCount(3);
         m_StackFrame->setHorizontalHeaderLabels({"Type", "Index", "Value"});
@@ -45,17 +45,17 @@ namespace scrDbgApp
         m_StackFrame->setEditTriggers(QAbstractItemView::NoEditTriggers);
         connect(m_StackFrame, &QTableWidget::cellDoubleClicked, this, &StackDialog::OnEditStack);
 
-        auto* stackframeLayout = new QVBoxLayout();
+        auto stackframeLayout = new QVBoxLayout();
         stackframeLayout->addWidget(stackFrameLabel);
         stackframeLayout->addWidget(m_StackFrame);
-        auto* stackframeWidget = new QWidget();
+        auto stackframeWidget = new QWidget();
         stackframeWidget->setLayout(stackframeLayout);
 
-        auto* splitter = new QSplitter(Qt::Vertical);
+        auto splitter = new QSplitter(Qt::Vertical);
         splitter->addWidget(callstackWidget);
         splitter->addWidget(stackframeWidget);
 
-        auto* mainLayout = new QVBoxLayout(this);
+        auto mainLayout = new QVBoxLayout(this);
         mainLayout->addWidget(splitter);
 
         PopulateCallstack();
@@ -96,6 +96,7 @@ namespace scrDbgApp
     void StackDialog::PopulateFrameDetails(int frameIndex)
     {
         uint32_t fp = m_FramePointers[frameIndex];
+        uint32_t sp = m_Thread.GetStackPointer();
         uint32_t pc = m_Thread.GetCallStack(frameIndex);
 
         int index = m_Layout.GetFunctionIndexForPc(pc);
@@ -105,25 +106,36 @@ namespace scrDbgApp
 
         int row = 0;
 
-        for (int i = 0; i < func.ArgCount; ++i)
+        for (int i = 0; i < func.ArgCount; i++)
         {
             int value = static_cast<int>(m_Thread.GetStack(fp + i));
             m_StackFrame->insertRow(row);
             m_StackFrame->setItem(row, 0, new QTableWidgetItem("Arg"));
             m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(i)));
             m_StackFrame->setItem(row, 2, new QTableWidgetItem(QString::number(value)));
-            ++row;
+            row++;
         }
 
         int localCount = func.FrameSize - func.ArgCount - 2;
-        for (int i = 0; i < localCount; ++i)
+        for (int i = 0; i < localCount; i++)
         {
             int value = static_cast<int>(m_Thread.GetStack(fp + func.ArgCount + 2 + i));
             m_StackFrame->insertRow(row);
             m_StackFrame->setItem(row, 0, new QTableWidgetItem("Local"));
             m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func.ArgCount + 2 + i)));
             m_StackFrame->setItem(row, 2, new QTableWidgetItem(QString::number(value)));
-            ++row;
+            row++;
+        }
+
+        int tempCount = sp - (fp + func.FrameSize);
+        for (int i = 0; i < tempCount; i++)
+        {
+            int value = static_cast<int>(m_Thread.GetStack(fp + func.FrameSize + i));
+            m_StackFrame->insertRow(row);
+            m_StackFrame->setItem(row, 0, new QTableWidgetItem("Temp"));
+            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func.FrameSize + i)));
+            m_StackFrame->setItem(row, 2, new QTableWidgetItem(QString::number(value)));
+            row++;
         }
     }
 

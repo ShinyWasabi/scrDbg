@@ -20,6 +20,7 @@ namespace scrDbgApp
         {
             LOG_TYPE_NONE,
             LOG_TYPE_FRAME_TIME,
+            LOG_TYPE_FUNCTION_CALLS,
             LOG_TYPE_NATIVE_CALLS,
             LOG_TYPE_STATIC_WRITES,
             LOG_TYPE_GLOBAL_WRITES

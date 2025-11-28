@@ -68,6 +68,7 @@ namespace scrDbgApp
         auto noneRb = new QRadioButton("None", this);
         noneRb->setChecked(true);
         auto frameTimeRb = new QRadioButton("Frame Time", this);
+        auto functionCallsRb = new QRadioButton("Function Calls", this);
         auto nativeCallsRb = new QRadioButton("Native Calls", this);
         auto staticWritesRb = new QRadioButton("Static Writes", this);
         auto globalWritesRb = new QRadioButton("Global Writes", this);
@@ -75,6 +76,7 @@ namespace scrDbgApp
         auto logTypeGroup = new QButtonGroup(this);
         logTypeGroup->addButton(noneRb, LOG_TYPE_NONE);
         logTypeGroup->addButton(frameTimeRb, LOG_TYPE_FRAME_TIME);
+        logTypeGroup->addButton(functionCallsRb, LOG_TYPE_FUNCTION_CALLS);
         logTypeGroup->addButton(nativeCallsRb, LOG_TYPE_NATIVE_CALLS);
         logTypeGroup->addButton(staticWritesRb, LOG_TYPE_STATIC_WRITES);
         logTypeGroup->addButton(globalWritesRb, LOG_TYPE_GLOBAL_WRITES);
@@ -87,6 +89,7 @@ namespace scrDbgApp
         typeLayout->addWidget(new QLabel("Type:", this));
         typeLayout->addWidget(noneRb);
         typeLayout->addWidget(frameTimeRb);
+        typeLayout->addWidget(functionCallsRb);
         typeLayout->addWidget(nativeCallsRb);
         typeLayout->addWidget(staticWritesRb);
         typeLayout->addWidget(globalWritesRb);

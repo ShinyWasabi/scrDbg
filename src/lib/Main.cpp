@@ -1,13 +1,11 @@
+#include "Hooking.hpp"
+#include "Pointers.hpp"
 #include "ResourceLoader.hpp"
-#include "core/Memory.hpp"
 #include "core/PipeServer.hpp"
 #include "debug/ScriptBreakpoint.hpp"
+#include "debug/ScriptFunctionNames.hpp"
 #include "debug/ScriptLogger.hpp"
-#include "rage/enhanced/scrThread.hpp"
-#include "rage/legacy/scrThread.hpp"
 #include "rage/shared/Joaat.hpp"
-#include "rage/shared/scrNativeRegistration.hpp"
-#include <MinHook.h>
 
 namespace scrDbgLib
 {
@@ -24,20 +22,6 @@ namespace scrDbgLib
         return rage::shared::Joaat(name);
     }
 
-    static bool InitPointers()
-    {
-        if (g_IsEnhanced ? !rage::enhanced::scrThread::Init() : !rage::legacy::scrThread::Init())
-            return false;
-
-        if (!rage::shared::scrNativeRegistration::Init())
-            return false;
-
-        if (!ScriptBreakpoint::Init())
-            return false;
-
-        return true;
-    }
-
     static int Cleanup(int exitcode, const char* message = nullptr)
     {
         if (exitcode == EXIT_FAILURE && message)
@@ -47,9 +31,7 @@ namespace scrDbgLib
         ScriptBreakpoint::SetPauseGame(false);
         PipeServer::Destroy();
         ScriptLogger::Destroy();
-        MH_DisableHook(MH_ALL_HOOKS);
-        MH_RemoveHook(MH_ALL_HOOKS);
-        MH_Uninitialize();
+        Hooking::Destroy();
 
         CloseHandle(g_MainThread);
         FreeLibraryAndExitThread(g_DllInstance, 0);
@@ -59,39 +41,14 @@ namespace scrDbgLib
     static DWORD Main(PVOID)
     {
         auto hash = GetModuleHash();
-        switch (hash)
-        {
-        case "GTA5.exe"_J:
-        {
-            auto addr = Memory::ScanPattern("E8 ? ? ? ? 48 85 FF 48 89 1D");
-            if (!addr)
-                return Cleanup(EXIT_FAILURE, "Failed to find pattern for hook.");
-
-            auto ptr = addr->Add(1).Rip().As<void*>();
-            MH_Initialize();
-            MH_CreateHook(ptr, reinterpret_cast<void*>(rage::legacy::scrThread::RunThread), nullptr);
-            MH_EnableHook(ptr);
-            break;
-        }
-        case "GTA5_Enhanced.exe"_J:
-        {
-            auto addr = Memory::ScanPattern("49 63 41 1C");
-            if (!addr)
-                return Cleanup(EXIT_FAILURE, "Failed to find pattern for hook.");
-
-            auto ptr = addr->Sub(0x24).As<void*>();
-            MH_Initialize();
-            MH_CreateHook(ptr, reinterpret_cast<void*>(rage::enhanced::scrThread::RunThread), nullptr);
-            MH_EnableHook(ptr);
+        if (hash == "GTA5_Enhanced.exe"_J)
             g_IsEnhanced = true;
-            break;
-        }
-        default:
-            return Cleanup(EXIT_FAILURE, "Unknown module.");
-        }
 
-        if (!InitPointers())
+        if (!g_Pointers.Init())
             return Cleanup(EXIT_FAILURE, "Failed to initialize pointers.");
+
+        if (!Hooking::Init())
+            return Cleanup(EXIT_FAILURE, "Failed to initialize hooking.");
 
         if (!ScriptLogger::Init("scrDbg.log"))
             return Cleanup(EXIT_FAILURE, "Failed to initialize script logger.");
@@ -101,6 +58,8 @@ namespace scrDbgLib
 
         if (!scrDbgShared::NativesBin::Load(static_cast<HMODULE>(g_DllInstance)))
             MessageBoxA(0, "Failed to load native names.", "Warning", MB_ICONWARNING);
+
+        ScriptFunctionNames::GenerateNamesForAllPrograms();
 
         PipeServer::Run();
 

@@ -9,6 +9,7 @@ namespace scrDbgLib
         {
             LOG_TYPE_NONE,
             LOG_TYPE_FRAME_TIME,
+            LOG_TYPE_FUNCTION_CALLS,
             LOG_TYPE_NATIVE_CALLS,
             LOG_TYPE_STATIC_WRITES,
             LOG_TYPE_GLOBAL_WRITES
@@ -18,17 +19,18 @@ namespace scrDbgLib
         static void Destroy();
 
         static void SetLogType(LogType type);
-        static LogType GetLogType();
         static void SetScriptHash(std::uint32_t hash);
-        static uint32_t GetScriptHash();
+        static bool ShouldLog(LogType type, std::uint32_t hash);
 
         static void Clear();
-        static void Log(LogType type, std::uint32_t hash, const char* message);
-        static void Logf(LogType type, std::uint32_t hash, const char* fmt, ...);
-
-        static void LoggerThread();
+        static void Log(const char* message);
+        static void Logf(const char* fmt, ...);
 
     private:
+        static void LoggerThread();
+
+        static constexpr std::uint32_t ALL_SCRIPTS_HASH = 0;
+
         static inline std::ofstream m_File;
         static inline std::string m_FilePath;
         static inline LogType m_LogType;

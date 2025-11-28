@@ -46,19 +46,14 @@ namespace scrDbgLib
         m_LogType = type;
     }
 
-    ScriptLogger::LogType ScriptLogger::GetLogType()
-    {
-        return m_LogType;
-    }
-
     void ScriptLogger::SetScriptHash(std::uint32_t hash)
     {
         m_ScriptHash = hash;
     }
 
-    uint32_t ScriptLogger::GetScriptHash()
+    bool ScriptLogger::ShouldLog(LogType type, std::uint32_t hash)
     {
-        return m_ScriptHash;
+        return m_LogType == type && (m_ScriptHash == ALL_SCRIPTS_HASH || m_ScriptHash == hash);
     }
 
     void ScriptLogger::Clear()
@@ -71,9 +66,9 @@ namespace scrDbgLib
         m_File.open(m_FilePath, std::ios::out | std::ios::trunc);
     }
 
-    void ScriptLogger::Log(LogType type, std::uint32_t hash, const char* message)
+    void ScriptLogger::Log(const char* message)
     {
-        if (!m_Running || m_LogType != type || (m_ScriptHash != 0 && m_ScriptHash != hash))
+        if (!m_Running)
             return;
 
         std::lock_guard<std::mutex> lock(m_Mutex);
@@ -81,9 +76,9 @@ namespace scrDbgLib
         m_CV.notify_one();
     }
 
-    void ScriptLogger::Logf(LogType type, std::uint32_t hash, const char* fmt, ...)
+    void ScriptLogger::Logf(const char* fmt, ...)
     {
-        if (!m_Running || m_LogType != type || (m_ScriptHash != 0 && m_ScriptHash != hash))
+        if (!m_Running)
             return;
 
         char buffer[1024];

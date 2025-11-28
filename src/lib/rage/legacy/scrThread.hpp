@@ -29,16 +29,12 @@ namespace rage::legacy
         std::uint32_t m_ScriptHash;
         char m_ScriptName[64];
 
-        static bool Init();
-
         static scrThread* GetCurrentThread();
         static scrThread* GetThread(std::uint32_t hash);
         static scrThreadState OnScriptException(const char* fmt, ...);
         static bool ProcessBreakpoints();
         static bool ResumeActiveBreakpoint();
         static scrThreadState RunThread(shared::scrValue* stack, shared::scrValue** globals, shared::scrProgram* program, scrThreadContext* context);
-
-        static inline shared::atArray<scrThread*>* m_Threads;
     };
     static_assert(sizeof(scrThread) == 0x118);
 }
