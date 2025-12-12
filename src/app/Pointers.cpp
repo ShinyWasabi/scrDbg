@@ -18,8 +18,8 @@ namespace scrDbgApp
                 ScriptThreads = ptr.Add(3).Rip();
             });
 
-            scanner.Add("ScriptPrograms", "48 C7 84 C8 D8 00 00 00 00 00 00 00", [this](Pointer ptr) {
-                ScriptPrograms = ptr.Add(0x13).Add(3).Rip().Add(0xD8);
+            scanner.Add("ScriptPrograms", "44 88 05 ? ? ? ? 48 89 F9", [this](Pointer ptr) {
+                ScriptPrograms = ptr.Add(3).Rip().Add(0xD8);
             });
 
             scanner.Add("ScriptGlobals", "48 8B 8E B8 00 00 00 48 8D 15 ? ? ? ? 49 89 D8", [this](Pointer ptr) {
