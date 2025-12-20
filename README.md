@@ -15,7 +15,7 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
 - Export disassembly, strings, statics, globals, and natives
 - View stack
   - View callstack
-  - Edit function arguments and locals
+  - Edit stack frame (function args, locals, temps)
 - View disassembly
   - Jump to a raw address
   - Binary search (pattern, hex, decimal, float, string)
@@ -26,6 +26,7 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
   - Set breakpoints
 - Logging
   - Log script frame times
+  - Log function calls
   - Log native calls
   - Log static and global writes
 - Statics editor
@@ -84,6 +85,10 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
   <img src="screenshots/scrDbgScreenshot12.png" alt="Screenshot 12" width="400"/>
 </p>
 
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot13.png" alt="Screenshot 13" width="400"/>
+</p>
+
 </details>
 
 ## Usage
@@ -107,4 +112,4 @@ Once you have these installed, you can simply clone the repository, open it in V
 
 ## Credits
 - [maybegreat48](https://github.com/maybegreat48) for [External](https://github.com/maybegreat48/External).
-- TheOldOne for logo design.
+- [OldAgario](https://github.com/OldAgario) for logo design.
