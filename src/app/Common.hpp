@@ -27,5 +27,5 @@ namespace scrDbgApp
     extern bool g_IsEnhanced;
 }
 
-#define ENHANCED_TARGET_BUILD "1013.17-1.72"
-#define LEGACY_TARGET_BUILD "3717.0-1.72"
+#define ENHANCED_TARGET_BUILD "1013.20-1.72"
+#define LEGACY_TARGET_BUILD "3725.0-1.72"
