@@ -1,13 +1,9 @@
 #pragma once
 
-namespace rage::shared
+namespace rage
 {
-#pragma pack(push, 0x10)
     class alignas(16) Vector3
     {
-    public:
-        float x, y, z;
-
     public:
         constexpr Vector3(float x, float y, float z)
             : x(x),
@@ -21,6 +17,11 @@ namespace rage::shared
               y(),
               z()
         {
+        }
+
+        operator bool() const
+        {
+            return this->x != 0.0f || this->y != 0.0f || this->z != 0.0f;
         }
 
         bool operator==(const Vector3& other) const
@@ -61,15 +62,16 @@ namespace rage::shared
             return vec;
         }
 
-        Vector3 operator*(const float& other) const
+        Vector3 operator/(const float& other) const
         {
             Vector3 vec;
-            vec.x = this->x * other;
-            vec.y = this->y * other;
-            vec.z = this->z * other;
+            vec.x = this->x / other;
+            vec.y = this->y / other;
+            vec.z = this->z / other;
             return vec;
         }
+
+        float x, y, z;
     };
     static_assert(sizeof(Vector3) == 0x10);
-#pragma pack(pop)
 };

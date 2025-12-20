@@ -1,6 +1,6 @@
 #pragma once
 
-namespace rage::shared
+namespace rage
 {
     template <typename T>
     class atArray
@@ -55,7 +55,7 @@ namespace rage::shared
             return false;
         }
 
-    public:
+    private:
         T* m_Data;
         std::uint16_t m_Size;
         std::uint16_t m_Capacity;

@@ -4,7 +4,7 @@
 #include "Pointers.hpp"
 #include "debug/ScriptFunctionNames.hpp"
 
-namespace rage::shared
+namespace rage
 {
     scrProgram* scrProgram::GetProgram(std::uint32_t hash)
     {
@@ -17,11 +17,18 @@ namespace rage::shared
         return nullptr;
     }
 
-    void scrProgram::scrProgramConstructor1(scrProgram* program, std::uint8_t a1)
+    void scrProgram::scrProgramConstructor(scrProgram* program, std::uint8_t a1)
     {
-        scrDbgLib::Hooking::GetOriginal<decltype(&scrProgramConstructor1)>("ScriptProgramConstructor1"_J)(program, a1);
+        scrDbgLib::Hooking::GetOriginal<decltype(&scrProgramConstructor)>("scrProgramConstructor"_J)(program, a1);
 
         scrDbgLib::ScriptFunctionNames::GenerateNamesForProgram(program);
+    }
+
+    void scrProgram::scrProgramDestructor(scrProgram* program)
+    {
+        scrDbgLib::ScriptFunctionNames::RemoveProgram(program);
+
+        scrDbgLib::Hooking::GetOriginal<decltype(&scrProgramDestructor)>("ScriptProgramDestructor"_J)(program);
     }
 
     std::uint32_t scrProgram::LoadScriptProgramSCO(const char* path, const char* scriptName)
@@ -32,12 +39,5 @@ namespace rage::shared
             scrDbgLib::ScriptFunctionNames::GenerateNamesForProgram(program);
 
         return hash;
-    }
-
-    void scrProgram::scrProgramDestructor(scrProgram* program)
-    {
-        scrDbgLib::ScriptFunctionNames::RemoveProgram(program);
-
-        scrDbgLib::Hooking::GetOriginal<decltype(&scrProgramDestructor)>("ScriptProgramDestructor"_J)(program);
     }
 }

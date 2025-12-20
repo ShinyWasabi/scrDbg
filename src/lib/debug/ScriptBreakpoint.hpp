@@ -1,17 +1,16 @@
 #pragma once
 
+namespace rage
+{
+    enum class scrThreadState : uint32_t;
+}
+
 namespace scrDbgLib
 {
     class ScriptBreakpoint
     {
     public:
-        static inline std::optional<std::pair<std::uint32_t, std::uint32_t>> m_ActiveBreakpoint;
-        static inline std::vector<std::pair<std::uint32_t, std::uint32_t>> m_Breakpoints;
-        static inline bool m_BreakpointsPauseGame;
-        static inline bool m_WasGamePausedByBreakpoint;
-        static inline bool m_SkipThisBreakpointHit;
-
-        static void PauseGame(bool pause);
+        static bool Process(uint32_t* hash, uint32_t* pc, rage::scrThreadState* state);
 
         static bool Add(std::uint32_t script, std::uint32_t pc);
         static bool Remove(std::uint32_t script, std::uint32_t pc);
@@ -21,5 +20,14 @@ namespace scrDbgLib
         static std::optional<std::pair<std::uint32_t, std::uint32_t>> GetActive();
         static std::vector<std::pair<std::uint32_t, std::uint32_t>> GetAll();
         static void RemoveAll();
+
+    private:
+        static void PauseGame(bool pause);
+
+        static inline std::optional<std::pair<std::uint32_t, std::uint32_t>> m_ActiveBreakpoint;
+        static inline std::vector<std::pair<std::uint32_t, std::uint32_t>> m_Breakpoints;
+        static inline bool m_BreakpointsPauseGame;
+        static inline bool m_WasGamePausedByBreakpoint;
+        static inline bool m_SkipThisBreakpointHit;
     };
 }

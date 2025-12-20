@@ -5,7 +5,7 @@ namespace scrDbgLib
     class ScriptLogger
     {
     public:
-        enum LogType
+        enum class LogType
         {
             LOG_TYPE_NONE,
             LOG_TYPE_FRAME_TIME,

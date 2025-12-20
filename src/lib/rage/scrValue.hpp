@@ -1,6 +1,6 @@
 #pragma once
 
-namespace rage::shared
+namespace rage
 {
     union scrValue {
         std::int32_t Int;
@@ -10,4 +10,5 @@ namespace rage::shared
         scrValue* Reference;
         std::uint64_t Any;
     };
+    static_assert(sizeof(scrValue) == 0x08);
 }

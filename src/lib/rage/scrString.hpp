@@ -1,6 +1,6 @@
 #pragma once
 
-namespace rage::shared
+namespace rage
 {
     static void scrStringAssign(char* dest, std::uint32_t size, const char* src)
     {

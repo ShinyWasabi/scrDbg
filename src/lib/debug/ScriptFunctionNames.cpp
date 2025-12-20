@@ -1,11 +1,11 @@
 #include "ScriptFunctionNames.hpp"
 #include "Pointers.hpp"
-#include "rage/shared/scrOpcode.hpp"
-#include "rage/shared/scrProgram.hpp"
+#include "rage/scrOpcode.hpp"
+#include "rage/scrProgram.hpp"
 
 namespace scrDbgLib
 {
-    void ScriptFunctionNames::GenerateNamesForProgram(rage::shared::scrProgram* program)
+    void ScriptFunctionNames::GenerateNamesForProgram(rage::scrProgram* program)
     {
         if (program && m_FunctionNames.find(program) != m_FunctionNames.end())
             return;
@@ -13,13 +13,13 @@ namespace scrDbgLib
         std::unordered_map<std::uint32_t, std::string> map;
 
         std::uint32_t pc = 0;
-        while (pc < program->m_CodeSize)
+        while (pc < program->GetCodeSize())
         {
             auto code = program->GetCode(pc);
             if (!code)
                 break;
 
-            if (*code == rage::shared::scrOpcode::ENTER)
+            if (*code == rage::scrOpcode::ENTER)
             {
                 std::string name;
                 if (code[4] > 0)
@@ -30,7 +30,7 @@ namespace scrDbgLib
                 map.emplace(pc, std::move(name));
             }
 
-            pc += rage::shared::GetInstructionSize(code);
+            pc += rage::GetInstructionSize(code);
         }
 
         m_FunctionNames.emplace(program, std::move(map));

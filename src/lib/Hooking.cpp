@@ -1,9 +1,8 @@
 #include "Hooking.hpp"
 #include "Pointers.hpp"
-#include "rage/enhanced/scrThread.hpp"
-#include "rage/legacy/scrThread.hpp"
-#include "rage/shared/Joaat.hpp"
-#include "rage/shared/scrProgram.hpp"
+#include "rage/Joaat.hpp"
+#include "rage/scrProgram.hpp"
+#include "rage/scrThread.hpp"
 #include <MinHook.h>
 
 namespace scrDbgLib
@@ -13,13 +12,10 @@ namespace scrDbgLib
         if (MH_Initialize() != MH_OK)
             return false;
 
-        AddHook("ScriptProgramConstructor1"_J, g_Pointers.ScriptProgramConstructor1, rage::shared::scrProgram::scrProgramConstructor1);
-        AddHook("LoadScriptProgramSCO"_J, g_Pointers.LoadScriptProgramSCO, rage::shared::scrProgram::LoadScriptProgramSCO);
-        AddHook("ScriptProgramDestructor"_J, g_Pointers.ScriptProgramDestructor, rage::shared::scrProgram::scrProgramDestructor);
-        if (g_IsEnhanced)
-            AddHook("RunScriptThread"_J, g_Pointers.RunScriptThread, rage::enhanced::scrThread::RunThread);
-        else
-            AddHook("RunScriptThread"_J, g_Pointers.RunScriptThread, rage::legacy::scrThread::RunThread);
+        AddHook("scrProgramConstructor"_J, g_Pointers.ScriptProgramConstructor1, rage::scrProgram::scrProgramConstructor);
+        AddHook("ScriptProgramDestructor"_J, g_Pointers.ScriptProgramDestructor, rage::scrProgram::scrProgramDestructor);
+        AddHook("LoadScriptProgramSCO"_J, g_Pointers.LoadScriptProgramSCO, rage::scrProgram::LoadScriptProgramSCO);
+        AddHook("RunScriptThread"_J, g_Pointers.RunScriptThread, rage::scrThread::RunThread);
 
         for (auto& hook : m_Hooks)
         {

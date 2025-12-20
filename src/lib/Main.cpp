@@ -5,7 +5,7 @@
 #include "debug/ScriptBreakpoint.hpp"
 #include "debug/ScriptFunctionNames.hpp"
 #include "debug/ScriptLogger.hpp"
-#include "rage/shared/Joaat.hpp"
+#include "rage/Joaat.hpp"
 
 namespace scrDbgLib
 {
@@ -19,7 +19,7 @@ namespace scrDbgLib
         std::filesystem::path path(modulePath);
         std::string name = path.filename().string();
 
-        return rage::shared::Joaat(name);
+        return rage::Joaat(name);
     }
 
     static int Cleanup(int exitcode, const char* message = nullptr)

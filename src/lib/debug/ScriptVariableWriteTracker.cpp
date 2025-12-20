@@ -1,11 +1,14 @@
 #include "ScriptVariableWriteTracker.hpp"
 #include "ScriptLogger.hpp"
-#include "rage/shared/scrOpcode.hpp"
+#include "rage/scrOpcode.hpp"
 
 namespace scrDbgLib
 {
-    void ScriptVariableWriteTracker::Begin(std::uint32_t index, bool isGlobal)
+    void ScriptVariableWriteTracker::Begin(uint32_t hash, std::uint32_t index, bool isGlobal)
     {
+        if (!ScriptLogger::ShouldLog(isGlobal ? ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES : ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, hash))
+            return;
+
         m_IsActive = true;
         m_IsGlobal = isGlobal;
         m_VariableIndex = index;
@@ -33,7 +36,7 @@ namespace scrDbgLib
             m_PathLen += static_cast<std::size_t>(written);
     }
 
-    void ScriptVariableWriteTracker::Finalize(std::uint32_t hash, const char* name, std::uint32_t pc, std::int32_t value, bool isStruct)
+    void ScriptVariableWriteTracker::Finalize(const char* name, std::uint32_t pc, std::int32_t value, bool isStruct)
     {
         if (!m_IsActive)
             return;
@@ -46,15 +49,9 @@ namespace scrDbgLib
 
         std::snprintf(m_PathBuf + m_PathLen, sizeof(m_PathBuf) - m_PathLen, "%s", "");
         if (m_IsGlobal)
-        {
-            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_GLOBAL_WRITES, hash))
-                ScriptLogger::Logf("[%s+0x%08X] Global_%u%s = %s", name, pc, m_VariableIndex, m_PathBuf, valueBuf);
-        }
+            ScriptLogger::Logf("[%s+0x%08X] Global_%u%s = %s", name, pc, m_VariableIndex, m_PathBuf, valueBuf);
         else
-        {
-            if (scrDbgLib::ScriptLogger::ShouldLog(scrDbgLib::ScriptLogger::LogType::LOG_TYPE_STATIC_WRITES, hash))
-                ScriptLogger::Logf("[%s+0x%08X] Static_%u%s = %s", name, pc, m_VariableIndex, m_PathBuf, valueBuf);
-        }
+            ScriptLogger::Logf("[%s+0x%08X] Static_%u%s = %s", name, pc, m_VariableIndex, m_PathBuf, valueBuf);
 
         Break();
     }
@@ -76,21 +73,21 @@ namespace scrDbgLib
         switch (op)
         {
         // continuation opcodes
-        case rage::shared::scrOpcode::IOFFSET:
-        case rage::shared::scrOpcode::IOFFSET_U8:
-        case rage::shared::scrOpcode::IOFFSET_S16:
-        case rage::shared::scrOpcode::ARRAY_U8:
-        case rage::shared::scrOpcode::ARRAY_U16:
-        case rage::shared::scrOpcode::PUSH_CONST_S16:
-        case rage::shared::scrOpcode::PUSH_CONST_U24:
+        case rage::scrOpcode::IOFFSET:
+        case rage::scrOpcode::IOFFSET_U8:
+        case rage::scrOpcode::IOFFSET_S16:
+        case rage::scrOpcode::ARRAY_U8:
+        case rage::scrOpcode::ARRAY_U16:
+        case rage::scrOpcode::PUSH_CONST_S16:
+        case rage::scrOpcode::PUSH_CONST_U24:
 
         // finalizer opcodes
-        case rage::shared::scrOpcode::STORE:
-        case rage::shared::scrOpcode::STORE_N:
-        case rage::shared::scrOpcode::IOFFSET_U8_STORE:
-        case rage::shared::scrOpcode::IOFFSET_S16_STORE:
-        case rage::shared::scrOpcode::ARRAY_U8_STORE:
-        case rage::shared::scrOpcode::ARRAY_U16_STORE:
+        case rage::scrOpcode::STORE:
+        case rage::scrOpcode::STORE_N:
+        case rage::scrOpcode::IOFFSET_U8_STORE:
+        case rage::scrOpcode::IOFFSET_S16_STORE:
+        case rage::scrOpcode::ARRAY_U8_STORE:
+        case rage::scrOpcode::ARRAY_U16_STORE:
             return false;
         }
 

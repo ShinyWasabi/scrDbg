@@ -1,6 +1,6 @@
 #pragma once
 
-namespace rage::shared
+namespace rage
 {
     enum scrOpcode : std::uint8_t
     {

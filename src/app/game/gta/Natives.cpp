@@ -9,6 +9,9 @@ namespace gta::Natives
         return scrDbgShared::NativesBin::GetNameByHash(hash);
     }
 
+    // TO-DO: Some natives (especially nullsubs) share the same handler.
+    // This makes it impossible to determine which native was actually called.
+    // Change this function to return all hashes associated with the handler, rather than stopping at the first match. This applies to the code in scrDbgLib as well.
     uint64_t GetHashByHandler(uint64_t handler)
     {
         if (!scrDbgApp::g_Pointers.NativeRegistrationTable || !handler)

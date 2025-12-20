@@ -2,23 +2,11 @@
 
 namespace rage
 {
-    namespace shared
-    {
-        class scrNativeRegistration;
-        class scrProgram;
-        template <typename T>
-        class atArray;
-    }
-
-    namespace legacy
-    {
-        class scrThread;
-    }
-
-    namespace enhanced
-    {
-        class scrThread;
-    }
+    template <typename T>
+    class atArray;
+    class scrNativeRegistration;
+    class scrProgram;
+    class scrThread;
 }
 
 namespace scrDbgLib
@@ -32,13 +20,12 @@ namespace scrDbgLib
 
     struct PointerData
     {
-        rage::shared::scrNativeRegistration* NativeRegistrationTable;
-        rage::shared::scrProgram** ScriptPrograms;
+        rage::scrNativeRegistration* NativeRegistrationTable;
+        rage::scrProgram** ScriptPrograms;
         PVOID ScriptProgramConstructor1; // for YSC
         PVOID LoadScriptProgramSCO;      // for SCO
         PVOID ScriptProgramDestructor;
-        rage::shared::atArray<rage::legacy::scrThread*>* ScriptThreadsLegacy;
-        rage::shared::atArray<rage::enhanced::scrThread*>* ScriptThreadsEnhanced;
+        rage::atArray<rage::scrThread*>* ScriptThreads;
         PVOID RunScriptThread;
         Functions::PauseGameNow PauseGameNow;
         Functions::UnpauseGameNow UnpauseGameNow;

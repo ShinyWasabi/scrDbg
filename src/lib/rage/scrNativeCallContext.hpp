@@ -2,11 +2,10 @@
 #include "Vector3.hpp"
 #include "scrValue.hpp"
 
-namespace rage::shared
+namespace rage
 {
-    class scrNativeCallContext
+    struct scrNativeCallContext
     {
-    public:
         scrNativeCallContext(scrValue* retVal, std::int32_t argCount, scrValue* args)
             : m_ReturnValue(retVal),
               m_ArgCount(argCount),

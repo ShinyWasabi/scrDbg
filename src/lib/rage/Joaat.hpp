@@ -1,6 +1,6 @@
 #pragma once
 
-namespace rage::shared
+namespace rage
 {
     constexpr std::uint32_t Joaat(const std::string_view str)
     {

@@ -1,27 +1,21 @@
 #pragma once
 
-namespace rage::shared
+namespace rage
 {
     class scrProgram;
 }
 
 namespace scrDbgLib
 {
-    struct ScriptFunctionNames
+    class ScriptFunctionNames
     {
-    private:
-        static inline std::unordered_map<rage::shared::scrProgram*, std::unordered_map<std::uint32_t, std::string>> m_FunctionNames;
-
     public:
-        static void GenerateNamesForProgram(rage::shared::scrProgram* program);
-        static void GenerateNamesForAllPrograms();
-
-        static void RemoveProgram(rage::shared::scrProgram* program)
+        static void RemoveProgram(rage::scrProgram* program)
         {
             m_FunctionNames.erase(program);
         }
 
-        static std::string* GetName(rage::shared::scrProgram* program, std::uint32_t pc)
+        static std::string* GetName(rage::scrProgram* program, std::uint32_t pc)
         {
             auto prog = m_FunctionNames.find(program);
             if (prog == m_FunctionNames.end())
@@ -33,5 +27,11 @@ namespace scrDbgLib
 
             return nullptr;
         }
+
+        static void GenerateNamesForProgram(rage::scrProgram* program);
+        static void GenerateNamesForAllPrograms();
+
+    private:
+        static inline std::unordered_map<rage::scrProgram*, std::unordered_map<std::uint32_t, std::string>> m_FunctionNames;
     };
 }

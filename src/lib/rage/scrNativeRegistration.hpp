@@ -1,49 +1,13 @@
 #pragma once
 #include "scrNativeCallContext.hpp"
 
-namespace rage::shared
+namespace rage
 {
     // https://www.unknowncheats.me/forum/3036413-post862.html
 
     class scrNativeRegistration
     {
     public:
-        struct RegistrationNode
-        {
-            template <typename T>
-            struct NodeEnc
-            {
-                std::uint32_t A;
-                std::uint32_t B;
-                std::uint32_t C;
-                char Pad[0x04];
-
-                T Decrypt() const
-                {
-                    const auto nonce = reinterpret_cast<std::uintptr_t>(this) ^ C;
-                    const auto value = static_cast<std::uint32_t>(nonce ^ A) | (nonce ^ B) << 32U;
-                    if constexpr (std::is_integral_v<T>)
-                        return value;
-                    else
-                        return reinterpret_cast<T>(value);
-                }
-            };
-
-            NodeEnc<RegistrationNode*> Next;
-            scrNativeHandler Handlers[7];
-            std::uint32_t numEntries1;
-            std::uint32_t numEntries2;
-            char Pad[0x04];
-            NodeEnc<std::uint64_t> Hashes[7];
-
-            std::uint32_t GetCount() const
-            {
-                return numEntries1 ^ numEntries2 ^ static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(&numEntries1));
-            }
-        };
-
-        RegistrationNode* m_Nodes[256];
-
         scrNativeHandler GetHandlerByHash(std::uint64_t hash) const
         {
             for (auto node = m_Nodes[hash & 255]; node; node = node->Next.Decrypt())
@@ -86,5 +50,42 @@ namespace rage::shared
             cache[handler] = hash;
             return hash;
         }
+
+    private:
+        struct RegistrationNode
+        {
+            template <typename T>
+            struct NodeEnc
+            {
+                std::uint32_t A;
+                std::uint32_t B;
+                std::uint32_t C;
+                char Pad[0x04];
+
+                T Decrypt() const
+                {
+                    const auto nonce = reinterpret_cast<std::uintptr_t>(this) ^ C;
+                    const auto value = static_cast<std::uint32_t>(nonce ^ A) | (nonce ^ B) << 32U;
+                    if constexpr (std::is_integral_v<T>)
+                        return value;
+                    else
+                        return reinterpret_cast<T>(value);
+                }
+            };
+
+            NodeEnc<RegistrationNode*> Next;
+            scrNativeHandler Handlers[7];
+            std::uint32_t numEntries1;
+            std::uint32_t numEntries2;
+            char Pad[0x04];
+            NodeEnc<std::uint64_t> Hashes[7];
+
+            std::uint32_t GetCount() const
+            {
+                return numEntries1 ^ numEntries2 ^ static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(&numEntries1));
+            }
+        };
+
+        RegistrationNode* m_Nodes[256];
     };
 }
