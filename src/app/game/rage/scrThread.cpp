@@ -68,6 +68,26 @@ namespace rage
         m_Base.Add(scrDbgApp::g_IsEnhanced ? STACK_GEN9 : STACK_GEN8).Deref().SetArray<uint64_t>(index, value);
     }
 
+    std::string scrThread::GetCreateTime() const
+    {
+        uint32_t createTime = m_Base.Add(scrDbgApp::g_IsEnhanced ? CREATE_TIME_GEN9 : CREATE_TIME_GEN8).Get<uint32_t>();
+
+        uint32_t now = timeGetTime();
+        uint32_t ms = now - createTime;
+
+        uint32_t totalSeconds = ms / 1000;
+
+        uint32_t hours = totalSeconds / 3600;
+        totalSeconds %= 3600;
+
+        uint32_t minutes = totalSeconds / 60;
+        uint32_t seconds = totalSeconds % 60;
+
+        char buffer[16];
+        std::snprintf(buffer, sizeof(buffer), "%02lu:%02lu:%02lu", hours, minutes, seconds);
+        return std::string(buffer);
+    }
+
     std::string scrThread::GetExitReason() const
     {
         if (scrDbgApp::g_IsEnhanced)
@@ -88,7 +108,7 @@ namespace rage
     std::string scrThread::GetScriptName() const
     {
         char buffer[64];
-        m_Base.Add(scrDbgApp::g_IsEnhanced ? SCRIPT_NAME_GEN9 : SCRIPT_HASH_GEN8).GetBuffer(buffer, 64);
+        m_Base.Add(scrDbgApp::g_IsEnhanced ? SCRIPT_NAME_GEN9 : SCRIPT_NAME_GEN8).GetBuffer(buffer, 64);
         return std::string(buffer);
     }
 

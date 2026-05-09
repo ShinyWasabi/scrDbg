@@ -64,10 +64,13 @@ namespace scrDbgApp
         m_StackPointer = new QLabel("Stack Pointer: 0x0000");
         m_StackPointer->setToolTip("Current top of the stack for this script thread.");
 
+        m_CreateTime = new QLabel("Create Time: 00:00:00");
+        m_CreateTime->setToolTip("Time passed since the creation of this script thread.");
+
         m_StackSize = new QLabel("Stack Size: 0");
         m_StackSize->setToolTip("Total stack size this script thread needs.");
 
-        QVector<QLabel*> leftLabels = {m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_StackSize};
+        QVector<QLabel*> leftLabels = {m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_CreateTime, m_StackSize};
         QVBoxLayout* leftLayout = new QVBoxLayout();
         for (auto* lbl : leftLabels)
             leftLayout->addWidget(lbl);
@@ -93,10 +96,13 @@ namespace scrDbgApp
         m_NativeCount = new QLabel("Native Count: 0");
         m_NativeCount->setToolTip("Number of native commands that this script program uses.");
 
+        m_RefCount = new QLabel("Ref Count: 0");
+        m_RefCount->setToolTip("Number of references this script program has.");
+
         m_StringsSize = new QLabel("Strings Size: 0");
         m_StringsSize->setToolTip("Total size, in bytes, of all string literals defined in this script program.");
 
-        QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_StringsSize};
+        QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_RefCount, m_StringsSize};
         QVBoxLayout* rightLayout = new QVBoxLayout();
         for (auto* lbl : rightLabels)
             rightLayout->addWidget(lbl);
@@ -370,6 +376,7 @@ namespace scrDbgApp
         m_FramePointer->setText(QString("Frame Pointer: 0x%1").arg(QString::number(thread.GetFramePointer(), 16).toUpper()));
         m_StackPointer->setText(QString("Stack Pointer: 0x%1").arg(QString::number(thread.GetStackPointer(), 16).toUpper()));
         m_StackSize->setText(QString("Stack Size: %1").arg(thread.GetStackSize()));
+        m_CreateTime->setText(QString("Create Time: %1").arg(thread.GetCreateTime()));
 
         auto program = rage::scrProgram::GetProgram(thread.GetProgramHash());
         if (!program)
@@ -382,6 +389,7 @@ namespace scrDbgApp
         m_GlobalCount->setText(QString("Global Count: %1").arg(program.GetGlobalCount()));
         m_GlobalBlock->setText(QString("Global Block: %1").arg(program.GetGlobalBlock()));
         m_NativeCount->setText(QString("Native Count: %1").arg(program.GetNativeCount()));
+        m_RefCount->setText(QString("Ref Count: %1").arg(program.GetRefCount()));
         m_StringsSize->setText(QString("String Size: %1").arg(program.GetStringsSize()));
 
         if (m_LastThreadId != id)

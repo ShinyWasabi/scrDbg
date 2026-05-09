@@ -39,6 +39,7 @@ namespace rage
         uint32_t GetCallStack(uint32_t index) const;
         uint64_t GetStack(uint32_t index) const;
         void SetStack(uint32_t index, uint64_t value) const;
+        std::string GetCreateTime() const;
         std::string GetExitReason() const;
         uint32_t GetScriptHash() const;
         std::string GetScriptName() const;
@@ -63,6 +64,7 @@ namespace rage
         static constexpr size_t CALL_DEPTH_GEN8 = 0x6C;
         static constexpr size_t CALL_STACK_GEN8 = 0x70;
         static constexpr size_t STACK_GEN8 = 0xB0;
+        static constexpr size_t CREATE_TIME_GEN8 = 0xC4;
         static constexpr size_t EXIT_REASON_GEN8 = 0xC8;
         static constexpr size_t SCRIPT_HASH_GEN8 = 0xD0;
         static constexpr size_t SCRIPT_NAME_GEN8 = 0xD4;
@@ -78,6 +80,7 @@ namespace rage
         static constexpr size_t CALL_DEPTH_GEN9 = 0x74;
         static constexpr size_t CALL_STACK_GEN9 = 0x78;
         static constexpr size_t STACK_GEN9 = 0xB8;
+        static constexpr size_t CREATE_TIME_GEN9 = 0xCC;
         static constexpr size_t EXIT_REASON_GEN9 = 0xD0;
         static constexpr size_t SCRIPT_HASH_GEN9 = 0x150;
         static constexpr size_t SCRIPT_NAME_GEN9 = 0x154;

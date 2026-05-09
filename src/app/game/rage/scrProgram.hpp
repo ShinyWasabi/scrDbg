@@ -18,6 +18,7 @@ namespace rage
         uint32_t GetGlobalBlock() const;
         uint32_t GetNativeCount() const;
         uint32_t GetNameHash() const;
+        uint32_t GetRefCount() const;
         uint32_t GetStringsSize() const;
 
         std::vector<uint8_t> GetFullCode() const;

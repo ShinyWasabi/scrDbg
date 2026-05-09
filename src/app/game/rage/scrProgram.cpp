@@ -48,6 +48,11 @@ namespace rage
         return m_Base.Add(STRINGS_SIZE).Get<uint32_t>();
     }
 
+    uint32_t scrProgram::GetRefCount() const
+    {
+        return m_Base.Add(REF_COUNT).Get<uint32_t>();
+    }
+
     std::vector<uint8_t> scrProgram::GetFullCode() const
     {
         uint32_t codeSize = GetCodeSize();

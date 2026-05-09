@@ -3,6 +3,8 @@
 #include <Windows.h>
 #include <Psapi.h>
 #include <TlHelp32.h>
+#include <Mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 // clang-format on
 #include <array>
 #include <atomic>
