@@ -1,3 +1,8 @@
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    message(STATUS "Skipping scrDbgApp for 32-bit build configuration.")
+    return()
+endif()
+
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(SHARED_DIR "${CMAKE_SOURCE_DIR}/src/shared")
 

@@ -45,9 +45,9 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (!Process::IsModuleLoaded(L"scrDbg.dll"))
+    if (!Process::IsModuleLoaded(L"scrDbg-x64.dll"))
     {
-        if (!Process::InjectModule("scrDbg.dll"))
+        if (!Process::InjectModule("scrDbg-x64.dll"))
         {
             QMessageBox::critical(nullptr, "Injection Failed", "Failed to inject scrDbg.dll.");
             return 1;

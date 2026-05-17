@@ -1,0 +1,11 @@
+#pragma once
+#include <Windows.h>
+#include <array>
+#include <cstddef>
+#include <filesystem>
+#include <fstream>
+#include <future>
+#include <iostream>
+#include <map>
+#include <string_view>
+#include <vector>

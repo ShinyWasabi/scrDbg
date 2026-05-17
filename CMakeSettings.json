@@ -1,10 +1,21 @@
 {
   "configurations": [
     {
-      "name": "Release",
+      "name": "Release-x64",
       "generator": "Ninja",
       "configurationType": "Release",
       "inheritEnvironments": [ "msvc_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "variables": [
+        { "name": "CMAKE_EXPORT_COMPILE_COMMANDS", "value": "YES" }
+      ]
+    },
+    {
+      "name": "Release-x86",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x86" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "variables": [
