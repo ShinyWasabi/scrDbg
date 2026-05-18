@@ -80,7 +80,7 @@ namespace rage
         Context m_Context;
         scrValue* m_Stack;
         uint32_t m_InsnCount;
-        scrValue* m_ProtectedStack;
+        uint8_t* m_ProtectedStack;
         int32_t m_ProtectedSlotIndex;
         scrValue* m_ProtectedTempStack;
         const char* m_KillReason;

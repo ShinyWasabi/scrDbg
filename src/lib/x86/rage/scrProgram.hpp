@@ -19,7 +19,7 @@ namespace rage
         static inline scrHash<scrProgram*>* sm_Programs;
         static inline int32_t* sm_GlobalsCount;
         static inline scrValue** sm_Globals; // it's not paged
-        static inline scrValue** sm_ProtectedGlobals;
+        static inline uint8_t** sm_ProtectedGlobals;
         static inline uint32_t (*sm_GetNextProtectedSlot)();
 
         static bool Init();

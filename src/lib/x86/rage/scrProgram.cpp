@@ -12,10 +12,10 @@ namespace rage
             sm_GlobalsCount = *addr->Add(1).As<int32_t**>();
 
         if (auto addr = Memory::ScanPattern("8B 15 ? ? ? ? 57 64 8B 3D"))
-            sm_Globals = *addr->Add(2).As<rage::scrValue***>();
+            sm_Globals = *addr->Add(2).As<scrValue***>();
 
         if (auto addr = Memory::ScanPattern("83 3D ? ? ? ? 00 A3 ? ? ? ? 8B 44 24"))
-            sm_ProtectedGlobals = *addr->Add(2).As<rage::scrValue***>();
+            sm_ProtectedGlobals = *addr->Add(2).As<uint8_t***>();
 
         if (auto addr = Memory::ScanPattern("A1 ? ? ? ? 3D ? ? ? ? 7D ? 40 A3 ? ? ? ? C1 E0"))
             sm_GetNextProtectedSlot = *addr->As<decltype(sm_GetNextProtectedSlot)>();

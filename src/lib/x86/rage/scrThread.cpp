@@ -622,7 +622,7 @@ namespace rage
             }
             case scrOpcode::_NULL:
             {
-                (++sp)[0].Reference = reinterpret_cast<rage::scrValue*>(&sm_NullContainer);
+                (++sp)[0].Reference = reinterpret_cast<scrValue*>(&sm_NullContainer);
                 break;
             }
             case scrOpcode::TEXT_LABEL_ASSIGN_STRING:
@@ -710,13 +710,13 @@ namespace rage
                 reinterpret_cast<char*>(dest)[(4 * srcCount) - 1] = 0;
                 break;
             }
-            case scrOpcode::GETXPROTECT: // TO-DO: these seem to be broken
+            case scrOpcode::GETXPROTECT:
             {
                 scrValue* addr = sp[0].Reference;
                 sp = sp - 1; // will push result back at sp+1 below
 
                 bool isGlobal;
-                rage::scrValue* protectedStorage;
+                uint8_t* protectedStorage;
                 if (addr < globals || addr >= &globals[*scrProgram::sm_GlobalsCount])
                 {
                     isGlobal = false;
@@ -725,7 +725,7 @@ namespace rage
                 else
                 {
                     isGlobal = true;
-                    protectedStorage = *rage::scrProgram::sm_ProtectedGlobals;
+                    protectedStorage = *scrProgram::sm_ProtectedGlobals;
                 }
 
                 uint32_t slotIndex = addr->Uns;
@@ -735,7 +735,7 @@ namespace rage
                     freshSlot = true;
                     if (isGlobal)
                     {
-                        slotIndex = rage::scrProgram::sm_GetNextProtectedSlot();
+                        slotIndex = scrProgram::sm_GetNextProtectedSlot();
                         addr->Uns = slotIndex;
                     }
                     else
@@ -760,8 +760,8 @@ namespace rage
                 if (protectedStorage)
                 {
                     if (freshSlot)
-                        protectedStorage[slotIndex].Int = 0;
-                    sp[0].Int = protectedStorage[slotIndex].Int;
+                        reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int = 0;
+                    sp[0].Int = reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int;
                 }
                 else
                 {
@@ -776,7 +776,7 @@ namespace rage
                 sp -= 2;
 
                 bool isGlobal;
-                scrValue* protectedStorage;
+                uint8_t* protectedStorage;
                 if (addr < globals || addr >= &globals[*scrProgram::sm_GlobalsCount])
                 {
                     isGlobal = false;
@@ -785,7 +785,7 @@ namespace rage
                 else
                 {
                     isGlobal = true;
-                    protectedStorage = *rage::scrProgram::sm_ProtectedGlobals;
+                    protectedStorage = *scrProgram::sm_ProtectedGlobals;
                 }
 
                 uint32_t slotIndex = addr->Uns;
@@ -793,7 +793,7 @@ namespace rage
                 {
                     if (isGlobal)
                     {
-                        slotIndex = rage::scrProgram::sm_GetNextProtectedSlot();
+                        slotIndex = scrProgram::sm_GetNextProtectedSlot();
                         addr->Uns = slotIndex;
                     }
                     else
@@ -814,7 +814,7 @@ namespace rage
                 }
 
                 if (protectedStorage)
-                    protectedStorage[slotIndex].Int = value;
+                    reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int = value;
                 break;
             }
             case scrOpcode::REFXPROTECT:
@@ -825,7 +825,7 @@ namespace rage
                 sp -= 3;
 
                 bool isGlobal;
-                rage::scrValue* protectedStorage;
+                uint8_t* protectedStorage;
                 if (addr < globals || addr >= &globals[*scrProgram::sm_GlobalsCount])
                 {
                     isGlobal = false;
@@ -834,7 +834,7 @@ namespace rage
                 else
                 {
                     isGlobal = true;
-                    protectedStorage = *rage::scrProgram::sm_ProtectedGlobals;
+                    protectedStorage = *scrProgram::sm_ProtectedGlobals;
                 }
 
                 if ((flags & 1) != 0)
@@ -855,7 +855,7 @@ namespace rage
                             {
                                 if (isGlobal)
                                 {
-                                    slotIndex = rage::scrProgram::sm_GetNextProtectedSlot();
+                                    slotIndex = scrProgram::sm_GetNextProtectedSlot();
                                     *slotPtr = slotIndex;
                                 }
                                 else
@@ -875,7 +875,7 @@ namespace rage
                             }
 
                             if (protectedStorage)
-                                resolvedValue = protectedStorage[slotIndex].Int;
+                                resolvedValue = reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int;
                         }
 
                         _this->m_ProtectedTempStack[++_this->m_Context.m_ProtectedSp].Int = resolvedValue;
@@ -906,7 +906,7 @@ namespace rage
                             {
                                 if (isGlobal)
                                 {
-                                    slotIndex = rage::scrProgram::sm_GetNextProtectedSlot();
+                                    slotIndex = scrProgram::sm_GetNextProtectedSlot();
                                     *slotPtr = slotIndex;
                                 }
                                 else
@@ -927,7 +927,7 @@ namespace rage
                             }
 
                             if (protectedStorage)
-                                protectedStorage[slotIndex].Int = storedVal;
+                                reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int = storedVal;
                         }
                     }
                 }
