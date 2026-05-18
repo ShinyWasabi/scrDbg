@@ -104,12 +104,20 @@ namespace rage
         scrThread* prevThread = *sm_CurrentThread;
         *sm_CurrentThread = _this;
 
+        struct ThreadRestore
+        {
+            scrThread** Current;
+            scrThread* Previous;
+
+            ~ThreadRestore()
+            {
+                *Current = Previous;
+            }
+        } restore{sm_CurrentThread, prevThread};
+
         scrProgram* program = scrProgram::GetProgram(_this->m_Context.m_ProgramHash);
         if (!program || program->m_NameHash == "remindermp"_J) // We use hash comparison here which is ~36x faster than R*'s _stricmp check from what I tested
-        {
-            *sm_CurrentThread = prevThread;
             return _this->m_Context.m_State = State::KILLED;
-        }
 
         uint8_t* code = program->m_Code;
         scrValue* stack = _this->m_Stack;
@@ -418,10 +426,7 @@ namespace rage
 
                 NativeContext::Handler handler = reinterpret_cast<NativeContext::Handler>(nativeAddr);
                 if (!handler)
-                {
-                    *sm_CurrentThread = prevThread;
                     return _this->OnException(pc, op, "Missing native command");
-                }
 
                 _this->m_Context.m_Sp = static_cast<uint32_t>((sp - stack) + 1);
 
@@ -440,7 +445,6 @@ namespace rage
                 else if (_this->m_Context.m_State != State::RUNNING)
                 {
                     _this->m_Context.m_Pc = pc - 7;
-                    *sm_CurrentThread = prevThread;
                     return _this->m_Context.m_State;
                 }
 
@@ -501,10 +505,7 @@ namespace rage
                 pc = retPc;
 
                 if (pc == 0)
-                {
-                    *sm_CurrentThread = prevThread;
                     return _this->m_Context.m_State = State::KILLED;
-                }
                 break;
             }
             case scrOpcode::LOAD:
@@ -580,10 +581,7 @@ namespace rage
                 sp -= 2;
 
                 if (sp[0].Int < 0 || sp[0].Int >= addr->Int)
-                {
-                    *sm_CurrentThread = prevThread;
                     return _this->OnException(pc, op, "Array overrun: %u >= %u", sp[0].Int, addr->Int);
-                }
 
                 sp[0].Reference = &addr[1 + (sp[0].Int * itemSize)];
                 break;
@@ -680,10 +678,7 @@ namespace rage
             case scrOpcode::THROW:
             {
                 if (!_this->m_Context.m_CatchPc)
-                {
-                    *sm_CurrentThread = prevThread;
                     return _this->OnException(pc, op, "THROW with no CATCH");
-                }
 
                 int32_t val = sp[0].Int;
 
@@ -749,7 +744,6 @@ namespace rage
                         else
                         {
                             slotIndex = 0;
-                            *sm_CurrentThread = prevThread;
                             return _this->OnException(pc, op, "Protected slot overrun: %d", _this->m_ProtectedSlotIndex);
                         }
                     }
@@ -807,7 +801,6 @@ namespace rage
                         else
                         {
                             slotIndex = 0;
-                            *sm_CurrentThread = prevThread;
                             return _this->OnException(pc, op, "Protected slot overrun: %d", _this->m_ProtectedSlotIndex);
                         }
                     }
@@ -868,7 +861,6 @@ namespace rage
                                     }
                                     else
                                     {
-                                        *sm_CurrentThread = prevThread;
                                         return _this->OnException(pc, op, "Protected slot overrun: %d", _this->m_ProtectedSlotIndex);
                                     }
                                 }
@@ -920,7 +912,6 @@ namespace rage
                                     else
                                     {
                                         slotIndex = 0;
-                                        *sm_CurrentThread = prevThread;
                                         return _this->OnException(pc, op, "Protected storage overrun: %d", _this->m_ProtectedSlotIndex);
                                     }
                                 }
@@ -946,7 +937,6 @@ namespace rage
                 }
                 else
                 {
-                    *sm_CurrentThread = prevThread;
                     return _this->OnException(pc, op, "Invalid opcode: %02X", raw);
                 }
                 break;
@@ -957,7 +947,6 @@ namespace rage
     exit:
         _this->m_Context.m_Pc = pc;
         _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
-        *sm_CurrentThread = prevThread;
         return State::RUNNING;
     }
 }
