@@ -88,7 +88,7 @@ namespace rage
         std::snprintf(fullMessage, sizeof(fullMessage), "Exception in %s at 0x%X (%s)!\nReason: %s",
             m_ScriptName,
             pc,
-            static_cast<uint8_t>(op) < 80 ? g_scrOpcodeNames[static_cast<uint8_t>(op)] : "PUSH_CONST_8",
+            static_cast<uint8_t>(op) < 256 ? g_scrOpcodeNames[static_cast<uint8_t>(op)] : "???",
             message);
         MessageBoxA(0, fullMessage, "Exception", MB_OK | MB_ICONERROR);
 
@@ -246,7 +246,7 @@ namespace rage
                 {
                     float x = sp[0].Float;
                     float y = sp[1].Float;
-                    sp[0].Float = y ? x - (static_cast<int32_t>(x / y) * y) : 0.0f;
+                    sp[0].Float = y != 0.0f ? x - (static_cast<int32_t>(x / y) * y) : 0.0f;
                 }
                 break;
             }
@@ -389,10 +389,10 @@ namespace rage
                 sp[-1].Int = sp[0].Int = sp[-2].Int;
                 break;
             }
-            case scrOpcode::PUSH_CONST_U16:
+            case scrOpcode::PUSH_CONST_S16:
             {
                 ++sp;
-                sp[0].Uns = *reinterpret_cast<uint16_t*>(&code[pc]);
+                sp[0].Int = *reinterpret_cast<int16_t*>(&code[pc]);
                 pc += 2;
                 break;
             }
@@ -428,7 +428,7 @@ namespace rage
                 if (!handler)
                     return _this->OnException(pc, op, "Missing native command");
 
-                _this->m_Context.m_Sp = static_cast<uint32_t>((sp - stack) + 1);
+                _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
 
                 NativeContext ctx{};
                 ctx.m_Args = &stack[_this->m_Context.m_Sp - argCount];
@@ -471,7 +471,7 @@ namespace rage
                 ++sp;
                 sp[0].Int = _this->m_Context.m_Fp;
 
-                uint32_t newSp = static_cast<uint32_t>((sp - stack) + 1);
+                uint32_t newSp = static_cast<uint32_t>(sp - stack + 1);
                 _this->m_Context.m_Sp = newSp;
                 _this->m_Context.m_Fp = newSp - argCount - 2;
 
@@ -671,7 +671,8 @@ namespace rage
             {
                 _this->m_Context.m_CatchFp = _this->m_Context.m_Fp;
                 _this->m_Context.m_CatchPc = pc;
-                _this->m_Context.m_CatchSp = static_cast<uint32_t>((sp - stack) + 1);
+                _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+                _this->m_Context.m_CatchSp = static_cast<uint32_t>(sp - stack + 1);
                 (++sp)[0].Int = -1;
                 break;
             }
@@ -926,25 +927,23 @@ namespace rage
             }
             case scrOpcode::EXIT:
             {
-                goto exit;
+                return _this->m_Context.m_State = State::KILLED;
             }
             default:
             {
-                uint8_t raw = static_cast<uint8_t>(op);
-                if (raw >= 80)
+                if (op >= rage::scrOpcode::PUSH_CONST_M16 && op <= rage::scrOpcode::PUSH_CONST_159)
                 {
-                    (++sp)[0].Int = raw - 96;
+                    (++sp)[0].Int = static_cast<uint8_t>(op) - 96;
                 }
                 else
                 {
-                    return _this->OnException(pc, op, "Invalid opcode: %02X", raw);
+                    return _this->OnException(pc, op, "Invalid opcode: %02X", op);
                 }
                 break;
             }
             }
         }
 
-    exit:
         _this->m_Context.m_Pc = pc;
         _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
         return State::RUNNING;
