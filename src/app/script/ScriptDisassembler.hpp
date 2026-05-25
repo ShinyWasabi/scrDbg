@@ -1,10 +1,5 @@
 #pragma once
 
-namespace rage
-{
-    class scrProgram;
-}
-
 namespace scrDbgApp
 {
     class ScriptDisassembler
@@ -32,7 +27,7 @@ namespace scrDbgApp
         static std::optional<int> UpdateStringIndex(const std::vector<uint8_t>& code, uint32_t pc);
         static std::string GetFunctionName(const std::vector<uint8_t>& code, uint32_t pc, uint32_t size, int funcIndex);
         static FunctionInfo GetFunctionInfo(const std::vector<uint8_t>& code, uint32_t pc, int funcIndex = -1);
-        static DecodedInstruction DecodeInstruction(const std::vector<uint8_t>& code, std::uint32_t pc, const rage::scrProgram& program, int stringIndex = -1, int funcIndex = -1);
+        static DecodedInstruction DecodeInstruction(const std::vector<uint8_t>& code, std::uint32_t pc, const ScriptProgram* program, int stringIndex = -1, int funcIndex = -1);
 
     private:
         struct InstructionInfo

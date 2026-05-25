@@ -1,6 +1,6 @@
 #include "GUIHelpers.hpp"
-#include "game/rage/scrOpcode.hpp"
-#include "game/rage/scrProgram.hpp"
+#include "game/Game.hpp"
+#include "script/Opcodes.hpp"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
@@ -141,7 +141,7 @@ namespace scrDbgApp::GUIHelpers
         return result;
     }
 
-    std::vector<std::vector<std::optional<uint8_t>>> ParseBinarySearchString(const QString& input, const rage::scrProgram& program)
+    std::vector<std::vector<std::optional<uint8_t>>> ParseBinarySearchString(const QString& input, const ScriptProgram* program)
     {
         using OptByte = std::optional<uint8_t>;
 
@@ -153,7 +153,7 @@ namespace scrDbgApp::GUIHelpers
         std::string value = input.toStdString();
         std::transform(value.begin(), value.end(), value.begin(), ::tolower);
 
-        auto indices = program.FindStringIndices(value);
+        auto indices = program->FindStringIndices(value);
         if (indices.empty())
             return result;
 
@@ -167,30 +167,30 @@ namespace scrDbgApp::GUIHelpers
 
             if (index < 0x08)
             {
-                p.push_back(rage::scrOpcode::PUSH_CONST_0 + index);
+                p.push_back(OpcodesGTA5::PUSH_CONST_0 + index);
             }
             else if (index < 0x100)
             {
-                p.push_back(rage::scrOpcode::PUSH_CONST_U8);
+                p.push_back(OpcodesGTA5::PUSH_CONST_U8);
                 pushLE(index, 1);
             }
             else if (index < 0x8000)
             {
-                p.push_back(rage::scrOpcode::PUSH_CONST_S16);
+                p.push_back(OpcodesGTA5::PUSH_CONST_S16);
                 pushLE(index, 2);
             }
             else if (index < 0x1000000)
             {
-                p.push_back(rage::scrOpcode::PUSH_CONST_U24);
+                p.push_back(OpcodesGTA5::PUSH_CONST_U24);
                 pushLE(index, 3);
             }
             else
             {
-                p.push_back(rage::scrOpcode::PUSH_CONST_U32);
+                p.push_back(OpcodesGTA5::PUSH_CONST_U32);
                 pushLE(index, 4);
             }
 
-            p.push_back(rage::scrOpcode::STRING);
+            p.push_back(OpcodesGTA5::STRING);
             return p;
         };
 
@@ -205,21 +205,21 @@ namespace scrDbgApp::GUIHelpers
             // PUSH_CONST_U8_U8 <wild> <index> STRING
             {
                 std::vector<OptByte> p;
-                p.push_back(rage::scrOpcode::PUSH_CONST_U8_U8);
+                p.push_back(OpcodesGTA5::PUSH_CONST_U8_U8);
                 p.push_back(std::nullopt); // first U8 (unknown)
                 p.push_back(idx);          // second U8 = string index
-                p.push_back(rage::scrOpcode::STRING);
+                p.push_back(OpcodesGTA5::STRING);
                 out.push_back(std::move(p));
             }
 
             // PUSH_CONST_U8_U8_U8 <wild> <wild> <index> STRING
             {
                 std::vector<OptByte> p;
-                p.push_back(rage::scrOpcode::PUSH_CONST_U8_U8_U8);
+                p.push_back(OpcodesGTA5::PUSH_CONST_U8_U8_U8);
                 p.push_back(std::nullopt); // first U8 (unknown)
                 p.push_back(std::nullopt); // second U8 (unknown)
                 p.push_back(idx);          // third U8 = string index
-                p.push_back(rage::scrOpcode::STRING);
+                p.push_back(OpcodesGTA5::STRING);
                 out.push_back(std::move(p));
             }
 

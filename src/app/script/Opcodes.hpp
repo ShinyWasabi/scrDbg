@@ -1,8 +1,8 @@
 #pragma once
 
-namespace rage
+namespace scrDbgApp
 {
-    enum scrOpcode : uint8_t
+    enum OpcodesGTA5 : uint8_t
     {
         NOP,
         IADD,

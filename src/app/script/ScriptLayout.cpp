@@ -1,11 +1,11 @@
 #include "ScriptLayout.hpp"
-#include "game/rage/scrOpcode.hpp"
+#include "Opcodes.hpp"
 #include "util/ScriptHelpers.hpp"
 
 namespace scrDbgApp
 {
-    ScriptLayout::ScriptLayout(const rage::scrProgram& program)
-        : m_Program(program)
+    ScriptLayout::ScriptLayout(std::unique_ptr<ScriptProgram> program)
+        : m_Program(std::move(program))
     {
         Refresh();
     }
@@ -16,8 +16,8 @@ namespace scrDbgApp
         m_Instructions.clear();
         m_Functions.clear();
 
-        m_Code = m_Program.GetFullCode();
-        m_Hash = m_Program.GetNameHash();
+        m_Code = m_Program->GetCode();
+        m_Hash = m_Program->GetNameHash();
 
         int strIndex = -1;
         int funcIndex = -1;
@@ -26,7 +26,7 @@ namespace scrDbgApp
         while (pc < m_Code.size())
         {
             uint8_t opcode = ScriptHelpers::ReadByte(m_Code, pc);
-            if (opcode == rage::scrOpcode::ENTER)
+            if (opcode == OpcodesGTA5::ENTER)
             {
                 auto info = ScriptDisassembler::GetFunctionInfo(m_Code, pc, ++funcIndex);
                 m_Functions.push_back({info});
@@ -40,9 +40,9 @@ namespace scrDbgApp
         }
     }
 
-    const rage::scrProgram& ScriptLayout::GetProgram() const
+    const ScriptProgram* ScriptLayout::GetProgram() const
     {
-        return m_Program;
+        return m_Program.get();
     }
 
     const std::vector<uint8_t>& ScriptLayout::GetCode() const

@@ -1,5 +1,4 @@
 #pragma once
-#include "game/rage/scrThread.hpp"
 #include "script/ScriptLayout.hpp"
 #include <QDialog>
 
@@ -12,7 +11,7 @@ namespace scrDbgApp
         Q_OBJECT
 
     public:
-        StackDialog(rage::scrThread thread, ScriptLayout& layout, QWidget* parent = nullptr);
+        StackDialog(std::unique_ptr<ScriptThread> thread, ScriptLayout& layout, QWidget* parent = nullptr);
 
     private slots:
         void OnFrameSelected(int row, int column);
@@ -22,7 +21,7 @@ namespace scrDbgApp
         void PopulateCallstack();
         void PopulateFrameDetails(int frameIndex);
 
-        rage::scrThread m_Thread;
+        std::unique_ptr<ScriptThread> m_Thread;
         ScriptLayout& m_Layout;
         std::vector<uint32_t> m_FramePointers;
 

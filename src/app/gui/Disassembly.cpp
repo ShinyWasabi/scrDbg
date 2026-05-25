@@ -1,6 +1,6 @@
 #include "Disassembly.hpp"
-#include "game/rage/scrOpcode.hpp"
 #include "pipe/PipeCommands.hpp"
+#include "script/Opcodes.hpp"
 #include "script/ScriptDisassembler.hpp"
 #include "util/ScriptHelpers.hpp"
 
@@ -57,7 +57,7 @@ namespace scrDbgApp
             return QVariant();
 
         int funcIndex = entry.FuncIndex;
-        if (code[entry.Pc] == rage::scrOpcode::CALL)
+        if (code[entry.Pc] == OpcodesGTA5::CALL)
         {
             uint32_t targetPc = ScriptHelpers::ReadU24(code, entry.Pc + 1);
 

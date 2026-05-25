@@ -1,6 +1,5 @@
 #pragma once
 #include "ScriptDisassembler.hpp"
-#include "game/rage/scrProgram.hpp"
 
 namespace scrDbgApp
 {
@@ -13,18 +12,18 @@ namespace scrDbgApp
             int FuncIndex;
         };
 
-        rage::scrProgram m_Program;
+        std::unique_ptr<ScriptProgram> m_Program;
         std::vector<uint8_t> m_Code;
         uint32_t m_Hash;
         std::vector<InstructionEntry> m_Instructions;
         std::vector<ScriptDisassembler::FunctionInfo> m_Functions;
 
     public:
-        ScriptLayout(const rage::scrProgram& program);
+        ScriptLayout(std::unique_ptr<ScriptProgram> program);
 
         void Refresh();
 
-        const rage::scrProgram& GetProgram() const;
+        const ScriptProgram* GetProgram() const;
         const std::vector<uint8_t>& GetCode() const;
         const int GetInstructionCount() const;
         const int GetFunctionCount() const;

@@ -1,9 +1,4 @@
 #include "ScriptExport.hpp"
-#include "game/gta/Natives.hpp"
-#include "game/gta/TextLabels.hpp"
-#include "game/rage/Joaat.hpp"
-#include "game/rage/scrProgram.hpp"
-#include "game/rage/scrThread.hpp"
 #include "util/GUIHelpers.hpp"
 #include <QCoreApplication>
 #include <QMessageBox>
@@ -54,12 +49,12 @@ namespace scrDbgApp::ScriptExport
 
     void ExportStatics(uint32_t scriptHash)
     {
-        auto thread = rage::scrThread::GetThread(scriptHash);
-        auto program = rage::scrProgram::GetProgram(scriptHash);
+        auto thread = g_Game->GetThread(scriptHash);
+        auto program = g_Game->GetProgram(scriptHash);
         if (!thread || !program)
             return;
 
-        const uint32_t count = program.GetStaticCount();
+        const uint32_t count = program->GetStaticCount();
         if (count == 0)
         {
             QMessageBox::warning(nullptr, "No Statics", "This script has no statics.");
@@ -72,8 +67,8 @@ namespace scrDbgApp::ScriptExport
                 if (progress.wasCanceled())
                     return;
 
-                const int currentVal = static_cast<int>(thread.GetStack(i));
-                const int defaultVal = static_cast<int>(program.GetStatic(i));
+                const int currentVal = thread->GetStack(i);
+                const int defaultVal = program->GetStatic(i);
                 out << "Static_" << i << " = " << currentVal << " // Default: " << defaultVal << "\n";
 
                 if (i % 50 == 0)
@@ -96,7 +91,7 @@ namespace scrDbgApp::ScriptExport
             int totalGlobalCount = 0;
             for (int i = 0; i < 64; i++)
             {
-                int blockCount = rage::scrProgram::GetGlobalBlockCount(i);
+                int blockCount = g_Game->GetGlobalBlockCount(i);
                 if (blockCount > 0)
                 {
                     lastValidBlock = i;
@@ -113,7 +108,7 @@ namespace scrDbgApp::ScriptExport
             GUIHelpers::ExportToFile("All Globals", "all_globals.txt", totalGlobalCount, [&](QTextStream& out, QProgressDialog& progress) {
                 for (int block = 0; block <= lastValidBlock; block++)
                 {
-                    int blockCount = rage::scrProgram::GetGlobalBlockCount(block);
+                    int blockCount = g_Game->GetGlobalBlockCount(block);
                     if (blockCount == 0)
                         continue;
 
@@ -125,7 +120,7 @@ namespace scrDbgApp::ScriptExport
                             return;
 
                         int globalIndex = (block << 18) + i;
-                        int value = static_cast<int>(rage::scrProgram::GetGlobal(globalIndex));
+                        int value = g_Game->GetGlobal(globalIndex);
                         out << "Global_" << globalIndex << " = " << value << "\n";
 
                         if (globalIndex % 50 == 0)
@@ -142,12 +137,12 @@ namespace scrDbgApp::ScriptExport
         }
         else
         {
-            auto program = rage::scrProgram::GetProgram(scriptHash);
+            auto program = g_Game->GetProgram(scriptHash);
             if (!program)
                 return;
 
-            const uint32_t block = program.GetGlobalBlock();
-            const uint32_t count = program.GetGlobalCount();
+            const uint32_t block = program->GetGlobalBlock();
+            const uint32_t count = program->GetGlobalCount();
             if (count == 0)
             {
                 QMessageBox::warning(nullptr, "No Globals", "This script has no globals.");
@@ -161,8 +156,8 @@ namespace scrDbgApp::ScriptExport
                         return;
 
                     int globalIndex = (block << 0x12) + i;
-                    int currentVal = static_cast<int>(rage::scrProgram::GetGlobal(globalIndex));
-                    int defaultVal = static_cast<int>(program.GetProgramGlobal(i));
+                    int currentVal = g_Game->GetGlobal(globalIndex);
+                    int defaultVal = program->GetProgramGlobal(i);
                     out << "Global_" << globalIndex << " = " << currentVal << " // Default: " << defaultVal << "\n";
 
                     if (i % 50 == 0)
@@ -182,7 +177,7 @@ namespace scrDbgApp::ScriptExport
     {
         if (exportAll)
         {
-            auto allNatives = gta::Natives::GetAll();
+            auto allNatives = g_Game->GetAllNatives();
 
             const uint32_t count = static_cast<uint32_t>(allNatives.size());
             if (count == 0)
@@ -201,7 +196,7 @@ namespace scrDbgApp::ScriptExport
                     out << "0x" << QString::number(hash, 16).toUpper();
                     out << ":" << QString::fromStdString(Process::GetName()) << "+0x" << QString::number(handler - Process::GetBaseAddress(), 16).toUpper();
 
-                    auto name = std::string(gta::Natives::GetNameByHash(hash));
+                    auto name = std::string(g_Game->GetNativeNameByHash(hash));
                     out << " // " << (name.empty() ? "UNKNOWN_NATIVE" : QString::fromStdString(name)) << "\n";
 
                     if (index % 50 == 0)
@@ -218,11 +213,11 @@ namespace scrDbgApp::ScriptExport
         }
         else
         {
-            auto program = rage::scrProgram::GetProgram(scriptHash);
+            auto program = g_Game->GetProgram(scriptHash);
             if (!program)
                 return;
 
-            const uint32_t count = program.GetNativeCount();
+            const uint32_t count = program->GetNativeCount();
             if (count == 0)
             {
                 QMessageBox::warning(nullptr, "No Natives", "This script has no natives.");
@@ -235,12 +230,12 @@ namespace scrDbgApp::ScriptExport
                     if (progress.wasCanceled())
                         return;
 
-                    uint64_t handler = program.GetNative(i);
-                    uint64_t hash = gta::Natives::GetHashByHandler(handler);
+                    uint64_t handler = program->GetNative(i);
+                    uint64_t hash = g_Game->GetNativeHashByHandler(handler);
                     out << "0x" << QString::number(hash, 16).toUpper();
                     out << ":" << QString::fromStdString(Process::GetName()) << "+0x" << QString::number(handler - Process::GetBaseAddress(), 16).toUpper();
 
-                    auto name = std::string(gta::Natives::GetNameByHash(hash));
+                    auto name = std::string(g_Game->GetNativeNameByHash(hash));
                     out << " // " << (name.empty() ? "UNKNOWN_NATIVE" : QString::fromStdString(name)) << "\n";
 
                     if (i % 50 == 0)
@@ -258,11 +253,11 @@ namespace scrDbgApp::ScriptExport
 
     void ExportStrings(uint32_t scriptHash, bool onlyTextLabels)
     {
-        auto program = rage::scrProgram::GetProgram(scriptHash);
+        auto program = g_Game->GetProgram(scriptHash);
         if (!program)
             return;
 
-        const auto strings = program.GetAllStrings();
+        const auto strings = program->GetStrings();
         const int count = static_cast<int>(strings.size());
         if (count == 0)
         {
@@ -281,8 +276,8 @@ namespace scrDbgApp::ScriptExport
 
                 if (onlyTextLabels)
                 {
-                    const uint32_t hash = RAGE_JOAAT(s);
-                    const std::string label = gta::TextLabels::GetTextLabel(hash);
+                    const uint32_t hash = JOAAT(s);
+                    const std::string label = g_Game->GetTextLabel(hash);
                     if (!label.empty())
                     {
                         out << QString("%1 (0x%2): %3\n").arg(QString::fromStdString(s)).arg(QString::number(hash, 16).toUpper()).arg(QString::fromStdString(label));

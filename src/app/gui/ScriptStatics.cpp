@@ -1,7 +1,4 @@
 #include "ScriptStatics.hpp"
-#include "game/rage/Joaat.hpp"
-#include "game/rage/scrProgram.hpp"
-#include "game/rage/scrThread.hpp"
 #include <QIntValidator>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -15,11 +12,11 @@ namespace scrDbgApp
         if (address < 0)
             return false;
 
-        auto program = rage::scrProgram::GetProgram(script);
+        auto program = g_Game->GetProgram(script);
         if (!program)
             return false; // or not?
 
-        int count = program.GetStaticCount();
+        int count = program->GetStaticCount();
         if (address >= count)
             return false;
 
@@ -116,9 +113,9 @@ namespace scrDbgApp
     void ScriptStaticsWidget::OnWriteNewStaticValue()
     {
         std::string name = m_StaticScriptName->text().toStdString();
-        auto hash = RAGE_JOAAT(name);
+        auto hash = JOAAT(name);
 
-        auto thread = rage::scrThread::GetThread(hash);
+        auto thread = g_Game->GetThread(hash);
         if (!thread)
             return;
 
@@ -130,15 +127,15 @@ namespace scrDbgApp
         }
 
         auto value = m_StaticNewValue->text().toInt();
-        thread.SetStack(address, value);
+        thread->SetStack(address, value);
     }
 
     void ScriptStaticsWidget::OnUpdateCurrentStaticValue()
     {
         std::string name = m_StaticScriptName->text().toStdString();
-        auto hash = RAGE_JOAAT(name);
+        auto hash = JOAAT(name);
 
-        auto thread = rage::scrThread::GetThread(hash);
+        auto thread = g_Game->GetThread(hash);
         if (!thread)
         {
             m_StaticCurrentValue->setText("Invalid");
@@ -152,7 +149,7 @@ namespace scrDbgApp
             return;
         }
 
-        int value = static_cast<int>(thread.GetStack(address));
+        int value = thread->GetStack(address);
         m_StaticCurrentValue->setText(QString("%1").arg(value));
     }
 }

@@ -2,14 +2,12 @@
 #include "Breakpoints.hpp"
 #include "Disassembly.hpp"
 #include "FunctionList.hpp"
-#include "Pointers.hpp"
 #include "Results.hpp"
 #include "ScriptExport.hpp"
 #include "Stack.hpp"
-#include "game/rage/Joaat.hpp"
-#include "game/rage/scrOpcode.hpp"
-#include "game/rage/scrThread.hpp"
+#include "game/Game.hpp"
 #include "pipe/PipeCommands.hpp"
+#include "script/Opcodes.hpp"
 #include "script/ScriptDisassembler.hpp"
 #include "util/GUIHelpers.hpp"
 #include "util/ScriptHelpers.hpp"
@@ -300,11 +298,11 @@ namespace scrDbgApp
         m_FunctionSearch->clear();
     }
 
-    void ScriptThreadsWidget::RefreshDisassembly(const rage::scrProgram& program)
+    void ScriptThreadsWidget::RefreshDisassembly(std::unique_ptr<ScriptProgram> program)
     {
         CleanupDisassembly();
 
-        m_Layout = std::make_unique<ScriptLayout>(program);
+        m_Layout = std::make_unique<ScriptLayout>(std::move(program));
 
         auto disasmModel = new DisassemblyModel(*m_Layout, m_Disassembly);
         m_Disassembly->setModel(disasmModel);
@@ -329,11 +327,11 @@ namespace scrDbgApp
     {
         uint32_t hash = GetCurrentScriptHash();
 
-        auto thread = rage::scrThread::GetThread(hash);
+        auto thread = g_Game->GetThread(hash);
         if (!thread)
             return;
 
-        auto state = thread.GetState();
+        auto state = thread->GetState();
 
         auto activeBp = PipeCommands::GetActiveBreakpoint();
         m_BreakpointsPauseGame->setEnabled(!activeBp.has_value());
@@ -346,7 +344,7 @@ namespace scrDbgApp
             m_TogglePauseScript->setText("Resume Breakpoint");
             m_TogglePauseScript->setToolTip("Resume the active breakpoint.");
         }
-        else if (state == rage::scrThreadState::PAUSED)
+        else if (state == ScriptThread::PAUSED)
         {
             m_TogglePauseScript->setText("Resume Script");
             m_TogglePauseScript->setToolTip("Resume the execution of this script thread.");
@@ -358,44 +356,44 @@ namespace scrDbgApp
         }
 
         // clang-format off
-        QString stateStr = (state == rage::scrThreadState::RUNNING) ? "RUNNING" : (state == rage::scrThreadState::IDLE) ? "IDLE" : (state == rage::scrThreadState::PAUSED) ? "PAUSED" : "KILLED";
+        QString stateStr = (state == ScriptThread::RUNNING) ? "RUNNING" : (state ==  ScriptThread::IDLE) ? "IDLE" : (state ==  ScriptThread::PAUSED) ? "PAUSED" : "KILLED";
         bool showBreakpointActive = isGlobalBreakpointPause || isLocalBreakpoint;
         m_State->setText("State: " + stateStr + (showBreakpointActive ? " (breakpoint active)" : ""));
 
-        auto priority = thread.GetPriority();
+        auto priority = thread->GetPriority();
 
-        QString priorityStr = (priority == rage::scrThreadPriority::HIGHEST) ? "HIGHEST" : (priority == rage::scrThreadPriority::NORMAL) ? "NORMAL" : (priority == rage::scrThreadPriority::LOWEST) ? "LOWEST" : "MANUAL_UPDATE";
+        QString priorityStr = (priority ==  ScriptThread::HIGHEST) ? "HIGHEST" : (priority ==  ScriptThread::NORMAL) ? "NORMAL" : (priority == ScriptThread::LOWEST) ? "LOWEST" : "MANUAL_UPDATE";
         m_Priority->setText("Priority: " + priorityStr);
         // clang-format on
 
-        uint32_t id = thread.GetId();
+        uint32_t id = thread->GetId();
 
-        m_Program->setText(QString("Program: %1").arg(thread.GetProgramHash()));
+        m_Program->setText(QString("Program: %1").arg(thread->GetProgramHash()));
         m_ThreadId->setText(QString("Thread ID: %1").arg(id));
-        m_ProgramCounter->setText(QString("Program Counter: 0x%1").arg(QString::number(thread.GetProgramCounter(), 16).toUpper()));
-        m_FramePointer->setText(QString("Frame Pointer: 0x%1").arg(QString::number(thread.GetFramePointer(), 16).toUpper()));
-        m_StackPointer->setText(QString("Stack Pointer: 0x%1").arg(QString::number(thread.GetStackPointer(), 16).toUpper()));
-        m_StackSize->setText(QString("Stack Size: %1").arg(thread.GetStackSize()));
-        m_CreateTime->setText(QString("Create Time: %1").arg(thread.GetCreateTime()));
+        m_ProgramCounter->setText(QString("Program Counter: 0x%1").arg(QString::number(thread->GetPc(), 16).toUpper()));
+        m_FramePointer->setText(QString("Frame Pointer: 0x%1").arg(QString::number(thread->GetFp(), 16).toUpper()));
+        m_StackPointer->setText(QString("Stack Pointer: 0x%1").arg(QString::number(thread->GetSp(), 16).toUpper()));
+        m_StackSize->setText(QString("Stack Size: %1").arg(thread->GetStackSize()));
+        m_CreateTime->setText(QString("Create Time: %1").arg(thread->GetCreateTime()));
 
-        auto program = rage::scrProgram::GetProgram(thread.GetProgramHash());
+        auto program = g_Game->GetProgram(thread->GetProgramHash());
         if (!program)
             return;
 
-        m_GlobalVersion->setText(QString("Global Version: %1").arg(program.GetGlobalVersion()));
-        m_CodeSize->setText(QString("Code Size: %1").arg(program.GetCodeSize()));
-        m_ArgCount->setText(QString("Arg Count: %1").arg(program.GetArgCount()));
-        m_StaticCount->setText(QString("Static Count: %1").arg(program.GetStaticCount()));
-        m_GlobalCount->setText(QString("Global Count: %1").arg(program.GetGlobalCount()));
-        m_GlobalBlock->setText(QString("Global Block: %1").arg(program.GetGlobalBlock()));
-        m_NativeCount->setText(QString("Native Count: %1").arg(program.GetNativeCount()));
-        m_RefCount->setText(QString("Ref Count: %1").arg(program.GetRefCount()));
-        m_StringsSize->setText(QString("String Size: %1").arg(program.GetStringsSize()));
+        m_GlobalVersion->setText(QString("Global Version: %1").arg(program->GetGlobalVersion()));
+        m_CodeSize->setText(QString("Code Size: %1").arg(program->GetCodeSize()));
+        m_ArgCount->setText(QString("Arg Count: %1").arg(program->GetArgCount()));
+        m_StaticCount->setText(QString("Static Count: %1").arg(program->GetStaticCount()));
+        m_GlobalCount->setText(QString("Global Count: %1").arg(program->GetGlobalCount()));
+        m_GlobalBlock->setText(QString("Global Block: %1").arg(program->GetGlobalBlock()));
+        m_NativeCount->setText(QString("Native Count: %1").arg(program->GetNativeCount()));
+        m_RefCount->setText(QString("Ref Count: %1").arg(program->GetRefCount()));
+        m_StringsSize->setText(QString("String Size: %1").arg(program->GetStringsSize()));
 
         if (m_LastThreadId != id)
         {
             m_LastThreadId = id;
-            RefreshDisassembly(program);
+            RefreshDisassembly(std::move(program));
         }
     }
 
@@ -404,12 +402,12 @@ namespace scrDbgApp
         QString currentScript = m_ScriptNames->currentText();
 
         std::vector<std::string> aliveScripts;
-        for (const auto& t : rage::scrThread::GetThreads())
+        for (const auto& t : g_Game->GetThreads())
         {
-            if (t.GetState() == rage::scrThreadState::KILLED || t.GetStackSize() == 0)
+            if (t->GetState() == ScriptThread::KILLED || t->GetStackSize() == 0)
                 continue;
 
-            std::string name = t.GetScriptName();
+            std::string name = t->GetScriptName();
             if (!name.empty())
                 aliveScripts.push_back(name);
         }
@@ -438,7 +436,7 @@ namespace scrDbgApp
             m_ScriptNames->clear();
             for (auto& name : aliveScripts)
             {
-                uint32_t hash = RAGE_JOAAT(name);
+                uint32_t hash = JOAAT(name);
                 m_ScriptNames->addItem(QString::fromStdString(name), QVariant::fromValue(hash));
             }
 
@@ -464,7 +462,7 @@ namespace scrDbgApp
     {
         auto hash = GetCurrentScriptHash();
 
-        auto thread = rage::scrThread::GetThread(GetCurrentScriptHash());
+        auto thread = g_Game->GetThread(GetCurrentScriptHash());
         if (!thread)
             return;
 
@@ -475,18 +473,18 @@ namespace scrDbgApp
 
         if (isGlobalBreakpointPause || isLocalBreakpoint)
             PipeCommands::ResumeBreakpoint();
-        else if (thread.GetState() == rage::scrThreadState::PAUSED)
-            thread.SetState(rage::scrThreadState::RUNNING);
+        else if (thread->GetState() == ScriptThread::PAUSED)
+            thread->SetState(ScriptThread::RUNNING);
         else
-            thread.SetState(rage::scrThreadState::PAUSED);
+            thread->SetState(ScriptThread::PAUSED);
     }
 
     void ScriptThreadsWidget::OnKillScript()
     {
-        if (auto thread = rage::scrThread::GetThread(GetCurrentScriptHash()))
+        if (auto thread = g_Game->GetThread(GetCurrentScriptHash()))
         {
-            thread.SetState(rage::scrThreadState::KILLED);
-            QMessageBox::information(this, "Kill Script", QString("Exit Reason: %1").arg(thread.GetExitReason().c_str()));
+            thread->SetState(ScriptThread::KILLED);
+            QMessageBox::information(this, "Kill Script", QString("Exit Reason: %1").arg(thread->GetExitReason().c_str()));
         }
     }
 
@@ -745,11 +743,11 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnViewStack()
     {
-        auto thread = rage::scrThread::GetThread(GetCurrentScriptHash());
+        auto thread = g_Game->GetThread(GetCurrentScriptHash());
         if (!thread)
             return;
 
-        StackDialog dlg(thread, *m_Layout, this);
+        StackDialog dlg(std::move(thread), *m_Layout, this);
         dlg.exec();
     }
 
@@ -825,7 +823,7 @@ namespace scrDbgApp
         auto& code = m_Layout->GetCode();
         uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
 
-        if (ScriptHelpers::IsJumpInstruction(code[pc]) || code[pc] == rage::scrOpcode::CALL)
+        if (ScriptHelpers::IsJumpInstruction(code[pc]) || code[pc] == OpcodesGTA5::CALL)
         {
             QAction* jumpAction = menu.addAction("Jump to Address");
             connect(jumpAction, &QAction::triggered, [this, index]() {
@@ -859,8 +857,8 @@ namespace scrDbgApp
         uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
         uint32_t size = ScriptHelpers::GetInstructionSize(m_Layout->GetCode(), pc);
 
-        std::vector<std::uint8_t> patch(size, rage::scrOpcode::NOP);
-        m_Layout->GetProgram().SetCode(pc, patch);
+        std::vector<std::uint8_t> patch(size, OpcodesGTA5::NOP);
+        m_Layout->GetProgram()->SetCode(pc, patch);
 
         m_Layout->Refresh();
         static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
@@ -906,12 +904,12 @@ namespace scrDbgApp
             if (i < newBytes.size())
                 patch.push_back(static_cast<uint8_t>(newBytes[i]));
             else if (fillWithNops)
-                patch.push_back(rage::scrOpcode::NOP);
+                patch.push_back(OpcodesGTA5::NOP);
             else
                 break; // Leave as is
         }
 
-        m_Layout->GetProgram().SetCode(pc, patch);
+        m_Layout->GetProgram()->SetCode(pc, patch);
 
         m_Layout->Refresh();
         static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
@@ -962,7 +960,7 @@ namespace scrDbgApp
                 int xrefFuncIndex = m_Layout->GetFunctionIndexForPc(targetPc);
                 int funcIndex = m_Layout->GetFunctionIndexForPc(pc);
                 auto func = m_Layout->GetFunction(funcIndex);
-                auto decoded = ScriptDisassembler::DecodeInstruction(code, pc, rage::scrProgram(), -1, xrefFuncIndex);
+                auto decoded = ScriptDisassembler::DecodeInstruction(code, pc, nullptr, -1, xrefFuncIndex);
                 results.push_back({pc, func.Name, decoded.Instruction});
             }
 
@@ -989,7 +987,7 @@ namespace scrDbgApp
         auto& code = m_Layout->GetCode();
         uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
 
-        if (code[pc] == rage::scrOpcode::CALL)
+        if (code[pc] == OpcodesGTA5::CALL)
             targetAddress = ScriptHelpers::ReadU24(code, pc + 1);
         else
             targetAddress = pc + 2 + ScriptHelpers::ReadS16(code, pc + 1) + 1;

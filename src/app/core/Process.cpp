@@ -35,7 +35,7 @@ namespace scrDbgApp
 
         HMODULE modules[0xFF];
         DWORD pcbNeeded;
-        if (!EnumProcessModulesEx(m_Handle, modules, sizeof(modules), &pcbNeeded, LIST_MODULES_64BIT))
+        if (!EnumProcessModulesEx(m_Handle, modules, sizeof(modules), &pcbNeeded, LIST_MODULES_ALL))
         {
             CloseHandle(m_Handle);
             m_Handle = nullptr;
@@ -106,6 +106,9 @@ namespace scrDbgApp
 
     bool Process::InjectModuleImpl(const char* modulePath)
     {
+        if (!g_Game->Is64Bit())
+            return true; // TO-DO: Inject from a separate x86 exe
+
         char fullPath[MAX_PATH];
         GetFullPathNameA(modulePath, MAX_PATH, fullPath, nullptr);
 

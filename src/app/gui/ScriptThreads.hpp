@@ -10,10 +10,6 @@ class QLineEdit;
 class QSortFilterProxyModel;
 class QTableView;
 class QCheckBox;
-namespace rage
-{
-    class scrProgram;
-}
 
 namespace scrDbgApp
 {
@@ -54,7 +50,7 @@ namespace scrDbgApp
         bool ScrollToAddress(uint32_t address);
         void UpdateDisassemblyInfo(int row, bool includeDesc);
         void CleanupDisassembly();
-        void RefreshDisassembly(const rage::scrProgram& program);
+        void RefreshDisassembly(std::unique_ptr<ScriptProgram> program);
         void UpdateCurrentScript();
 
         uint32_t m_LastThreadId;

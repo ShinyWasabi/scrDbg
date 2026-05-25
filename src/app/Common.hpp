@@ -24,13 +24,6 @@
 #include <unordered_set>
 #include <vector>
 
+#include "Joaat.hpp"
 #include "core/Pointer.hpp"
-using scrDbgApp::Pointer;
-
-namespace scrDbgApp
-{
-    extern bool g_IsEnhanced;
-}
-
-#define ENHANCED_TARGET_BUILD "1013.20-1.72"
-#define LEGACY_TARGET_BUILD "3725.0-1.72"
+#include "game/Game.hpp"

@@ -1,8 +1,8 @@
 #include "GUI/GUI.hpp"
-#include "Pointers.hpp"
 #include "ResourceLoader.hpp"
 #include "core/PipeClient.hpp"
-#include "util/Misc.hpp"
+#include "game/gta4/GTA4.hpp"
+#include "game/gta5/GTA5.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -18,22 +18,38 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (!Process::Init(L"GTA5.exe"))
+    for (const auto& game : g_Games)
     {
-        if (!Process::Init(L"GTA5_Enhanced.exe"))
+        if (Process::Init(game.second))
         {
-            QMessageBox::critical(nullptr, "Process", "Failed to initialize process. Please make sure BattlEye is disabled and the game is running.");
-            return 1;
+            switch (game.first)
+            {
+            case GameType::GTA4:
+                g_Game = std::make_unique<GTA4>();
+                break;
+            case GameType::GTA5_GEN8:
+                g_Game = std::make_unique<GTA5_GEN8>();
+                break;
+            case GameType::GTA5_GEN9:
+                g_Game = std::make_unique<GTA5_GEN9>();
+                break;
+            }
+            break;
         }
-        g_IsEnhanced = true;
     }
 
-    if (!g_Pointers.Init())
+    if (!g_Game)
+    {
+        QMessageBox::critical(nullptr, "Process", "Failed to initialize process. Please make sure the game is running.");
+        return 1;
+    }
+
+    if (!g_Game->Init())
     {
         std::string message = "Failed to initialize pointers.";
 
-        const auto target = g_IsEnhanced ? ENHANCED_TARGET_BUILD : LEGACY_TARGET_BUILD;
-        const auto build = Misc::GetGameBuild();
+        const auto target = g_Game->GetTargetBuild();
+        const auto build = g_Game->GetGameBuild();
         if (!build.empty() && build != target)
         {
             char note[256]{};
@@ -45,9 +61,9 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (!Process::IsModuleLoaded(L"scrDbg-x64.dll"))
+    if (!Process::IsModuleLoaded(g_Game->Is64Bit() ? L"scrDbg-x64.dll" : L"scrDbg-x86.dll"))
     {
-        if (!Process::InjectModule("scrDbg-x64.dll"))
+        if (!Process::InjectModule(g_Game->Is64Bit() ? "scrDbg-x64.dll" : "scrDbg-x86.dll"))
         {
             QMessageBox::critical(nullptr, "Injection Failed", "Failed to inject scrDbg.dll.");
             return 1;
@@ -71,6 +87,7 @@ int main(int argc, char* argv[])
     Process::Destroy();
     ReleaseMutex(mutex);
     CloseHandle(mutex);
+    g_Game.reset();
 
     return ret;
 }

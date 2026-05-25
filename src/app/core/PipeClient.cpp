@@ -4,6 +4,9 @@ namespace scrDbgApp
 {
     bool PipeClient::InitImpl(const std::string& name)
     {
+        if (g_Game->GetType() != GameType::GTA5_GEN8 && g_Game->GetType() != GameType::GTA5_GEN9)
+            return true;
+
         if (m_PipeHandle != INVALID_HANDLE_VALUE)
             return false;
 

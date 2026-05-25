@@ -1,9 +1,6 @@
 #include "ScriptDisassembler.hpp"
-#include "game/gta/Natives.hpp"
-#include "game/gta/TextLabels.hpp"
-#include "game/rage/Joaat.hpp"
-#include "game/rage/scrOpcode.hpp"
-#include "game/rage/scrProgram.hpp"
+#include "Opcodes.hpp"
+#include "game/Game.hpp"
 #include "util/ScriptHelpers.hpp"
 
 namespace scrDbgApp
@@ -18,40 +15,40 @@ namespace scrDbgApp
 
     std::optional<int> ScriptDisassembler::UpdateStringIndex(const std::vector<uint8_t>& code, uint32_t pc)
     {
-        uint8_t op = ScriptHelpers::ReadByte(code, pc);
+        OpcodesGTA5 op = static_cast<OpcodesGTA5>(ScriptHelpers::ReadByte(code, pc));
 
         switch (op)
         {
-        case rage::scrOpcode::PUSH_CONST_0:
+        case OpcodesGTA5::PUSH_CONST_0:
             return 0;
-        case rage::scrOpcode::PUSH_CONST_1:
+        case OpcodesGTA5::PUSH_CONST_1:
             return 1;
-        case rage::scrOpcode::PUSH_CONST_2:
+        case OpcodesGTA5::PUSH_CONST_2:
             return 2;
-        case rage::scrOpcode::PUSH_CONST_3:
+        case OpcodesGTA5::PUSH_CONST_3:
             return 3;
-        case rage::scrOpcode::PUSH_CONST_4:
+        case OpcodesGTA5::PUSH_CONST_4:
             return 4;
-        case rage::scrOpcode::PUSH_CONST_5:
+        case OpcodesGTA5::PUSH_CONST_5:
             return 5;
-        case rage::scrOpcode::PUSH_CONST_6:
+        case OpcodesGTA5::PUSH_CONST_6:
             return 6;
-        case rage::scrOpcode::PUSH_CONST_7:
+        case OpcodesGTA5::PUSH_CONST_7:
             return 7;
-        case rage::scrOpcode::PUSH_CONST_U8:
+        case OpcodesGTA5::PUSH_CONST_U8:
             return ScriptHelpers::ReadByte(code, pc + 1);
 
         // Handle peephole optimizations
-        case rage::scrOpcode::PUSH_CONST_U8_U8:
+        case OpcodesGTA5::PUSH_CONST_U8_U8:
             return ScriptHelpers::ReadByte(code, pc + 2);
-        case rage::scrOpcode::PUSH_CONST_U8_U8_U8:
+        case OpcodesGTA5::PUSH_CONST_U8_U8_U8:
             return ScriptHelpers::ReadByte(code, pc + 3);
 
-        case rage::scrOpcode::PUSH_CONST_S16:
+        case OpcodesGTA5::PUSH_CONST_S16:
             return ScriptHelpers::ReadS16(code, pc + 1);
-        case rage::scrOpcode::PUSH_CONST_U24:
+        case OpcodesGTA5::PUSH_CONST_U24:
             return ScriptHelpers::ReadU24(code, pc + 1);
-        case rage::scrOpcode::PUSH_CONST_U32:
+        case OpcodesGTA5::PUSH_CONST_U32:
             return ScriptHelpers::ReadU32(code, pc + 1);
         default:
             return std::nullopt;
@@ -83,7 +80,7 @@ namespace scrDbgApp
 
     ScriptDisassembler::FunctionInfo ScriptDisassembler::GetFunctionInfo(const std::vector<uint8_t>& code, uint32_t pc, int funcIndex)
     {
-        if (pc >= code.size() || ScriptHelpers::ReadByte(code, pc) != rage::scrOpcode::ENTER)
+        if (pc >= code.size() || ScriptHelpers::ReadByte(code, pc) != (uint8_t)OpcodesGTA5::ENTER)
             return {};
 
         uint32_t start = pc;
@@ -102,13 +99,13 @@ namespace scrDbgApp
             uint8_t op = ScriptHelpers::ReadByte(code, pos);
             int size = ScriptHelpers::GetInstructionSize(code, pos);
 
-            if (op == rage::scrOpcode::LEAVE)
+            if (op == (uint8_t)OpcodesGTA5::LEAVE)
             {
                 uint32_t next = pos + size;
                 uint8_t nextOp = (next < code.size()) ? ScriptHelpers::ReadByte(code, next) : 0xFF;
 
                 // If next op is ENTER, this is the last LEAVE of the function
-                if (nextOp == rage::scrOpcode::ENTER || next >= code.size())
+                if (nextOp == (uint8_t)OpcodesGTA5::ENTER || next >= code.size())
                 {
                     lastLeave = pos;
                     retCount = ScriptHelpers::ReadByte(code, pos + 2);
@@ -131,7 +128,7 @@ namespace scrDbgApp
         return info;
     }
 
-    ScriptDisassembler::DecodedInstruction ScriptDisassembler::DecodeInstruction(const std::vector<uint8_t>& code, uint32_t pc, const rage::scrProgram& program, int stringIndex, int funcIndex)
+    ScriptDisassembler::DecodedInstruction ScriptDisassembler::DecodeInstruction(const std::vector<uint8_t>& code, uint32_t pc, const ScriptProgram* program, int stringIndex, int funcIndex)
     {
         DecodedInstruction result;
 
@@ -179,7 +176,7 @@ namespace scrDbgApp
             case 'd': // U24
             {
                 uint32_t val = ScriptHelpers::ReadU24(code, offset);
-                if (op == rage::scrOpcode::CALL) // Print CALL as hex
+                if (op == (uint8_t)OpcodesGTA5::CALL) // Print CALL as hex
                 {
                     instr << "0x" << std::uppercase << std::hex << val;
 
@@ -224,15 +221,15 @@ namespace scrDbgApp
                 uint32_t retCount = native & 3;
                 uint32_t index = (ScriptHelpers::ReadByte(code, offset++) << 8) | ScriptHelpers::ReadByte(code, offset++);
 
-                uint64_t handler = program.GetNative(index);
-                uint64_t hash = gta::Natives::GetHashByHandler(handler);
+                uint64_t handler = program->GetNative(index);
+                uint64_t hash = g_Game->GetNativeHashByHandler(handler);
 
                 instr << argCount << ", " << retCount << ", " << index;
                 if (handler && hash)
                 {
                     std::ostringstream nativeStr;
 
-                    auto name = gta::Natives::GetNameByHash(hash);
+                    auto name = g_Game->GetNativeNameByHash(hash);
                     nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
 
                     nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << hash;
@@ -262,10 +259,10 @@ namespace scrDbgApp
             }
             case 'm': // STRING
             {
-                if (stringIndex >= 0 && stringIndex < program.GetStringsSize())
+                if (stringIndex >= 0 && stringIndex < program->GetStringsSize())
                 {
-                    auto str = program.GetString(stringIndex);
-                    auto label = gta::TextLabels::GetTextLabel(RAGE_JOAAT(str));
+                    auto str = program->GetString(stringIndex);
+                    auto label = g_Game->GetTextLabel(JOAAT(str));
 
                     if (!label.empty())
                         instr << "\"" << str << "\"" << " // GXT: " << label;

@@ -1,5 +1,4 @@
 #include "Logs.hpp"
-#include "game/rage/Joaat.hpp"
 #include "pipe/PipeCommands.hpp"
 #include <QButtonGroup>
 #include <QCheckBox>
@@ -35,7 +34,7 @@ namespace scrDbgApp
             QString name = scriptInput->text().trimmed();
             if (!name.isEmpty())
             {
-                uint32_t hash = RAGE_JOAAT(name.toStdString().c_str());
+                uint32_t hash = JOAAT(name.toStdString().c_str());
                 PipeCommands::SetLoggerScript(hash);
 
                 m_CurrentScript->setText("Current Script: " + name);

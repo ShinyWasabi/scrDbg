@@ -1,5 +1,4 @@
 #include "ScriptGlobals.hpp"
-#include "game/rage/scrProgram.hpp"
 #include <QIntValidator>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -17,7 +16,7 @@ namespace scrDbgApp
         if (blockIndex >= 64)
             return false;
 
-        int blockCount = rage::scrProgram::GetGlobalBlockCount(blockIndex);
+        int blockCount = g_Game->GetGlobalBlockCount(blockIndex);
         int offset = address & 0x3FFFF;
         if (offset >= blockCount)
             return false;
@@ -118,7 +117,7 @@ namespace scrDbgApp
         }
 
         int value = m_GlobalNewValue->text().toInt();
-        rage::scrProgram::SetGlobal(address, value);
+        g_Game->SetGlobal(address, value);
     }
 
     void ScriptGlobalsWidget::OnUpdateCurrentGlobalValue()
@@ -130,7 +129,7 @@ namespace scrDbgApp
             return;
         }
 
-        int value = static_cast<int>(rage::scrProgram::GetGlobal(address));
+        int value = g_Game->GetGlobal(address);
         m_GlobalCurrentValue->setText(QString::number(value));
     }
 }
