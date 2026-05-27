@@ -87,10 +87,10 @@ namespace scrDbgApp
         return std::string(buffer);
     }
 
-    std::string ScriptThreadGTA5_GEN9::GetExitReason() const
+    std::string ScriptThreadGTA5_GEN9::GetKillReason() const
     {
         char buffer[128];
-        m_Base.Add(EXIT_REASON).GetBuffer(buffer, 128);
+        m_Base.Add(KILL_REASON).GetBuffer(buffer, 128);
         return std::string(buffer);
     }
 

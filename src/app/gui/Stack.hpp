@@ -1,5 +1,4 @@
 #pragma once
-#include "script/ScriptLayout.hpp"
 #include <QDialog>
 
 class QTableWidget;
@@ -11,7 +10,7 @@ namespace scrDbgApp
         Q_OBJECT
 
     public:
-        StackDialog(std::unique_ptr<ScriptThread> thread, ScriptLayout& layout, QWidget* parent = nullptr);
+        StackDialog(std::unique_ptr<ScriptThread> thread, Disassembler* disassembler, QWidget* parent = nullptr);
 
     private slots:
         void OnFrameSelected(int row, int column);
@@ -22,7 +21,7 @@ namespace scrDbgApp
         void PopulateFrameDetails(int frameIndex);
 
         std::unique_ptr<ScriptThread> m_Thread;
-        ScriptLayout& m_Layout;
+        Disassembler* m_Disassembler;
         std::vector<uint32_t> m_FramePointers;
 
         QTableWidget* m_CallStack;

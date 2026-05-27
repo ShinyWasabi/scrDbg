@@ -16,6 +16,11 @@ namespace scrDbgApp
             return Pointer(Process::Read<uintptr_t>(m_Address));
         }
 
+        Pointer Deref32() const
+        {
+            return Pointer(Process::Read<uint32_t>(m_Address));
+        }
+
         Pointer Add(size_t offset) const
         {
             return Pointer(m_Address + offset);

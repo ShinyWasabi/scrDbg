@@ -8,10 +8,10 @@
 
 namespace scrDbgApp
 {
-    StackDialog::StackDialog(std::unique_ptr<ScriptThread> thread, ScriptLayout& layout, QWidget* parent)
+    StackDialog::StackDialog(std::unique_ptr<ScriptThread> thread, Disassembler* disassembler, QWidget* parent)
         : QDialog(parent),
           m_Thread(std::move(thread)),
-          m_Layout(layout)
+          m_Disassembler(disassembler)
     {
         setWindowTitle("Stack");
         resize(700, 500);
@@ -75,8 +75,8 @@ namespace scrDbgApp
         {
             uint32_t addr = m_Thread->GetCallStack(i);
 
-            int index = m_Layout.GetFunctionIndexForPc(addr);
-            auto func = m_Layout.GetFunction(index);
+            int index = m_Disassembler->GetFunctionIndexForPc(addr);
+            auto func = m_Disassembler->GetFunction(index);
 
             m_FramePointers[i] = fp;
 
@@ -99,8 +99,8 @@ namespace scrDbgApp
         uint32_t sp = m_Thread->GetSp();
         uint32_t pc = m_Thread->GetCallStack(frameIndex);
 
-        int index = m_Layout.GetFunctionIndexForPc(pc);
-        auto func = m_Layout.GetFunction(index);
+        int index = m_Disassembler->GetFunctionIndexForPc(pc);
+        auto func = m_Disassembler->GetFunction(index);
 
         m_StackFrame->setRowCount(0);
 

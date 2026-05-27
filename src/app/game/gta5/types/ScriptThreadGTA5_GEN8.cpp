@@ -87,9 +87,9 @@ namespace scrDbgApp
         return std::string(buffer);
     }
 
-    std::string ScriptThreadGTA5_GEN8::GetExitReason() const
+    std::string ScriptThreadGTA5_GEN8::GetKillReason() const
     {
-        return m_Base.Add(EXIT_REASON).GetString(128);
+        return m_Base.Add(KILL_REASON).GetString(128);
     }
 
     uint32_t ScriptThreadGTA5_GEN8::GetScriptHash() const

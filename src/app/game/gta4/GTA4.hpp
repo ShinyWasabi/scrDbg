@@ -22,10 +22,12 @@ namespace scrDbgApp
             return false;
         }
 
+        std::unique_ptr<Disassembler> CreateDisassembly(std::unique_ptr<ScriptProgram> program) const override;
+
         std::string GetGameBuild() const override;
         int32_t GetGlobal(uint32_t index) const override;
         void SetGlobal(uint32_t index, int32_t value) const override;
-        uint32_t GetGlobalBlockCount(uint32_t block) const override;
+        uint32_t GetGlobalCount() const override;
         std::unique_ptr<ScriptProgram> GetProgram(uint32_t hash) const override;
         std::vector<std::unique_ptr<ScriptThread>> GetThreads() const override;
         std::unique_ptr<ScriptThread> GetThread(uint32_t hash) const override;

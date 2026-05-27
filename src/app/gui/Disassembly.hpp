@@ -1,5 +1,4 @@
 #pragma once
-#include "script/ScriptLayout.hpp"
 #include <QWidget>
 #include <QtCore>
 
@@ -10,7 +9,7 @@ namespace scrDbgApp
         Q_OBJECT
 
     public:
-        explicit DisassemblyModel(ScriptLayout& layout, QObject* parent = nullptr);
+        explicit DisassemblyModel(const Disassembler* disassembler, QObject* parent = nullptr);
 
         int rowCount(const QModelIndex& parent = QModelIndex()) const override;
         int columnCount(const QModelIndex&) const override;
@@ -18,6 +17,6 @@ namespace scrDbgApp
         QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
     private:
-        ScriptLayout& m_Layout;
+        const Disassembler* m_Disassembler;
     };
 }

@@ -5,6 +5,8 @@ namespace scrDbgApp
     class GTA5 : public Game
     {
     public:
+        std::unique_ptr<Disassembler> CreateDisassembly(std::unique_ptr<ScriptProgram> program) const override;
+
         std::string GetGameBuild() const override;
         int32_t GetGlobal(uint32_t index) const override;
         void SetGlobal(uint32_t index, int32_t value) const override;

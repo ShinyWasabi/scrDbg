@@ -1,6 +1,5 @@
 #include "GUIHelpers.hpp"
 #include "game/Game.hpp"
-#include "script/Opcodes.hpp"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
@@ -143,6 +142,10 @@ namespace scrDbgApp::GUIHelpers
 
     std::vector<std::vector<std::optional<uint8_t>>> ParseBinarySearchString(const QString& input, const ScriptProgram* program)
     {
+        return {}; // todo
+
+        /*
+
         using OptByte = std::optional<uint8_t>;
 
         std::vector<std::vector<OptByte>> result;
@@ -237,5 +240,7 @@ namespace scrDbgApp::GUIHelpers
         }
 
         return result;
+
+        */
     }
 }

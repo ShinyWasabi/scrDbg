@@ -1,5 +1,6 @@
 #pragma once
 #include "Types.hpp"
+#include "disasm/Disassembler.hpp"
 
 namespace scrDbgApp
 {
@@ -25,18 +26,66 @@ namespace scrDbgApp
         virtual GameType GetType() const = 0;
         virtual const char* GetTargetBuild() const = 0;
         virtual bool Is64Bit() const = 0;
+        virtual std::unique_ptr<Disassembler> CreateDisassembly(std::unique_ptr<ScriptProgram> program) const = 0;
 
-        virtual std::string GetGameBuild() const = 0;
-        virtual int32_t GetGlobal(uint32_t index) const = 0;
-        virtual void SetGlobal(uint32_t index, int32_t value) const = 0;
-        virtual uint32_t GetGlobalBlockCount(uint32_t block) const = 0;
-        virtual std::unique_ptr<ScriptProgram> GetProgram(uint32_t hash) const = 0;
-        virtual std::vector<std::unique_ptr<ScriptThread>> GetThreads() const = 0;
-        virtual std::unique_ptr<ScriptThread> GetThread(uint32_t hash) const = 0;
-        virtual std::string_view GetNativeNameByHash(uint64_t hash) const = 0;
-        virtual uint64_t GetNativeHashByHandler(uintptr_t handler) const = 0;
-        virtual std::unordered_map<uint64_t, uintptr_t> GetAllNatives() const = 0;
-        virtual std::string GetTextLabel(uint32_t hash) const = 0;
+        virtual std::string GetGameBuild() const
+        {
+            return {};
+        }
+
+        virtual int32_t GetGlobal(uint32_t index) const
+        {
+            return 0;
+        }
+
+        virtual void SetGlobal(uint32_t index, int32_t value) const
+        {
+        }
+
+        virtual uint32_t GetGlobalCount() const
+        {
+            return 0;
+        }
+
+        virtual uint32_t GetGlobalBlockCount(uint32_t block) const
+        {
+            return 0;
+        }
+
+        virtual std::unique_ptr<ScriptProgram> GetProgram(uint32_t hash) const
+        {
+            return nullptr;
+        }
+
+        virtual std::vector<std::unique_ptr<ScriptThread>> GetThreads() const
+        {
+            return {};
+        }
+
+        virtual std::unique_ptr<ScriptThread> GetThread(uint32_t hash) const
+        {
+            return nullptr;
+        }
+
+        virtual std::string_view GetNativeNameByHash(uint64_t hash) const
+        {
+            return {};
+        }
+
+        virtual uint64_t GetNativeHashByHandler(uintptr_t handler) const
+        {
+            return 0;
+        }
+
+        virtual std::unordered_map<uint64_t, uintptr_t> GetAllNatives() const
+        {
+            return {};
+        }
+
+        virtual std::string GetTextLabel(uint32_t hash) const
+        {
+            return {};
+        }
     };
 
     inline std::unique_ptr<Game> g_Game;

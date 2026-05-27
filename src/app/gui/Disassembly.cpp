@@ -1,20 +1,18 @@
 #include "Disassembly.hpp"
+#include "disasm/Disassembler.hpp"
 #include "pipe/PipeCommands.hpp"
-#include "script/Opcodes.hpp"
-#include "script/ScriptDisassembler.hpp"
-#include "util/ScriptHelpers.hpp"
 
 namespace scrDbgApp
 {
-    DisassemblyModel::DisassemblyModel(ScriptLayout& layout, QObject* parent)
+    DisassemblyModel::DisassemblyModel(const Disassembler* disassembler, QObject* parent)
         : QAbstractTableModel(parent),
-          m_Layout(layout)
+          m_Disassembler(disassembler)
     {
     }
 
     int DisassemblyModel::rowCount(const QModelIndex& parent) const
     {
-        return m_Layout.GetInstructionCount();
+        return m_Disassembler->GetInstructionCount();
     }
 
     int DisassemblyModel::columnCount(const QModelIndex&) const
@@ -36,12 +34,11 @@ namespace scrDbgApp
         if (!index.isValid())
             return QVariant();
 
-        const auto& code = m_Layout.GetCode();
-        const auto entry = m_Layout.GetInstruction(index.row());
+        const auto entry = m_Disassembler->GetInstruction(index.row());
 
         if (role == Qt::BackgroundRole)
         {
-            auto hash = m_Layout.GetHash();
+            auto hash = m_Disassembler->GetHash();
 
             auto active = PipeCommands::GetActiveBreakpoint();
             if (active && active->first == hash && active->second == entry.Pc)
@@ -56,17 +53,7 @@ namespace scrDbgApp
         if (role != Qt::DisplayRole)
             return QVariant();
 
-        int funcIndex = entry.FuncIndex;
-        if (code[entry.Pc] == OpcodesGTA5::CALL)
-        {
-            uint32_t targetPc = ScriptHelpers::ReadU24(code, entry.Pc + 1);
-
-            int targetFuncIndex = m_Layout.GetFunctionIndexForPc(targetPc);
-            if (targetFuncIndex != -1)
-                funcIndex = targetFuncIndex;
-        }
-
-        auto insn = ScriptDisassembler::DecodeInstruction(code, entry.Pc, m_Layout.GetProgram(), entry.StringIndex, funcIndex);
+        auto insn = m_Disassembler->DecodeInstruction(index.row());
 
         switch (index.column())
         {

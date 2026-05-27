@@ -2,15 +2,15 @@
 
 namespace scrDbgApp
 {
-    FunctionListModel::FunctionListModel(const ScriptLayout& layout, QObject* parent)
+    FunctionListModel::FunctionListModel(const Disassembler* disassembler, QObject* parent)
         : QAbstractTableModel(parent),
-          m_Layout(layout)
+          m_Disassembler(disassembler)
     {
     }
 
     int FunctionListModel::rowCount(const QModelIndex&) const
     {
-        return m_Layout.GetFunctionCount();
+        return m_Disassembler->GetFunctionCount();
     }
 
     int FunctionListModel::columnCount(const QModelIndex&) const
@@ -32,7 +32,7 @@ namespace scrDbgApp
         if (!index.isValid() || role != Qt::DisplayRole)
             return QVariant();
 
-        auto func = m_Layout.GetFunction(index.row());
+        auto func = m_Disassembler->GetFunction(index.row());
 
         switch (index.column())
         {

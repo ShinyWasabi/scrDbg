@@ -1,43 +1,174 @@
 #pragma once
+#include "Disassembler.hpp"
 
 namespace scrDbgApp
 {
-    class ScriptDisassembler
+    class DisassemblerGTA5 : public Disassembler
     {
     public:
-        struct FunctionInfo
-        {
-            uint32_t Start;
-            uint32_t End;
-            uint32_t Length;
-            uint32_t FrameSize;
-            uint32_t ArgCount;
-            uint32_t RetCount;
-            std::string Name;
-        };
+        using Disassembler::Disassembler;
 
-        struct DecodedInstruction
+        bool SupportsFunctions() const override
         {
-            std::string Address;
-            std::string Bytes;
-            std::string Instruction;
-        };
+            return true;
+        }
 
-        static const char* GetInstructionDescription(uint8_t opcode);
-        static std::optional<int> UpdateStringIndex(const std::vector<uint8_t>& code, uint32_t pc);
-        static std::string GetFunctionName(const std::vector<uint8_t>& code, uint32_t pc, uint32_t size, int funcIndex);
-        static FunctionInfo GetFunctionInfo(const std::vector<uint8_t>& code, uint32_t pc, int funcIndex = -1);
-        static DecodedInstruction DecodeInstruction(const std::vector<uint8_t>& code, std::uint32_t pc, const ScriptProgram* program, int stringIndex = -1, int funcIndex = -1);
+        bool UsesStringsTable() const override
+        {
+            return true;
+        }
+
+        int GetInstructionSize(uint32_t pc) const override;
+        virtual bool IsJumpOrCall(uint8_t op) const override;
+        virtual uint32_t GetJumpTarget(uint32_t pc) const override;
+        virtual bool IsWildcard(uint8_t op) const override;
+        virtual bool IsXrefToPc(uint32_t pc, uint32_t targetPc) const override;
+        virtual std::string MakePattern(uint32_t start, int len) const override;
+        virtual bool IsPatternUnique(uint32_t start, int len) const override;
+        virtual const char* GetInstructionDescription(uint8_t op) const override;
+        std::optional<FunctionInfo> BuildFunction(uint32_t pc, uint32_t funcIndex) const override;
+        std::optional<uint32_t> UpdateStringIndex(uint32_t pc) const override;
+        std::string DecodeInstructionInternal(const InstructionInfo& insnInfo) const override;
 
     private:
-        struct InstructionInfo
+        std::string GetFunctionName(uint32_t pc, uint32_t size, int funcIndex) const;
+
+        enum Opcodes : uint8_t
         {
-            const char* Name;
-            const char* Description;
-            const char* OperandFmt;
+            NOP,
+            IADD,
+            ISUB,
+            IMUL,
+            IDIV,
+            IMOD,
+            INOT,
+            INEG,
+            IEQ,
+            INE,
+            IGT,
+            IGE,
+            ILT,
+            ILE,
+            FADD,
+            FSUB,
+            FMUL,
+            FDIV,
+            FMOD,
+            FNEG,
+            FEQ,
+            FNE,
+            FGT,
+            FGE,
+            FLT,
+            FLE,
+            VADD,
+            VSUB,
+            VMUL,
+            VDIV,
+            VNEG,
+            IAND,
+            IOR,
+            IXOR,
+            I2F,
+            F2I,
+            F2V,
+            PUSH_CONST_U8,
+            PUSH_CONST_U8_U8,
+            PUSH_CONST_U8_U8_U8,
+            PUSH_CONST_U32,
+            PUSH_CONST_F,
+            DUP,
+            DROP,
+            NATIVE,
+            ENTER,
+            LEAVE,
+            LOAD,
+            STORE,
+            STORE_REV,
+            LOAD_N,
+            STORE_N,
+            ARRAY_U8,
+            ARRAY_U8_LOAD,
+            ARRAY_U8_STORE,
+            LOCAL_U8,
+            LOCAL_U8_LOAD,
+            LOCAL_U8_STORE,
+            STATIC_U8,
+            STATIC_U8_LOAD,
+            STATIC_U8_STORE,
+            IADD_U8,
+            IMUL_U8,
+            IOFFSET,
+            IOFFSET_U8,
+            IOFFSET_U8_LOAD,
+            IOFFSET_U8_STORE,
+            PUSH_CONST_S16,
+            IADD_S16,
+            IMUL_S16,
+            IOFFSET_S16,
+            IOFFSET_S16_LOAD,
+            IOFFSET_S16_STORE,
+            ARRAY_U16,
+            ARRAY_U16_LOAD,
+            ARRAY_U16_STORE,
+            LOCAL_U16,
+            LOCAL_U16_LOAD,
+            LOCAL_U16_STORE,
+            STATIC_U16,
+            STATIC_U16_LOAD,
+            STATIC_U16_STORE,
+            GLOBAL_U16,
+            GLOBAL_U16_LOAD,
+            GLOBAL_U16_STORE,
+            J,
+            JZ,
+            IEQ_JZ,
+            INE_JZ,
+            IGT_JZ,
+            IGE_JZ,
+            ILT_JZ,
+            ILE_JZ,
+            CALL,
+            STATIC_U24,
+            STATIC_U24_LOAD,
+            STATIC_U24_STORE,
+            GLOBAL_U24,
+            GLOBAL_U24_LOAD,
+            GLOBAL_U24_STORE,
+            PUSH_CONST_U24,
+            SWITCH,
+            STRING,
+            STRINGHASH,
+            TEXT_LABEL_ASSIGN_STRING,
+            TEXT_LABEL_ASSIGN_INT,
+            TEXT_LABEL_APPEND_STRING,
+            TEXT_LABEL_APPEND_INT,
+            TEXT_LABEL_COPY,
+            CATCH,
+            THROW,
+            CALLINDIRECT,
+            PUSH_CONST_M1,
+            PUSH_CONST_0,
+            PUSH_CONST_1,
+            PUSH_CONST_2,
+            PUSH_CONST_3,
+            PUSH_CONST_4,
+            PUSH_CONST_5,
+            PUSH_CONST_6,
+            PUSH_CONST_7,
+            PUSH_CONST_FM1,
+            PUSH_CONST_F0,
+            PUSH_CONST_F1,
+            PUSH_CONST_F2,
+            PUSH_CONST_F3,
+            PUSH_CONST_F4,
+            PUSH_CONST_F5,
+            PUSH_CONST_F6,
+            PUSH_CONST_F7,
+            IS_BIT_SET
         };
 
-        static inline constexpr std::array<InstructionInfo, 131> m_InstructionTable = {{
+        static inline constexpr std::array<InstructionTable, 131> m_InstructionTable = {{
             {"NOP", "Does nothing.", ""},
             {"IADD", "Adds the top two integers on the stack and pushes the result.", ""},
             {"ISUB", "Subtracts the top integer from the next on the stack and pushes the result.", ""},

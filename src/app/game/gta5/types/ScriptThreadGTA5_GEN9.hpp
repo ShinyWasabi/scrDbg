@@ -24,7 +24,7 @@ namespace scrDbgApp
         int32_t GetStack(uint32_t index) const override;
         void SetStack(uint32_t index, int32_t value) const override;
         std::string GetCreateTime() const override;
-        std::string GetExitReason() const override;
+        std::string GetKillReason() const override;
         uint32_t GetScriptHash() const override;
         std::string GetScriptName() const override;
 
@@ -41,7 +41,7 @@ namespace scrDbgApp
         static constexpr size_t CALL_STACK = 0x78;
         static constexpr size_t STACK = 0xB8;
         static constexpr size_t CREATE_TIME = 0xCC;
-        static constexpr size_t EXIT_REASON = 0xD0;
+        static constexpr size_t KILL_REASON = 0xD0;
         static constexpr size_t SCRIPT_HASH = 0x150;
         static constexpr size_t SCRIPT_NAME = 0x154;
 

@@ -7,10 +7,7 @@
 #include "Stack.hpp"
 #include "game/Game.hpp"
 #include "pipe/PipeCommands.hpp"
-#include "script/Opcodes.hpp"
-#include "script/ScriptDisassembler.hpp"
 #include "util/GUIHelpers.hpp"
-#include "util/ScriptHelpers.hpp"
 #include <QCheckBox>
 #include <QClipboard>
 #include <QComboBox>
@@ -35,9 +32,11 @@ namespace scrDbgApp
     ScriptThreadsWidget::ScriptThreadsWidget(QWidget* parent)
         : QWidget(parent),
           m_LastThreadId(0),
-          m_Layout(nullptr),
+          m_Disassembler(nullptr),
           m_FunctionFilter(nullptr)
     {
+        bool isGta5 = g_Game->GetType() == GameType::GTA5_GEN8 || g_Game->GetType() == GameType::GTA5_GEN9;
+
         m_ScriptNames = new QComboBox(this);
         m_ScriptNames->setEditable(false);
 
@@ -46,6 +45,7 @@ namespace scrDbgApp
 
         m_Priority = new QLabel("Priority: HIGHEST");
         m_Priority->setToolTip("Execution priority of this script thread.\n(HIGHEST, NORMAL, LOWEST, MANUAL_UPDATE)");
+        m_Priority->setVisible(isGta5);
 
         m_Program = new QLabel("Program: 0");
         m_Program->setToolTip("JOAAT hash of the name of this script thread's program.");
@@ -64,6 +64,7 @@ namespace scrDbgApp
 
         m_CreateTime = new QLabel("Create Time: 00:00:00");
         m_CreateTime->setToolTip("Time passed since the creation of this script thread.");
+        m_CreateTime->setVisible(isGta5);
 
         m_StackSize = new QLabel("Stack Size: 0");
         m_StackSize->setToolTip("Total stack size this script thread needs.");
@@ -73,8 +74,11 @@ namespace scrDbgApp
         for (auto* lbl : leftLabels)
             leftLayout->addWidget(lbl);
 
+        leftLayout->addStretch();
+
         m_GlobalVersion = new QLabel("Global Version: 0");
         m_GlobalVersion->setToolTip("Unused. Checks whether two script programs have incompatible globals variables.");
+        m_GlobalVersion->setVisible(isGta5);
 
         m_CodeSize = new QLabel("Code Size: 0");
         m_CodeSize->setToolTip("Total size, in bytes, of the bytecode for this script program.");
@@ -87,27 +91,35 @@ namespace scrDbgApp
 
         m_GlobalCount = new QLabel("Global Count: 0");
         m_GlobalCount->setToolTip("Number of global variables defined in this script program.");
+        m_GlobalCount->setVisible(isGta5);
 
         m_GlobalBlock = new QLabel("Global Block: 0");
         m_GlobalBlock->setToolTip("The global block index of this script program's global variables.");
+        m_GlobalBlock->setVisible(isGta5);
 
         m_NativeCount = new QLabel("Native Count: 0");
         m_NativeCount->setToolTip("Number of native commands that this script program uses.");
+        m_NativeCount->setVisible(isGta5);
 
         m_RefCount = new QLabel("Ref Count: 0");
         m_RefCount->setToolTip("Number of references this script program has.");
 
         m_StringsSize = new QLabel("Strings Size: 0");
         m_StringsSize->setToolTip("Total size, in bytes, of all string literals defined in this script program.");
+        m_StringsSize->setVisible(isGta5);
 
         QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_RefCount, m_StringsSize};
         QVBoxLayout* rightLayout = new QVBoxLayout();
         for (auto* lbl : rightLabels)
             rightLayout->addWidget(lbl);
 
+        rightLayout->addStretch();
+
         QHBoxLayout* columnsLayout = new QHBoxLayout();
         columnsLayout->addLayout(leftLayout);
+        columnsLayout->addSpacing(48);
         columnsLayout->addLayout(rightLayout);
+        columnsLayout->addStretch();
 
         m_TogglePauseScript = new QPushButton("Pause Script");
         connect(m_TogglePauseScript, &QPushButton::clicked, this, &ScriptThreadsWidget::OnTogglePauseScript);
@@ -163,7 +175,7 @@ namespace scrDbgApp
         m_FunctionList->setStyleSheet("QTableView { font-family: Consolas; font-size: 11pt; }");
         connect(m_FunctionList, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
             QModelIndex idx = m_FunctionFilter->mapToSource(index);
-            uint32_t pc = m_Layout->GetFunction(idx.row()).Start;
+            uint32_t pc = m_Disassembler->GetFunction(idx.row()).Start;
             ScrollToAddress(pc);
         });
 
@@ -178,8 +190,8 @@ namespace scrDbgApp
         functionLayout->addWidget(m_FunctionList);
         functionLayout->addWidget(m_FunctionSearch);
 
-        QWidget* functionWidget = new QWidget(this);
-        functionWidget->setLayout(functionLayout);
+        m_FunctionWidget = new QWidget(this);
+        m_FunctionWidget->setLayout(functionLayout);
 
         m_DisassemblyInfo = new QLabel(this);
         m_DisassemblyInfo->setText("- <none>");
@@ -206,7 +218,7 @@ namespace scrDbgApp
         disasmWidget->setLayout(disasmLayout);
 
         QSplitter* splitter = new QSplitter(Qt::Horizontal, this);
-        splitter->addWidget(functionWidget);
+        splitter->addWidget(m_FunctionWidget);
         splitter->addWidget(disasmWidget);
         splitter->setChildrenCollapsible(false);
         splitter->setStretchFactor(0, 2);
@@ -239,8 +251,8 @@ namespace scrDbgApp
         QModelIndex idx;
         for (int i = 0; i < m_Disassembly->model()->rowCount(); i++)
         {
-            uint32_t pc = m_Layout->GetInstruction(i).Pc;
-            uint32_t size = ScriptHelpers::GetInstructionSize(m_Layout->GetCode(), pc);
+            uint32_t pc = m_Disassembler->GetInstruction(i).Pc;
+            uint32_t size = m_Disassembler->GetInstructionSize(pc);
 
             if (address >= pc && address < pc + size)
             {
@@ -260,29 +272,37 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::UpdateDisassemblyInfo(int row, bool includeDesc)
     {
-        auto& code = m_Layout->GetCode();
+        auto& code = m_Disassembler->GetCode();
+        uint32_t pc = m_Disassembler->GetInstruction(row).Pc;
 
-        uint32_t pc = m_Layout->GetInstruction(row).Pc;
-        int index = m_Layout->GetFunctionIndexForPc(pc);
-        auto func = m_Layout->GetFunction(index);
+        QString text;
 
-        QString name = QString::fromStdString(func.Name);
-        uint32_t offset = pc - func.Start;
+        if (m_Disassembler->SupportsFunctions())
+        {
+            int index = m_Disassembler->GetFunctionIndexForPc(pc);
+            auto func = m_Disassembler->GetFunction(index);
+            QString name = QString::fromStdString(func.Name);
+            uint32_t offset = pc - func.Start;
+            text = QString("%1+0x%2").arg(name).arg(QString::number(offset, 16).toUpper());
+        }
+        else
+        {
+            text = QString("0x%1").arg(QString::number(pc, 16).toUpper());
+        }
 
-        QString desc;
         if (includeDesc)
-            desc = QString::fromStdString(ScriptDisassembler::GetInstructionDescription(code[pc]));
-
-        QString text = QString("%1+%2").arg(name).arg(offset);
-        if (!desc.isEmpty())
-            text += QString(" | %1").arg(desc);
+        {
+            QString desc = QString::fromStdString(m_Disassembler->GetInstructionDescription(code[pc]));
+            if (!desc.isEmpty())
+                text += QString(" | %1").arg(desc);
+        }
 
         m_DisassemblyInfo->setText(text);
     }
 
     void ScriptThreadsWidget::CleanupDisassembly()
     {
-        m_Layout.reset();
+        m_Disassembler.reset();
 
         if (m_Disassembly->model())
             m_Disassembly->setModel(nullptr);
@@ -302,9 +322,11 @@ namespace scrDbgApp
     {
         CleanupDisassembly();
 
-        m_Layout = std::make_unique<ScriptLayout>(std::move(program));
+        m_Disassembler = g_Game->CreateDisassembly(std::move(program));
 
-        auto disasmModel = new DisassemblyModel(*m_Layout, m_Disassembly);
+        m_FunctionWidget->setVisible(m_Disassembler->SupportsFunctions());
+
+        auto disasmModel = new DisassemblyModel(m_Disassembler.get(), m_Disassembly);
         m_Disassembly->setModel(disasmModel);
         m_Disassembly->setColumnWidth(0, 100);
         m_Disassembly->setColumnWidth(1, 150);
@@ -315,7 +337,7 @@ namespace scrDbgApp
         connect(m_Disassembly->verticalScrollBar(), &QScrollBar::valueChanged, this, &ScriptThreadsWidget::OnUpdateDisassemblyInfoByScroll);
         connect(m_Disassembly->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ScriptThreadsWidget::OnUpdateDisassemblyInfoBySelection);
 
-        auto funcModel = new FunctionListModel(*m_Layout, m_FunctionList);
+        auto funcModel = new FunctionListModel(m_Disassembler.get(), m_FunctionList);
         m_FunctionFilter = new QSortFilterProxyModel(this);
         m_FunctionFilter->setSourceModel(funcModel);
         m_FunctionFilter->setFilterCaseSensitivity(Qt::CaseInsensitive);
@@ -484,7 +506,7 @@ namespace scrDbgApp
         if (auto thread = g_Game->GetThread(GetCurrentScriptHash()))
         {
             thread->SetState(ScriptThread::KILLED);
-            QMessageBox::information(this, "Kill Script", QString("Exit Reason: %1").arg(thread->GetExitReason().c_str()));
+            QMessageBox::information(this, "Kill Script", QString("Kill Reason: %1").arg(thread->GetKillReason().c_str()));
         }
     }
 
@@ -625,19 +647,16 @@ namespace scrDbgApp
         layout->addWidget(edit);
 
         QRadioButton* patternBtn = new QRadioButton("Pattern");
+        QRadioButton* hexadecimalBtn = new QRadioButton("Hexadecimal");
+        QRadioButton* decimalBtn = new QRadioButton("Decimal");
+        QRadioButton* floatBtn = new QRadioButton("Float");
+        QRadioButton* stringBtn = new QRadioButton("String");
+
         patternBtn->setChecked(true);
         patternBtn->setToolTip("Search for a IDA-style pattern (e.g., 61 ? ? ? 41 16 56).");
-
-        QRadioButton* hexadecimalBtn = new QRadioButton("Hexadecimal");
         hexadecimalBtn->setToolTip("Search for a hexadecimal value (e.g., 0x99B507EA).");
-
-        QRadioButton* decimalBtn = new QRadioButton("Decimal");
         decimalBtn->setToolTip("Search for a decimal value (e.g., 2578778090).");
-
-        QRadioButton* floatBtn = new QRadioButton("Float");
         floatBtn->setToolTip("Search for a float value, (e.g., 3.14).");
-
-        QRadioButton* stringBtn = new QRadioButton("String");
         stringBtn->setToolTip("Search for a string inside the string table.");
 
         layout->addWidget(patternBtn);
@@ -651,7 +670,7 @@ namespace scrDbgApp
         connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
 
-        if (dlg.exec() != QDialog::Accepted)
+        if (dlg.exec() != QDialog::Accepted || edit->text().isEmpty())
             return;
 
         auto type = GUIHelpers::BinarySearchType::PATTERN;
@@ -664,16 +683,13 @@ namespace scrDbgApp
         else if (stringBtn->isChecked())
             type = GUIHelpers::BinarySearchType::STRING;
 
-        if (edit->text().isEmpty())
-            return;
-
-        auto program = m_Layout->GetProgram();
-        auto code = m_Layout->GetCode();
+        const auto& code = m_Disassembler->GetCode();
+        const bool isStringSearch = type == GUIHelpers::BinarySearchType::STRING;
 
         std::vector<std::vector<std::optional<uint8_t>>> patterns;
-        if (type == GUIHelpers::BinarySearchType::STRING)
+        if (isStringSearch)
         {
-            patterns = GUIHelpers::ParseBinarySearchString(edit->text(), program);
+            patterns = GUIHelpers::ParseBinarySearchString(edit->text(), m_Disassembler->GetProgram());
             if (patterns.empty())
             {
                 QMessageBox::warning(this, "Binary Search", "No string matches found.");
@@ -694,7 +710,7 @@ namespace scrDbgApp
         std::vector<uint32_t> allMatches;
         for (auto& pat : patterns)
         {
-            auto addrs = ScriptHelpers::ScanPattern(code, pat);
+            auto addrs = m_Disassembler->ScanPattern(pat);
             allMatches.insert(allMatches.end(), addrs.begin(), addrs.end());
         }
 
@@ -705,32 +721,23 @@ namespace scrDbgApp
         }
 
         std::vector<ResultsDialog::Entry> results;
-        for (int i = 0; i < m_Layout->GetInstructionCount(); i++)
+        for (int i = 0; i < m_Disassembler->GetInstructionCount(); i++)
         {
-            auto insn = m_Layout->GetInstruction(i);
-            uint32_t insnSize = ScriptHelpers::GetInstructionSize(code, insn.Pc);
+            auto insn = m_Disassembler->GetInstruction(i);
+            uint32_t size = m_Disassembler->GetInstructionSize(insn.Pc);
 
             for (uint32_t addr : allMatches)
             {
-                if (addr >= insn.Pc && addr < insn.Pc + insnSize)
-                {
-                    auto func = m_Layout->GetFunction(insn.FuncIndex);
+                if (addr < insn.Pc || addr >= insn.Pc + size)
+                    continue;
 
-                    uint32_t displayPc = insn.Pc;
-                    int stringIndex = insn.StringIndex;
+                // For string searches, show the STRING opcode that follows the PUSH_CONST
+                int decodeIndex = (isStringSearch && i + 1 < m_Disassembler->GetInstructionCount()) ? i + 1 : i;
 
-                    // Only for STRING searches, advance to the next instruction
-                    if (type == GUIHelpers::BinarySearchType::STRING && i + 1 < m_Layout->GetInstructionCount())
-                    {
-                        auto nextInsn = m_Layout->GetInstruction(i + 1);
-                        displayPc = nextInsn.Pc;
-                        stringIndex = nextInsn.StringIndex;
-                    }
+                auto func = insn.FuncIndex ? m_Disassembler->GetFunction(*insn.FuncIndex) : Disassembler::FunctionInfo{};
+                auto decoded = m_Disassembler->DecodeInstruction(decodeIndex);
 
-                    auto decoded = ScriptDisassembler::DecodeInstruction(code, displayPc, program, stringIndex, insn.FuncIndex);
-
-                    results.push_back({displayPc, func.Name, decoded.Instruction});
-                }
+                results.push_back({m_Disassembler->GetInstruction(decodeIndex).Pc, func.Name, decoded.Instruction});
             }
         }
 
@@ -747,7 +754,7 @@ namespace scrDbgApp
         if (!thread)
             return;
 
-        StackDialog dlg(std::move(thread), *m_Layout, this);
+        StackDialog dlg(std::move(thread), m_Disassembler.get(), this);
         dlg.exec();
     }
 
@@ -820,10 +827,10 @@ namespace scrDbgApp
             OnViewXrefsDialog(index);
         });
 
-        auto& code = m_Layout->GetCode();
-        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
+        auto& code = m_Disassembler->GetCode();
+        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
 
-        if (ScriptHelpers::IsJumpInstruction(code[pc]) || code[pc] == OpcodesGTA5::CALL)
+        if (m_Disassembler->IsJumpOrCall(code[pc]))
         {
             QAction* jumpAction = menu.addAction("Jump to Address");
             connect(jumpAction, &QAction::triggered, [this, index]() {
@@ -854,20 +861,20 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnNopInstruction(const QModelIndex& index)
     {
-        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
-        uint32_t size = ScriptHelpers::GetInstructionSize(m_Layout->GetCode(), pc);
+        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t size = m_Disassembler->GetInstructionSize(pc);
 
-        std::vector<std::uint8_t> patch(size, OpcodesGTA5::NOP);
-        m_Layout->GetProgram()->SetCode(pc, patch);
+        std::vector<std::uint8_t> patch(size, 0);
+        m_Disassembler->GetProgram()->SetCode(pc, patch);
 
-        m_Layout->Refresh();
+        m_Disassembler->Refresh();
         static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
     }
 
     void ScriptThreadsWidget::OnPatchInstruction(const QModelIndex& index)
     {
-        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
-        uint32_t instrSize = ScriptHelpers::GetInstructionSize(m_Layout->GetCode(), pc);
+        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t instrSize = m_Disassembler->GetInstructionSize(pc);
 
         bool ok = false;
         QString input = QInputDialog::getText(this, "Custom Patch", QString("Enter up to %1 bytes in hex (space separated):").arg(instrSize), QLineEdit::Normal, "", &ok);
@@ -904,14 +911,14 @@ namespace scrDbgApp
             if (i < newBytes.size())
                 patch.push_back(static_cast<uint8_t>(newBytes[i]));
             else if (fillWithNops)
-                patch.push_back(OpcodesGTA5::NOP);
+                patch.push_back(0);
             else
                 break; // Leave as is
         }
 
-        m_Layout->GetProgram()->SetCode(pc, patch);
+        m_Disassembler->GetProgram()->SetCode(pc, patch);
 
-        m_Layout->Refresh();
+        m_Disassembler->Refresh();
         static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
     }
 
@@ -920,17 +927,17 @@ namespace scrDbgApp
         if (!index.isValid())
             return;
 
-        auto& code = m_Layout->GetCode();
-        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
+        auto& code = m_Disassembler->GetCode();
+        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
 
         std::string uniquePattern;
 
         int patternLength = 4;
         for (; patternLength <= 32; ++patternLength)
         {
-            if (ScriptHelpers::IsPatternUnique(code, pc, patternLength))
+            if (m_Disassembler->IsPatternUnique(pc, patternLength))
             {
-                uniquePattern = ScriptHelpers::MakePattern(code, pc, patternLength);
+                uniquePattern = m_Disassembler->MakePattern(pc, patternLength);
                 break;
             }
         }
@@ -947,24 +954,19 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnViewXrefsDialog(const QModelIndex& index)
     {
-        auto& code = m_Layout->GetCode();
-        uint32_t targetPc = m_Layout->GetInstruction(index.row()).Pc;
+        uint32_t targetPc = m_Disassembler->GetInstruction(index.row()).Pc;
 
         std::vector<ResultsDialog::Entry> results;
 
-        uint32_t pc = 0;
-        while (pc < code.size())
+        for (int i = 0; i < m_Disassembler->GetInstructionCount(); i++)
         {
-            if (ScriptHelpers::IsXrefToPc(code, pc, targetPc))
-            {
-                int xrefFuncIndex = m_Layout->GetFunctionIndexForPc(targetPc);
-                int funcIndex = m_Layout->GetFunctionIndexForPc(pc);
-                auto func = m_Layout->GetFunction(funcIndex);
-                auto decoded = ScriptDisassembler::DecodeInstruction(code, pc, nullptr, -1, xrefFuncIndex);
-                results.push_back({pc, func.Name, decoded.Instruction});
-            }
+            auto insn = m_Disassembler->GetInstruction(i);
+            if (!m_Disassembler->IsXrefToPc(insn.Pc, targetPc))
+                continue;
 
-            pc += ScriptHelpers::GetInstructionSize(code, pc);
+            auto func = insn.FuncIndex ? m_Disassembler->GetFunction(*insn.FuncIndex) : Disassembler::FunctionInfo{};
+            auto decoded = m_Disassembler->DecodeInstruction(i);
+            results.push_back({insn.Pc, func.Name, decoded.Instruction});
         }
 
         if (results.empty())
@@ -982,23 +984,14 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnJumpToInstructionAddress(const QModelIndex& index)
     {
-        uint32_t targetAddress;
-
-        auto& code = m_Layout->GetCode();
-        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
-
-        if (code[pc] == OpcodesGTA5::CALL)
-            targetAddress = ScriptHelpers::ReadU24(code, pc + 1);
-        else
-            targetAddress = pc + 2 + ScriptHelpers::ReadS16(code, pc + 1) + 1;
-
-        ScrollToAddress(targetAddress);
+        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        ScrollToAddress(m_Disassembler->GetJumpTarget(pc));
     }
 
     void ScriptThreadsWidget::OnSetBreakpoint(const QModelIndex& index, bool set)
     {
         uint32_t script = GetCurrentScriptHash();
-        uint32_t pc = m_Layout->GetInstruction(index.row()).Pc;
+        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
         PipeCommands::SetBreakpoint(script, pc, set);
     }
 }

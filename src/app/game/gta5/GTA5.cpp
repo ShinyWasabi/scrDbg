@@ -1,6 +1,7 @@
 #include "GTA5.hpp"
 #include "ResourceLoader.hpp"
 #include "core/Scanner.hpp"
+#include "disasm/DisassemblerGTA5.hpp"
 #include "types/ScriptProgramGTA5.hpp"
 #include "types/ScriptThreadGTA5_GEN8.hpp"
 #include "types/ScriptThreadGTA5_GEN9.hpp"
@@ -34,6 +35,13 @@ namespace scrDbgApp
             return Pointer(slot + it->KeyOffset).GetString(4096);
 
         return {};
+    }
+
+    std::unique_ptr<Disassembler> GTA5::CreateDisassembly(std::unique_ptr<ScriptProgram> program) const
+    {
+        auto disasm = std::make_unique<DisassemblerGTA5>(std::move(program));
+        disasm->Refresh();
+        return disasm;
     }
 
     bool GTA5_GEN9::Init()
