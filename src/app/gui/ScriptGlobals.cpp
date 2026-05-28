@@ -12,16 +12,19 @@ namespace scrDbgApp
         if (address < 0)
             return false;
 
-        int blockIndex = (address >> 0x12) & 0x3F;
-        if (blockIndex >= 64)
-            return false;
+        if (g_Game->Is64Bit())
+        {
+            int blockIndex = (address >> 0x12) & 0x3F;
+            if (blockIndex >= 64)
+                return false;
 
-        int blockCount = g_Game->GetGlobalBlockCount(blockIndex);
-        int offset = address & 0x3FFFF;
-        if (offset >= blockCount)
-            return false;
+            int blockCount = g_Game->GetGlobalBlockCount(blockIndex);
+            int offset = address & 0x3FFFF;
+            if (offset >= blockCount)
+                return false;
+        }
 
-        return true;
+        return address < g_Game->GetGlobalCount();
     }
 
     ScriptGlobalsWidget::ScriptGlobalsWidget(QWidget* parent)

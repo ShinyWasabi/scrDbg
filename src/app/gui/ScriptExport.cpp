@@ -1,22 +1,46 @@
 #include "ScriptExport.hpp"
-#include "util/GUIHelpers.hpp"
 #include <QCoreApplication>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QTableView>
-#include <QTextStream>
 
 // TO-DO: a lot of code repetition here, consider refactoring
 
 namespace scrDbgApp::ScriptExport
 {
+    void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb)
+    {
+        QString name = QFileDialog::getSaveFileName(nullptr, title, filename, "Text Files (*.txt);;All Files (*)");
+        if (name.isEmpty())
+            return;
+
+        QFile file(name);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        {
+            QMessageBox::critical(nullptr, title, "Failed to open file for writing.");
+            return;
+        }
+
+        QTextStream out(&file);
+        out.setEncoding(QStringConverter::Utf8);
+
+        QProgressDialog progress(QString("Exporting %1...").arg(title), "Cancel", 0, count, nullptr);
+        progress.setWindowModality(Qt::ApplicationModal);
+        progress.setMinimumDuration(200);
+        progress.setValue(0);
+
+        cb(out, progress);
+        file.close();
+    }
+
     void ExportDisassembly(QTableView* view)
     {
         const int count = view->model()->rowCount();
 
         auto oldModel = view->model();
 
-        GUIHelpers::ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+        ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
             for (int row = 0; row < count; row++)
             {
                 if (progress.wasCanceled())
@@ -61,7 +85,7 @@ namespace scrDbgApp::ScriptExport
             return;
         }
 
-        GUIHelpers::ExportToFile("Statics", "statics.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+        ExportToFile("Statics", "statics.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
             for (uint32_t i = 0; i < count; i++)
             {
                 if (progress.wasCanceled())
@@ -105,7 +129,7 @@ namespace scrDbgApp::ScriptExport
                 return;
             }
 
-            GUIHelpers::ExportToFile("All Globals", "all_globals.txt", totalGlobalCount, [&](QTextStream& out, QProgressDialog& progress) {
+            ExportToFile("All Globals", "all_globals.txt", totalGlobalCount, [&](QTextStream& out, QProgressDialog& progress) {
                 for (int block = 0; block <= lastValidBlock; block++)
                 {
                     int blockCount = g_Game->GetGlobalBlockCount(block);
@@ -149,7 +173,7 @@ namespace scrDbgApp::ScriptExport
                 return;
             }
 
-            GUIHelpers::ExportToFile("Globals", "globals.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            ExportToFile("Globals", "globals.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
                 for (uint32_t i = 0; i < count; i++)
                 {
                     if (progress.wasCanceled())
@@ -186,7 +210,7 @@ namespace scrDbgApp::ScriptExport
                 return;
             }
 
-            GUIHelpers::ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
                 uint32_t index = 0;
                 for (auto& [hash, handler] : allNatives)
                 {
@@ -224,7 +248,7 @@ namespace scrDbgApp::ScriptExport
                 return;
             }
 
-            GUIHelpers::ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
                 for (uint32_t i = 0; i < count; i++)
                 {
                     if (progress.wasCanceled())
@@ -266,7 +290,7 @@ namespace scrDbgApp::ScriptExport
         }
 
         int exportedCount = 0;
-        GUIHelpers::ExportToFile(onlyTextLabels ? "Text Labels" : "Strings", onlyTextLabels ? "text_labels.txt" : "strings.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+        ExportToFile(onlyTextLabels ? "Text Labels" : "Strings", onlyTextLabels ? "text_labels.txt" : "strings.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
             for (int i = 0; i < count; i++)
             {
                 if (progress.wasCanceled())

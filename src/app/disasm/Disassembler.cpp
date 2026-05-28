@@ -17,35 +17,18 @@ namespace scrDbgApp
         m_Code = m_Program->GetCode();
         m_Hash = m_Program->GetNameHash();
 
-        std::optional<uint32_t> funcIndex = std::nullopt;
-        std::optional<uint32_t> stringIndex = std::nullopt;
-
         uint32_t pc = 0;
         while (pc < m_Code.size())
         {
-            if (SupportsFunctions())
-            {
-                uint32_t nextIndex = funcIndex.has_value() ? *funcIndex + 1 : 0;
-                if (auto func = BuildFunction(pc, nextIndex))
-                {
-                    funcIndex = nextIndex;
-                    m_Functions.push_back(*func);
-                }
-            }
+            BuildFunction(pc);
 
-            if (UsesStringsTable())
-            {
-                if (auto newStrIndex = UpdateStringIndex(pc))
-                    stringIndex = newStrIndex;
-            }
-
-            m_Instructions.push_back({pc, funcIndex, stringIndex});
+            m_Instructions.push_back(pc);
 
             pc += GetInstructionSize(pc);
         }
     }
 
-    const uint32_t Disassembler::GetHash() const
+    uint32_t Disassembler::GetHash() const
     {
         return m_Hash;
     }
@@ -60,7 +43,7 @@ namespace scrDbgApp
         return m_Program.get();
     }
 
-    const int Disassembler::GetFunctionCount() const
+    int Disassembler::GetFunctionCount() const
     {
         return static_cast<int>(m_Functions.size());
     }
@@ -73,26 +56,26 @@ namespace scrDbgApp
         return m_Functions[index];
     }
 
-    int Disassembler::GetFunctionIndexForPc(uint32_t pc) const
+    std::optional<Disassembler::FunctionInfo> Disassembler::GetFunctionForPc(uint32_t pc) const
     {
-        for (size_t i = 0; i < m_Functions.size(); ++i)
+        for (const auto& func : m_Functions)
         {
-            if (pc >= m_Functions[i].Start && pc <= m_Functions[i].End)
-                return static_cast<int>(i);
+            if (pc >= func.Start && pc <= func.End)
+                return func;
         }
 
-        return -1;
+        return std::nullopt;
     }
 
-    const int Disassembler::GetInstructionCount() const
+    int Disassembler::GetInstructionCount() const
     {
         return static_cast<int>(m_Instructions.size());
     }
 
-    Disassembler::InstructionInfo Disassembler::GetInstruction(int index) const
+    uint32_t Disassembler::GetInstruction(int index) const
     {
         if (index < 0 || index >= static_cast<int>(m_Instructions.size()))
-            return {};
+            return 0;
 
         return m_Instructions[index];
     }
@@ -102,22 +85,22 @@ namespace scrDbgApp
         if (index < 0 || index >= static_cast<int>(m_Instructions.size()))
             return {};
 
-        auto& insn = m_Instructions[index];
+        uint32_t pc = m_Instructions[index];
 
         DecodedInstruction result{};
 
         std::ostringstream addr;
-        addr << "0x" << std::uppercase << std::setfill('0') << std::setw(8) << std::hex << insn.Pc;
+        addr << "0x" << std::uppercase << std::setfill('0') << std::setw(8) << std::hex << pc;
         result.Address = addr.str();
 
         std::ostringstream bytes;
         bytes << std::hex << std::uppercase << std::setfill('0');
-        int size = GetInstructionSize(insn.Pc);
+        int size = GetInstructionSize(pc);
         for (int i = 0; i < size; i++)
-            bytes << std::setw(2) << static_cast<int>(GetU8(insn.Pc + i)) << " ";
+            bytes << std::setw(2) << static_cast<int>(GetU8(pc + i)) << " ";
         result.Bytes = bytes.str();
 
-        result.Instruction = DecodeInstructionInternal(insn);
+        result.Instruction = DecodeInstructionInternal(index);
         return result;
     }
 
@@ -130,10 +113,10 @@ namespace scrDbgApp
         if (patSize == 0 || codeSize < patSize)
             return results;
 
-        for (int i = 0; i + patSize <= codeSize; ++i)
+        for (int i = 0; i + patSize <= codeSize; i++)
         {
             bool match = true;
-            for (int j = 0; j < patSize; ++j)
+            for (int j = 0; j < patSize; j++)
             {
                 if (pattern[j] && *pattern[j] != m_Code[i + j])
                 {

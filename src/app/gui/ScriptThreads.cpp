@@ -1,4 +1,5 @@
 #include "ScriptThreads.hpp"
+#include "BinarySearch.hpp"
 #include "Breakpoints.hpp"
 #include "Disassembly.hpp"
 #include "FunctionList.hpp"
@@ -7,7 +8,6 @@
 #include "Stack.hpp"
 #include "game/Game.hpp"
 #include "pipe/PipeCommands.hpp"
-#include "util/GUIHelpers.hpp"
 #include <QCheckBox>
 #include <QClipboard>
 #include <QComboBox>
@@ -251,7 +251,7 @@ namespace scrDbgApp
         QModelIndex idx;
         for (int i = 0; i < m_Disassembly->model()->rowCount(); i++)
         {
-            uint32_t pc = m_Disassembler->GetInstruction(i).Pc;
+            uint32_t pc = m_Disassembler->GetInstruction(i);
             uint32_t size = m_Disassembler->GetInstructionSize(pc);
 
             if (address >= pc && address < pc + size)
@@ -273,21 +273,18 @@ namespace scrDbgApp
     void ScriptThreadsWidget::UpdateDisassemblyInfo(int row, bool includeDesc)
     {
         auto& code = m_Disassembler->GetCode();
-        uint32_t pc = m_Disassembler->GetInstruction(row).Pc;
+        uint32_t pc = m_Disassembler->GetInstruction(row);
 
         QString text;
-
-        if (m_Disassembler->SupportsFunctions())
+        if (auto func = m_Disassembler->GetFunctionForPc(pc))
         {
-            int index = m_Disassembler->GetFunctionIndexForPc(pc);
-            auto func = m_Disassembler->GetFunction(index);
-            QString name = QString::fromStdString(func.Name);
-            uint32_t offset = pc - func.Start;
+            QString name = QString::fromStdString(func->Name);
+            uint32_t offset = pc - func->Start;
             text = QString("%1+0x%2").arg(name).arg(QString::number(offset, 16).toUpper());
         }
         else
         {
-            text = QString("0x%1").arg(QString::number(pc, 16).toUpper());
+            text = QString("+0x%2 (dead)").arg(QString::number(pc, 16).toUpper());
         }
 
         if (includeDesc)
@@ -323,8 +320,6 @@ namespace scrDbgApp
         CleanupDisassembly();
 
         m_Disassembler = g_Game->CreateDisassembly(std::move(program));
-
-        m_FunctionWidget->setVisible(m_Disassembler->SupportsFunctions());
 
         auto disasmModel = new DisassemblyModel(m_Disassembler.get(), m_Disassembly);
         m_Disassembly->setModel(disasmModel);
@@ -673,23 +668,22 @@ namespace scrDbgApp
         if (dlg.exec() != QDialog::Accepted || edit->text().isEmpty())
             return;
 
-        auto type = GUIHelpers::BinarySearchType::PATTERN;
+        auto type = BinarySearch::SearchType::PATTERN;
         if (hexadecimalBtn->isChecked())
-            type = GUIHelpers::BinarySearchType::HEXADECIMAL;
+            type = BinarySearch::SearchType::HEXADECIMAL;
         else if (decimalBtn->isChecked())
-            type = GUIHelpers::BinarySearchType::DECIMAL;
+            type = BinarySearch::SearchType::DECIMAL;
         else if (floatBtn->isChecked())
-            type = GUIHelpers::BinarySearchType::FLOAT;
+            type = BinarySearch::SearchType::FLOAT;
         else if (stringBtn->isChecked())
-            type = GUIHelpers::BinarySearchType::STRING;
+            type = BinarySearch::SearchType::STRING;
 
-        const auto& code = m_Disassembler->GetCode();
-        const bool isStringSearch = type == GUIHelpers::BinarySearchType::STRING;
+        const bool isStringSearch = type == BinarySearch::SearchType::STRING;
 
-        std::vector<std::vector<std::optional<uint8_t>>> patterns;
+        Disassembler::StringSeachPattern patterns;
         if (isStringSearch)
         {
-            patterns = GUIHelpers::ParseBinarySearchString(edit->text(), m_Disassembler->GetProgram());
+            patterns = BinarySearch::ParseBinarySearchString(edit->text(), m_Disassembler.get());
             if (patterns.empty())
             {
                 QMessageBox::warning(this, "Binary Search", "No string matches found.");
@@ -698,7 +692,7 @@ namespace scrDbgApp
         }
         else
         {
-            auto pattern = GUIHelpers::ParseBinarySearch(edit->text(), type);
+            auto pattern = BinarySearch::ParseBinarySearch(edit->text(), type);
             if (pattern.empty())
             {
                 QMessageBox::warning(this, "Binary Search", "Could not parse the input.");
@@ -723,21 +717,22 @@ namespace scrDbgApp
         std::vector<ResultsDialog::Entry> results;
         for (int i = 0; i < m_Disassembler->GetInstructionCount(); i++)
         {
-            auto insn = m_Disassembler->GetInstruction(i);
-            uint32_t size = m_Disassembler->GetInstructionSize(insn.Pc);
+            uint32_t pc = m_Disassembler->GetInstruction(i);
+            uint32_t size = m_Disassembler->GetInstructionSize(pc);
 
             for (uint32_t addr : allMatches)
             {
-                if (addr < insn.Pc || addr >= insn.Pc + size)
+                if (addr < pc || addr >= pc + size)
                     continue;
 
+                bool isGta5 = g_Game->GetType() == GameType::GTA5_GEN8 || g_Game->GetType() == GameType::GTA5_GEN9;
                 // For string searches, show the STRING opcode that follows the PUSH_CONST
-                int decodeIndex = (isStringSearch && i + 1 < m_Disassembler->GetInstructionCount()) ? i + 1 : i;
+                int decodeIndex = (isGta5 && isStringSearch && i + 1 < m_Disassembler->GetInstructionCount()) ? i + 1 : i;
 
-                auto func = insn.FuncIndex ? m_Disassembler->GetFunction(*insn.FuncIndex) : Disassembler::FunctionInfo{};
+                auto func = m_Disassembler->GetFunctionForPc(pc);
                 auto decoded = m_Disassembler->DecodeInstruction(decodeIndex);
 
-                results.push_back({m_Disassembler->GetInstruction(decodeIndex).Pc, func.Name, decoded.Instruction});
+                results.push_back({m_Disassembler->GetInstruction(decodeIndex), func ? func->Name : std::string{}, decoded.Instruction});
             }
         }
 
@@ -828,7 +823,7 @@ namespace scrDbgApp
         });
 
         auto& code = m_Disassembler->GetCode();
-        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t pc = m_Disassembler->GetInstruction(index.row());
 
         if (m_Disassembler->IsJumpOrCall(code[pc]))
         {
@@ -861,7 +856,7 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnNopInstruction(const QModelIndex& index)
     {
-        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t pc = m_Disassembler->GetInstruction(index.row());
         uint32_t size = m_Disassembler->GetInstructionSize(pc);
 
         std::vector<std::uint8_t> patch(size, 0);
@@ -873,7 +868,7 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnPatchInstruction(const QModelIndex& index)
     {
-        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t pc = m_Disassembler->GetInstruction(index.row());
         uint32_t instrSize = m_Disassembler->GetInstructionSize(pc);
 
         bool ok = false;
@@ -928,7 +923,7 @@ namespace scrDbgApp
             return;
 
         auto& code = m_Disassembler->GetCode();
-        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t pc = m_Disassembler->GetInstruction(index.row());
 
         std::string uniquePattern;
 
@@ -954,19 +949,19 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnViewXrefsDialog(const QModelIndex& index)
     {
-        uint32_t targetPc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t targetPc = m_Disassembler->GetInstruction(index.row());
 
         std::vector<ResultsDialog::Entry> results;
 
         for (int i = 0; i < m_Disassembler->GetInstructionCount(); i++)
         {
-            auto insn = m_Disassembler->GetInstruction(i);
-            if (!m_Disassembler->IsXrefToPc(insn.Pc, targetPc))
+            uint32_t pc = m_Disassembler->GetInstruction(i);
+            if (!m_Disassembler->IsXrefToPc(pc, targetPc))
                 continue;
 
-            auto func = insn.FuncIndex ? m_Disassembler->GetFunction(*insn.FuncIndex) : Disassembler::FunctionInfo{};
+            auto func = m_Disassembler->GetFunctionForPc(pc);
             auto decoded = m_Disassembler->DecodeInstruction(i);
-            results.push_back({insn.Pc, func.Name, decoded.Instruction});
+            results.push_back({pc, func ? func->Name : std::string{}, decoded.Instruction});
         }
 
         if (results.empty())
@@ -984,14 +979,14 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnJumpToInstructionAddress(const QModelIndex& index)
     {
-        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t pc = m_Disassembler->GetInstruction(index.row());
         ScrollToAddress(m_Disassembler->GetJumpTarget(pc));
     }
 
     void ScriptThreadsWidget::OnSetBreakpoint(const QModelIndex& index, bool set)
     {
         uint32_t script = GetCurrentScriptHash();
-        uint32_t pc = m_Disassembler->GetInstruction(index.row()).Pc;
+        uint32_t pc = m_Disassembler->GetInstruction(index.row());
         PipeCommands::SetBreakpoint(script, pc, set);
     }
 }

@@ -8,27 +8,24 @@ namespace scrDbgApp
     public:
         using Disassembler::Disassembler;
 
-        bool SupportsFunctions() const override
-        {
-            return false;
-        }
-
-        bool UsesStringsTable() const override
-        {
-            return false;
-        }
-
+        std::optional<FunctionInfo> GetFunctionForPc(uint32_t pc) const override;
         int GetInstructionSize(uint32_t pc) const override;
-        virtual bool IsJumpOrCall(uint8_t op) const override;
-        virtual uint32_t GetJumpTarget(uint32_t pc) const override;
-        virtual bool IsWildcard(uint8_t op) const override;
-        virtual bool IsXrefToPc(uint32_t pc, uint32_t targetPc) const override;
-        virtual std::string MakePattern(uint32_t start, int len) const override;
-        virtual bool IsPatternUnique(uint32_t start, int len) const override;
-        virtual const char* GetInstructionDescription(uint8_t op) const override;
-        std::string DecodeInstructionInternal(const InstructionInfo& insnInfo) const override;
+        bool IsJumpOrCall(uint8_t op) const override;
+        uint32_t GetJumpTarget(uint32_t pc) const override;
+        bool IsWildcard(uint8_t op) const override;
+        bool IsXrefToPc(uint32_t pc, uint32_t targetPc) const override;
+        std::string MakePattern(uint32_t start, int len) const override;
+        bool IsPatternUnique(uint32_t start, int len) const override;
+        StringSeachPattern MakeStringSearchPatterns(const std::string& value) const override;
+        const char* GetInstructionDescription(uint8_t op) const override;
+
+    protected:
+        void BuildFunction(uint32_t pc) override;
+        std::string DecodeInstructionInternal(int index) const override;
 
     private:
+        std::unordered_map<uint32_t, uint32_t> m_PcToEntry;
+
         enum Opcodes : uint8_t
         {
             NOP,
@@ -336,7 +333,7 @@ namespace scrDbgApp
             {"DROP", "Drop top of stack", ""},
             {"NATIVE", "Call native command", "h"},
             {"CALL", "Call script function", "e"},
-            {"ENTER", "Enter function frame", "ab"},
+            {"ENTER", "Enter function frame", "n"},
             {"LEAVE", "Leave function frame", "aa"},
             {"LOAD", "Load value from reference", ""},
             {"STORE", "Store value to reference", ""},

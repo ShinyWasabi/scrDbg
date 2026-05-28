@@ -2,6 +2,62 @@
 
 namespace scrDbgApp
 {
+    std::string DisassemblerGTA5::GetFunctionName(uint32_t pc, uint32_t size) const
+    {
+        if (size > 0)
+        {
+            std::string name(reinterpret_cast<const char*>(&m_Code[pc + 7])); // 7 instead of 5 to skip the profiler placeholders
+            if (!name.empty())
+                return name;
+        }
+
+        std::ostringstream nameStr;
+        nameStr << "sub_" << std::uppercase << std::hex << pc;
+        return nameStr.str();
+    }
+
+    std::optional<uint32_t> DisassemblerGTA5::GetStringIndex(uint32_t pc) const
+    {
+        Opcodes op = static_cast<Opcodes>(GetU8(pc));
+
+        switch (op)
+        {
+        case Opcodes::PUSH_CONST_0:
+            return 0;
+        case Opcodes::PUSH_CONST_1:
+            return 1;
+        case Opcodes::PUSH_CONST_2:
+            return 2;
+        case Opcodes::PUSH_CONST_3:
+            return 3;
+        case Opcodes::PUSH_CONST_4:
+            return 4;
+        case Opcodes::PUSH_CONST_5:
+            return 5;
+        case Opcodes::PUSH_CONST_6:
+            return 6;
+        case Opcodes::PUSH_CONST_7:
+            return 7;
+        case Opcodes::PUSH_CONST_U8:
+            return GetU8(pc + 1);
+
+        // Handle peephole optimizations
+        case Opcodes::PUSH_CONST_U8_U8:
+            return GetU8(pc + 2);
+        case Opcodes::PUSH_CONST_U8_U8_U8:
+            return GetU8(pc + 3);
+
+        case Opcodes::PUSH_CONST_S16:
+            return GetU8(pc + 1);
+        case Opcodes::PUSH_CONST_U24:
+            return GetU8(pc + 1);
+        case Opcodes::PUSH_CONST_U32:
+            return GetU8(pc + 1);
+        }
+
+        return std::nullopt;
+    }
+
     int DisassemblerGTA5::GetInstructionSize(uint32_t pc) const
     {
         Opcodes op = static_cast<Opcodes>(GetU8(pc));
@@ -251,6 +307,99 @@ namespace scrDbgApp
         return count == 1;
     }
 
+    Disassembler::StringSeachPattern DisassemblerGTA5::MakeStringSearchPatterns(const std::string& value) const
+    {
+        StringSeachPattern result;
+
+        std::string str = value;
+        std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+
+        auto indices = m_Program->FindStringIndices(str);
+        if (indices.empty())
+            return result;
+
+        auto buildNormal = [&](uint32_t index) {
+            std::vector<std::optional<uint8_t>> p;
+
+            auto pushLE = [&](uint32_t val, int bytes) {
+                for (int i = 0; i < bytes; i++)
+                    p.push_back(static_cast<uint8_t>((val >> (8 * i)) & 0xFF));
+            };
+
+            if (index < 0x08)
+            {
+                p.push_back(Opcodes::PUSH_CONST_0 + index);
+            }
+            else if (index < 0x100)
+            {
+                p.push_back(Opcodes::PUSH_CONST_U8);
+                pushLE(index, 1);
+            }
+            else if (index < 0x8000)
+            {
+                p.push_back(Opcodes::PUSH_CONST_S16);
+                pushLE(index, 2);
+            }
+            else if (index < 0x1000000)
+            {
+                p.push_back(Opcodes::PUSH_CONST_U24);
+                pushLE(index, 3);
+            }
+            else
+            {
+                p.push_back(Opcodes::PUSH_CONST_U32);
+                pushLE(index, 4);
+            }
+
+            p.push_back(Opcodes::STRING);
+            return p;
+        };
+
+        auto buildPeephole = [&](uint32_t index) {
+            StringSeachPattern out;
+
+            if (index > 0xFF) // only U8 constants
+                return out;
+
+            uint8_t idx = static_cast<uint8_t>(index);
+
+            // PUSH_CONST_U8_U8 <wild> <index> STRING
+            {
+                std::vector<std::optional<uint8_t>> p;
+                p.push_back(Opcodes::PUSH_CONST_U8_U8);
+                p.push_back(std::nullopt); // first U8 (unknown)
+                p.push_back(idx);          // second U8 = string index
+                p.push_back(Opcodes::STRING);
+                out.push_back(std::move(p));
+            }
+
+            // PUSH_CONST_U8_U8_U8 <wild> <wild> <index> STRING
+            {
+                std::vector<std::optional<uint8_t>> p;
+                p.push_back(Opcodes::PUSH_CONST_U8_U8_U8);
+                p.push_back(std::nullopt); // first U8 (unknown)
+                p.push_back(std::nullopt); // second U8 (unknown)
+                p.push_back(idx);          // third U8 = string index
+                p.push_back(Opcodes::STRING);
+                out.push_back(std::move(p));
+            }
+
+            return out;
+        };
+
+        // Build all pattern variants
+        for (uint32_t idx : indices)
+        {
+            result.push_back(buildNormal(idx));
+
+            // peephole variants (if any)
+            auto p = buildPeephole(idx);
+            result.insert(result.end(), p.begin(), p.end());
+        }
+
+        return result;
+    }
+
     const char* DisassemblerGTA5::GetInstructionDescription(uint8_t opcode) const
     {
         if (opcode >= m_InstructionTable.size())
@@ -259,40 +408,17 @@ namespace scrDbgApp
         return m_InstructionTable[opcode].Description;
     }
 
-    std::string DisassemblerGTA5::GetFunctionName(uint32_t pc, uint32_t size, int funcIndex) const
-    {
-        if (size > 0)
-        {
-            std::string name(reinterpret_cast<const char*>(&m_Code[pc]), size);
-
-            // Remove profiler placeholders in case the script is compiled by RAGE script compiler
-            if (name.size() >= 2 && name[0] == '_' && name[1] == '_')
-                name.erase(0, 2);
-
-            while (!name.empty() && (name.back() == '\0' || name.back() == ' '))
-                name.pop_back();
-
-            if (!name.empty())
-                return name;
-        }
-
-        if (funcIndex >= 0)
-            return "func_" + std::to_string(funcIndex);
-
-        return "<invalid>";
-    }
-
-    std::optional<DisassemblerGTA5::FunctionInfo> DisassemblerGTA5::BuildFunction(uint32_t pc, uint32_t funcIndex) const
+    void DisassemblerGTA5::BuildFunction(uint32_t pc)
     {
         if (pc >= m_Code.size() || GetU8(pc) != Opcodes::ENTER)
-            return std::nullopt;
+            return;
 
         uint32_t start = pc;
         uint8_t argCount = GetU8(pc + 1);
         uint16_t frameSize = GetS16(pc + 2);
         uint8_t nameLen = GetU8(pc + 4);
 
-        std::string name = GetFunctionName(pc + 5, nameLen, funcIndex);
+        std::string name = GetFunctionName(pc, nameLen);
 
         uint32_t pos = pc + GetInstructionSize(pc);
 
@@ -328,68 +454,27 @@ namespace scrDbgApp
         info.FrameSize = frameSize;
         info.RetCount = retCount;
         info.Name = name;
-
-        return info;
+        m_Functions.push_back(info);
     }
 
-    std::optional<uint32_t> DisassemblerGTA5::UpdateStringIndex(uint32_t pc) const
-    {
-        Opcodes op = static_cast<Opcodes>(GetU8(pc));
-
-        switch (op)
-        {
-        case Opcodes::PUSH_CONST_0:
-            return 0;
-        case Opcodes::PUSH_CONST_1:
-            return 1;
-        case Opcodes::PUSH_CONST_2:
-            return 2;
-        case Opcodes::PUSH_CONST_3:
-            return 3;
-        case Opcodes::PUSH_CONST_4:
-            return 4;
-        case Opcodes::PUSH_CONST_5:
-            return 5;
-        case Opcodes::PUSH_CONST_6:
-            return 6;
-        case Opcodes::PUSH_CONST_7:
-            return 7;
-        case Opcodes::PUSH_CONST_U8:
-            return GetU8(pc + 1);
-
-        // Handle peephole optimizations
-        case Opcodes::PUSH_CONST_U8_U8:
-            return GetU8(pc + 2);
-        case Opcodes::PUSH_CONST_U8_U8_U8:
-            return GetU8(pc + 3);
-
-        case Opcodes::PUSH_CONST_S16:
-            return GetU8(pc + 1);
-        case Opcodes::PUSH_CONST_U24:
-            return GetU8(pc + 1);
-        case Opcodes::PUSH_CONST_U32:
-            return GetU8(pc + 1);
-        }
-
-        return std::nullopt;
-    }
-
-    std::string DisassemblerGTA5::DecodeInstructionInternal(const InstructionInfo& insnInfo) const
+    std::string DisassemblerGTA5::DecodeInstructionInternal(int index) const
     {
         std::string result = "???";
 
-        uint8_t op = GetU8(insnInfo.Pc);
+        auto& insnPc = m_Instructions[index];
+
+        uint8_t op = GetU8(insnPc);
         if (op >= m_InstructionTable.size())
             return result;
 
-        const auto& insn = m_InstructionTable[op];
+        auto& insnTable = m_InstructionTable[op];
 
         std::ostringstream instr;
-        instr << insn.Name << " ";
+        instr << insnTable.Name << " ";
 
-        uint32_t offset = insnInfo.Pc + 1;
+        uint32_t offset = insnPc + 1;
 
-        auto fmt = insn.OperandFmt;
+        auto fmt = insnTable.OperandFmt;
         while (*fmt)
         {
             switch (*fmt++)
@@ -412,14 +497,10 @@ namespace scrDbgApp
                 {
                     instr << "0x" << std::uppercase << std::hex << val;
 
-                    int targetFuncIndex = GetFunctionIndexForPc(val);
-                    if (targetFuncIndex != -1)
+                    if (auto func = GetFunctionForPc(val))
                     {
-                        if (auto func = BuildFunction(val, targetFuncIndex))
-                        {
-                            if (!func->Name.empty())
-                                instr << " // " << func->Name;
-                        }
+                        if (!func->Name.empty())
+                            instr << " // " << func->Name;
                     }
                 }
                 else
@@ -495,9 +576,11 @@ namespace scrDbgApp
             }
             case 'm': // STRING
             {
-                if (insnInfo.StringIndex.has_value() && insnInfo.StringIndex < m_Program->GetStringsSize())
+                auto strIndex = GetStringIndex(m_Instructions[index - 1]);
+
+                if (strIndex.has_value() && strIndex < m_Program->GetStringsSize())
                 {
-                    auto str = m_Program->GetString(*insnInfo.StringIndex);
+                    auto str = m_Program->GetString(*strIndex);
                     auto label = g_Game->GetTextLabel(JOAAT(str));
 
                     if (!label.empty())
@@ -519,8 +602,11 @@ namespace scrDbgApp
                 uint8_t nameLen = GetU8(offset++);
 
                 instr << std::dec << static_cast<int>(argCount) << ", " << frameSize;
-                instr << ", " << GetFunctionName(offset, nameLen, *insnInfo.FuncIndex);
-
+                if (auto func = GetFunctionForPc(offset - 5))
+                {
+                    if (!func->Name.empty())
+                        instr << ", " << func->Name;
+                }
                 offset += nameLen;
                 break;
             }

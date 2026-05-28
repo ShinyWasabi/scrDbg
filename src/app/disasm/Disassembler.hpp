@@ -5,6 +5,8 @@ namespace scrDbgApp
     class Disassembler
     {
     public:
+        using StringSeachPattern = std::vector<std::vector<std::optional<uint8_t>>>;
+
         struct FunctionInfo
         {
             uint32_t Start;
@@ -14,13 +16,6 @@ namespace scrDbgApp
             uint32_t ArgCount;
             uint32_t RetCount;
             std::string Name;
-        };
-
-        struct InstructionInfo
-        {
-            uint32_t Pc;
-            std::optional<uint32_t> FuncIndex;
-            std::optional<uint32_t> StringIndex;
         };
 
         struct DecodedInstruction
@@ -34,20 +29,17 @@ namespace scrDbgApp
         virtual ~Disassembler() = default;
 
         void Refresh();
-
-        const uint32_t GetHash() const;
+        uint32_t GetHash() const;
         const std::vector<uint8_t>& GetCode() const;
         const ScriptProgram* GetProgram() const;
-        const int GetFunctionCount() const;
+        int GetFunctionCount() const;
         FunctionInfo GetFunction(int index) const;
-        int GetFunctionIndexForPc(uint32_t pc) const;
-        const int GetInstructionCount() const;
-        InstructionInfo GetInstruction(int index) const;
+        virtual std::optional<FunctionInfo> GetFunctionForPc(uint32_t pc) const; // GTA 4 needs to override it
+        int GetInstructionCount() const;
+        uint32_t GetInstruction(int index) const;
         DecodedInstruction DecodeInstruction(int index) const;
         std::vector<uint32_t> ScanPattern(const std::vector<std::optional<uint8_t>>& pattern) const;
 
-        virtual bool SupportsFunctions() const = 0;
-        virtual bool UsesStringsTable() const = 0;
         virtual int GetInstructionSize(uint32_t pc) const = 0;
         virtual bool IsJumpOrCall(uint8_t op) const = 0;
         virtual uint32_t GetJumpTarget(uint32_t pc) const = 0;
@@ -55,18 +47,8 @@ namespace scrDbgApp
         virtual bool IsXrefToPc(uint32_t pc, uint32_t targetPc) const = 0;
         virtual std::string MakePattern(uint32_t start, int len) const = 0;
         virtual bool IsPatternUnique(uint32_t start, int len) const = 0;
+        virtual StringSeachPattern MakeStringSearchPatterns(const std::string& value) const = 0;
         virtual const char* GetInstructionDescription(uint8_t op) const = 0;
-        virtual std::string DecodeInstructionInternal(const InstructionInfo& insnInfo) const = 0;
-
-        virtual std::optional<FunctionInfo> BuildFunction(uint32_t pc, uint32_t funcIndex) const
-        {
-            return std::nullopt;
-        }
-
-        virtual std::optional<uint32_t> UpdateStringIndex(uint32_t pc) const
-        {
-            return std::nullopt;
-        }
 
     protected:
         struct InstructionTable
@@ -75,6 +57,9 @@ namespace scrDbgApp
             const char* Description;
             const char* OperandFmt;
         };
+
+        virtual void BuildFunction(uint32_t pc) = 0;
+        virtual std::string DecodeInstructionInternal(int index) const = 0;
 
         uint8_t GetU8(uint32_t pc) const
         {
@@ -113,6 +98,6 @@ namespace scrDbgApp
         std::vector<uint8_t> m_Code;
         std::unique_ptr<ScriptProgram> m_Program;
         std::vector<FunctionInfo> m_Functions;
-        std::vector<InstructionInfo> m_Instructions;
+        std::vector<uint32_t> m_Instructions;
     };
 }

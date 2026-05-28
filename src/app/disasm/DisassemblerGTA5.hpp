@@ -8,30 +8,23 @@ namespace scrDbgApp
     public:
         using Disassembler::Disassembler;
 
-        bool SupportsFunctions() const override
-        {
-            return true;
-        }
-
-        bool UsesStringsTable() const override
-        {
-            return true;
-        }
-
         int GetInstructionSize(uint32_t pc) const override;
-        virtual bool IsJumpOrCall(uint8_t op) const override;
-        virtual uint32_t GetJumpTarget(uint32_t pc) const override;
-        virtual bool IsWildcard(uint8_t op) const override;
-        virtual bool IsXrefToPc(uint32_t pc, uint32_t targetPc) const override;
-        virtual std::string MakePattern(uint32_t start, int len) const override;
-        virtual bool IsPatternUnique(uint32_t start, int len) const override;
-        virtual const char* GetInstructionDescription(uint8_t op) const override;
-        std::optional<FunctionInfo> BuildFunction(uint32_t pc, uint32_t funcIndex) const override;
-        std::optional<uint32_t> UpdateStringIndex(uint32_t pc) const override;
-        std::string DecodeInstructionInternal(const InstructionInfo& insnInfo) const override;
+        bool IsJumpOrCall(uint8_t op) const override;
+        uint32_t GetJumpTarget(uint32_t pc) const override;
+        bool IsWildcard(uint8_t op) const override;
+        bool IsXrefToPc(uint32_t pc, uint32_t targetPc) const override;
+        std::string MakePattern(uint32_t start, int len) const override;
+        bool IsPatternUnique(uint32_t start, int len) const override;
+        StringSeachPattern MakeStringSearchPatterns(const std::string& value) const override;
+        const char* GetInstructionDescription(uint8_t op) const override;
+
+    protected:
+        void BuildFunction(uint32_t pc) override;
+        std::string DecodeInstructionInternal(int index) const override;
 
     private:
-        std::string GetFunctionName(uint32_t pc, uint32_t size, int funcIndex) const;
+        std::string GetFunctionName(uint32_t pc, uint32_t size) const;
+        std::optional<uint32_t> GetStringIndex(uint32_t pc) const;
 
         enum Opcodes : uint8_t
         {

@@ -75,15 +75,14 @@ namespace scrDbgApp
         {
             uint32_t addr = m_Thread->GetCallStack(i);
 
-            int index = m_Disassembler->GetFunctionIndexForPc(addr);
-            auto func = m_Disassembler->GetFunction(index);
+            auto func = m_Disassembler->GetFunctionForPc(addr);
 
             m_FramePointers[i] = fp;
 
-            fp = static_cast<uint32_t>(m_Thread->GetStack(fp + func.ArgCount + 1));
+            fp = static_cast<uint32_t>(m_Thread->GetStack(fp + func->ArgCount + 1));
 
             m_CallStack->setItem(i, 0, new QTableWidgetItem(QString("0x%1").arg(QString::number(addr, 16).toUpper())));
-            m_CallStack->setItem(i, 1, new QTableWidgetItem(QString::fromStdString(func.Name)));
+            m_CallStack->setItem(i, 1, new QTableWidgetItem(QString::fromStdString(func->Name)));
         }
 
         if (depth > 0)
@@ -99,14 +98,13 @@ namespace scrDbgApp
         uint32_t sp = m_Thread->GetSp();
         uint32_t pc = m_Thread->GetCallStack(frameIndex);
 
-        int index = m_Disassembler->GetFunctionIndexForPc(pc);
-        auto func = m_Disassembler->GetFunction(index);
+        auto func = m_Disassembler->GetFunctionForPc(pc);
 
         m_StackFrame->setRowCount(0);
 
         int row = 0;
 
-        for (int i = 0; i < func.ArgCount; i++)
+        for (int i = 0; i < func->ArgCount; i++)
         {
             int value = m_Thread->GetStack(fp + i);
             m_StackFrame->insertRow(row);
@@ -116,24 +114,24 @@ namespace scrDbgApp
             row++;
         }
 
-        int localCount = func.FrameSize - func.ArgCount - 2;
+        int localCount = func->FrameSize - func->ArgCount - 2;
         for (int i = 0; i < localCount; i++)
         {
-            int value = m_Thread->GetStack(fp + func.ArgCount + 2 + i);
+            int value = m_Thread->GetStack(fp + func->ArgCount + 2 + i);
             m_StackFrame->insertRow(row);
             m_StackFrame->setItem(row, 0, new QTableWidgetItem("Local"));
-            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func.ArgCount + 2 + i)));
+            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func->ArgCount + 2 + i)));
             m_StackFrame->setItem(row, 2, new QTableWidgetItem(QString::number(value)));
             row++;
         }
 
-        int tempCount = sp - (fp + func.FrameSize);
+        int tempCount = sp - (fp + func->FrameSize);
         for (int i = 0; i < tempCount; i++)
         {
-            int value = m_Thread->GetStack(fp + func.FrameSize + i);
+            int value = m_Thread->GetStack(fp + func->FrameSize + i);
             m_StackFrame->insertRow(row);
             m_StackFrame->setItem(row, 0, new QTableWidgetItem("Temp"));
-            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func.FrameSize + i)));
+            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func->FrameSize + i)));
             m_StackFrame->setItem(row, 2, new QTableWidgetItem(QString::number(value)));
             row++;
         }

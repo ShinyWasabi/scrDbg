@@ -34,17 +34,16 @@ namespace scrDbgApp
         if (!index.isValid())
             return QVariant();
 
-        const auto entry = m_Disassembler->GetInstruction(index.row());
-
         if (role == Qt::BackgroundRole)
         {
+            auto pc = m_Disassembler->GetInstruction(index.row());
             auto hash = m_Disassembler->GetHash();
 
             auto active = PipeCommands::GetActiveBreakpoint();
-            if (active && active->first == hash && active->second == entry.Pc)
+            if (active && active->first == hash && active->second == pc)
                 return QBrush(Qt::green);
 
-            if (PipeCommands::BreakpointExists(hash, entry.Pc))
+            if (PipeCommands::BreakpointExists(hash, pc))
                 return QBrush(Qt::red);
 
             return QVariant();

@@ -2,6 +2,22 @@
 
 namespace scrDbgApp
 {
+    std::optional<Disassembler::FunctionInfo> DisassemblerGTA4::GetFunctionForPc(uint32_t pc) const
+    {
+        auto it = m_PcToEntry.find(pc);
+        if (it == m_PcToEntry.end())
+            return std::nullopt;
+
+        uint32_t entryPc = it->second;
+        for (const auto& func : m_Functions)
+        {
+            if (func.Start == entryPc)
+                return func;
+        }
+
+        return std::nullopt;
+    }
+
     int DisassemblerGTA4::GetInstructionSize(uint32_t pc) const
     {
         Opcodes op = static_cast<Opcodes>(GetU8(pc));
@@ -175,6 +191,42 @@ namespace scrDbgApp
         return count == 1;
     }
 
+    Disassembler::StringSeachPattern DisassemblerGTA4::MakeStringSearchPatterns(const std::string& value) const
+    {
+        StringSeachPattern result;
+
+        uint32_t pc = 0;
+        while (pc < m_Code.size())
+        {
+            Opcodes op = static_cast<Opcodes>(GetU8(pc));
+            int insnSize = GetInstructionSize(pc);
+
+            if (op == Opcodes::STRING)
+            {
+                uint8_t len = GetU8(pc + 1);
+                if (len > 0 && pc + 2 + len <= m_Code.size())
+                {
+                    std::string str(reinterpret_cast<const char*>(&m_Code[pc + 2]), len);
+                    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+
+                    if (str.find(value) != std::string::npos)
+                    {
+                        std::vector<std::optional<uint8_t>> pattern;
+                        pattern.push_back(static_cast<uint8_t>(Opcodes::STRING));
+                        pattern.push_back(len);
+                        for (int i = 0; i < len; i++)
+                            pattern.push_back(m_Code[pc + 2 + i]);
+                        result.push_back(std::move(pattern));
+                    }
+                }
+            }
+
+            pc += insnSize;
+        }
+
+        return result;
+    }
+
     const char* DisassemblerGTA4::GetInstructionDescription(uint8_t opcode) const
     {
         if (opcode >= m_InstructionTable.size())
@@ -183,22 +235,120 @@ namespace scrDbgApp
         return m_InstructionTable[opcode].Description;
     }
 
-    std::string DisassemblerGTA4::DecodeInstructionInternal(const InstructionInfo& insnInfo) const
+    void DisassemblerGTA4::BuildFunction(uint32_t pc)
     {
-        std::string result = "???";
+        if (pc >= m_Code.size() || static_cast<Opcodes>(GetU8(pc)) != Opcodes::ENTER)
+            return;
 
-        uint8_t op = GetU8(insnInfo.Pc);
+        const uint32_t entryPc = pc;
+        const uint8_t argCount = GetU8(pc + 1);
+        const uint16_t frameSize = GetU16(pc + 2);
+
+        std::unordered_map<uint32_t, int> visited;
+        std::vector<uint32_t> worklist;
+
+        uint32_t postEnter = entryPc + GetInstructionSize(entryPc);
+        worklist.push_back(postEnter);
+
+        uint32_t lastLeavePc = 0;
+        uint8_t retCount = 0;
+
+        while (!worklist.empty())
+        {
+            uint32_t cur = worklist.back();
+            worklist.pop_back();
+
+            if (cur >= m_Code.size() || visited.count(cur))
+                continue;
+
+            int insnSize = GetInstructionSize(cur);
+            visited[cur] = insnSize;
+
+            Opcodes op = static_cast<Opcodes>(GetU8(cur));
+
+            switch (op)
+            {
+            case Opcodes::LEAVE:
+            {
+                if (cur >= lastLeavePc)
+                {
+                    lastLeavePc = cur;
+                    retCount = GetU8(cur + 2);
+                }
+                break;
+            }
+            case Opcodes::J:
+            {
+                worklist.push_back(GetU32(cur + 1));
+                break;
+            }
+            case Opcodes::JZ:
+            case Opcodes::JNZ:
+            {
+                worklist.push_back(GetU32(cur + 1));
+                worklist.push_back(cur + insnSize);
+                break;
+            }
+            case Opcodes::SWITCH:
+            {
+                uint8_t count = GetU8(cur + 1);
+                for (int i = 0; i < count; i++)
+                {
+                    uint32_t target = GetU32(cur + 2 + i * 8 + 4);
+                    worklist.push_back(target);
+                }
+                worklist.push_back(cur + insnSize);
+                break;
+            }
+            default:
+            {
+                worklist.push_back(cur + insnSize);
+                break;
+            }
+            }
+        }
+
+        if (lastLeavePc == 0)
+            return;
+
+        uint32_t totalBytes = GetInstructionSize(entryPc);
+        m_PcToEntry[entryPc] = static_cast<int>(entryPc);
+        for (auto& [visitedPc, size] : visited)
+        {
+            totalBytes += size;
+            m_PcToEntry[visitedPc] = static_cast<int>(entryPc);
+        }
+
+        std::ostringstream nameStr;
+        nameStr << "sub_" << std::uppercase << std::hex << entryPc;
+
+        FunctionInfo info{};
+        info.Start = entryPc;
+        info.End = lastLeavePc;
+        info.Length = totalBytes;
+        info.ArgCount = argCount;
+        info.FrameSize = frameSize;
+        info.RetCount = retCount;
+        info.Name = nameStr.str();
+        m_Functions.push_back(info);
+    }
+
+    std::string DisassemblerGTA4::DecodeInstructionInternal(int index) const
+    {
+        auto& insnPc = m_Instructions[index];
+
+        uint8_t op = GetU8(insnPc);
         if (op >= m_InstructionTable.size())
             return "???";
 
-        const auto& insn = m_InstructionTable[op];
+        const auto& insnTable = m_InstructionTable[op];
 
         std::ostringstream instr;
-        instr << insn.Name << " ";
+        instr << insnTable.Name << " ";
 
-        uint32_t offset = insnInfo.Pc + 1;
+        uint32_t offset = insnPc + 1;
 
-        const char* fmt = insn.OperandFmt;
+        const char* fmt = insnTable.OperandFmt;
         while (*fmt)
         {
             switch (*fmt++)
@@ -218,9 +368,22 @@ namespace scrDbgApp
             {
                 uint32_t val = GetU32(offset);
                 if (IsJumpOrCall(op) || op == Opcodes::NATIVE)
+                {
                     instr << "0x" << std::uppercase << std::hex << val;
+
+                    if (op == Opcodes::CALL)
+                    {
+                        if (auto func = GetFunctionForPc(val))
+                        {
+                            if (!func->Name.empty())
+                                instr << " // " << func->Name;
+                        }
+                    }
+                }
                 else
+                {
                     instr << std::dec << val;
+                }
                 offset += 4;
                 break;
             }
@@ -274,8 +437,26 @@ namespace scrDbgApp
                 if (!str.empty() && str.back() == '\0')
                     str.pop_back();
 
-                instr << "\"" << str << "\"";
+                auto label = g_Game->GetTextLabel(JOAAT(str));
+                if (!label.empty())
+                    instr << "\"" << str << "\"" << " // GXT: " << label;
+                else
+                    instr << "\"" << str << "\"";
                 offset += len;
+                break;
+            }
+            case 'n': // ENTER
+            {
+                uint8_t argCount = GetU8(offset++);
+                uint16_t frameSize = GetU16(offset);
+                offset += 2;
+
+                instr << std::dec << static_cast<int>(argCount) << ", " << frameSize;
+                if (auto func = GetFunctionForPc(offset - 4))
+                {
+                    if (!func->Name.empty())
+                        instr << ", " << func->Name;
+                }
                 break;
             }
             }
@@ -284,7 +465,6 @@ namespace scrDbgApp
                 instr << ", ";
         }
 
-        result = instr.str();
-        return result;
+        return instr.str();
     }
 }
