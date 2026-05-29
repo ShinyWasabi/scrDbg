@@ -6,6 +6,7 @@
 #include "debug/ScriptFunctionNames.hpp"
 #include "debug/ScriptLogger.hpp"
 #include "rage/Joaat.hpp"
+#include "scrDbg.h"
 
 namespace scrDbgLib
 {
@@ -56,7 +57,7 @@ namespace scrDbgLib
         if (!PipeServer::Init("scrDbg"))
             return Cleanup(EXIT_FAILURE, "Failed to initialize scrDbg pipe server.");
 
-        if (!scrDbgShared::NativesBin::Load(static_cast<HMODULE>(g_DllInstance)))
+        if (!scrDbgShared::NativesBin::Load(static_cast<HMODULE>(g_DllInstance), NATIVES_GTA5_BIN))
             MessageBoxA(0, "Failed to load native names.", "Warning", MB_ICONWARNING);
 
         ScriptFunctionNames::GenerateNamesForAllPrograms();

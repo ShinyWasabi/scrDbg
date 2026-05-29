@@ -3,7 +3,6 @@
 #include "ScriptGlobals.hpp"
 #include "ScriptStatics.hpp"
 #include "ScriptThreads.hpp"
-#include "scrDbg.h"
 #include <QVBoxLayout>
 
 namespace scrDbgApp

@@ -25,6 +25,7 @@ namespace scrDbgApp
         virtual bool Init() = 0;
         virtual GameType GetType() const = 0;
         virtual const char* GetTargetBuild() const = 0;
+        virtual int GetResourceId() const = 0;
         virtual bool Is64Bit() const = 0;
         virtual std::unique_ptr<Disassembler> CreateDisassembly(std::unique_ptr<ScriptProgram> program) const = 0;
 

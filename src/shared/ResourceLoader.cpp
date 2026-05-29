@@ -3,9 +3,9 @@
 
 namespace scrDbgShared
 {
-    bool NativesBin::Load(HMODULE module)
+    bool NativesBin::Load(HMODULE module, int id)
     {
-        HRSRC res = FindResource(module, MAKEINTRESOURCE(NATIVES_BIN), RT_RCDATA);
+        HRSRC res = FindResource(module, MAKEINTRESOURCE(id), RT_RCDATA);
         if (!res)
             return false;
 

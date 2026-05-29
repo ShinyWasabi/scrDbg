@@ -5,6 +5,11 @@ namespace scrDbgApp
     class GTA5 : public Game
     {
     public:
+        int GetResourceId() const override
+        {
+            return NATIVES_GTA5_BIN;
+        }
+
         std::unique_ptr<Disassembler> CreateDisassembly(std::unique_ptr<ScriptProgram> program) const override;
 
         std::string GetGameBuild() const override;

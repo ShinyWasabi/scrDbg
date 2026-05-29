@@ -15,12 +15,12 @@ namespace scrDbgShared
             REFERENCE
         };
 
-        static bool Load(HMODULE module);
+        static bool Load(HMODULE module, int id);
 
         static std::string_view GetNameByHash(uint64_t hash)
         {
             auto it = Names.find(hash);
-            return it != Names.end() ? std::string_view(it->second) : std::string_view();
+            return it != Names.end() ? std::string_view(it->second) : std::string_view{};
         }
 
         static const std::vector<NativeTypes>* GetArgsByHash(uint64_t hash)

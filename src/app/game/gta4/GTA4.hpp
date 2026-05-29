@@ -17,6 +17,11 @@ namespace scrDbgApp
             return "121";
         }
 
+        int GetResourceId() const override
+        {
+            return NATIVES_GTA4_BIN;
+        }
+
         bool Is64Bit() const override
         {
             return false;

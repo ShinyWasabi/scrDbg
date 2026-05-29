@@ -1,9 +1,6 @@
 import struct
 import re
 
-INPUT_FILE = "natives.txt"
-OUTPUT_FILE = "../resources/natives.bin"
-
 NATIVE_TYPE = {
     "NONE": 0,
     "INT": 1,
@@ -30,6 +27,7 @@ def parse_types(type_str):
             types.append(NATIVE_TYPE.get(t, 0))
     return types
 
+
 def parse_line(line):
     line = line.strip()
     if not line or line.startswith("#"):
@@ -48,16 +46,17 @@ def parse_line(line):
     return native_hash, native_name, arg_types, ret_types
 
 
-def main():
+def build_bin(input_file, output_file):
     entries = []
-    with open(INPUT_FILE, "r", encoding="utf-8") as f:
+
+    with open(input_file, "r", encoding="utf-8") as f:
         for line in f:
             parsed = parse_line(line)
             if parsed:
                 entries.append(parsed)
 
-    with open(OUTPUT_FILE, "wb") as out:
-        out.write(struct.pack("<I", len(entries)))
+    with open(output_file, "wb") as out:
+        out.write(struct.pack("<I", len(entries))) # native count
 
         for native_hash, name, arg_types, ret_types in entries:
             name_bytes = name.encode("utf-8")
@@ -72,7 +71,13 @@ def main():
             for r in ret_types:
                 out.write(struct.pack("B", r)) # return type (uint8)
 
-    print(f"Wrote {len(entries)} entries to {OUTPUT_FILE}.")
+    print(f"Wrote {len(entries)} natives to {output_file}.")
+
+
+def main():
+    build_bin("natives-gta5.txt", "../resources/natives-gta5.bin")
+    build_bin("natives-gta4.txt", "../resources/natives-gta4.bin")
+
 
 if __name__ == "__main__":
     main()

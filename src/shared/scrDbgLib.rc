@@ -1,7 +1,8 @@
 #include "scrDbg.h"
 #include <Windows.h>
 
-NATIVES_BIN RCDATA "../../resources/natives.bin"
+NATIVES_GTA4_BIN RCDATA "../../resources/natives-gta4.bin"
+NATIVES_GTA5_BIN RCDATA "../../resources/natives-gta5.bin"
 
 VS_VERSION_INFO VERSIONINFO
   FILEVERSION SCRDBG_FILEVERSION

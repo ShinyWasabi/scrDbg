@@ -76,8 +76,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (!scrDbgShared::NativesBin::Load(GetModuleHandle(0)))
-        QMessageBox::warning(nullptr, "Resources", "Failed to load native names.");
+    if (!scrDbgShared::NativesBin::Load(GetModuleHandle(0), g_Game->GetResourceId()))
+        QMessageBox::warning(nullptr, "Resources", "Failed to load natives database.");
 
     GUIWidget gui;
     gui.show();

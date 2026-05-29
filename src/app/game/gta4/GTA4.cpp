@@ -1,4 +1,5 @@
 #include "GTA4.hpp"
+#include "ResourceLoader.hpp"
 #include "core/Scanner.hpp"
 #include "disasm/DisassemblerGTA4.hpp"
 #include "types/ScriptProgramGTA4.hpp"
@@ -145,7 +146,7 @@ namespace scrDbgApp
 
     std::string_view GTA4::GetNativeNameByHash(uint64_t hash) const
     {
-        return "";
+        return scrDbgShared::NativesBin::GetNameByHash(hash);
     }
 
     uint64_t GTA4::GetNativeHashByHandler(uintptr_t handler) const
