@@ -1,5 +1,45 @@
+include(cmake/minhook.cmake)
+
+set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(SHARED_DIR "${CMAKE_SOURCE_DIR}/src/shared")
+
+set(RESOURCES "${SHARED_DIR}/scrDbgLib.rc")
+
+file(GLOB_RECURSE SRC_FILES
+    "${SRC_DIR}/**.hpp"
+    "${SRC_DIR}/**.cpp"
+)
+
+file(GLOB_RECURSE SHARED_FILES
+    "${SHARED_DIR}/**.hpp"
+    "${SHARED_DIR}/**.cpp"
+)
+
+add_library(scrDbgLib MODULE ${SRC_FILES} ${SHARED_FILES} ${RESOURCES})
+
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    add_subdirectory(x64)
+    set(ARCH_SUFFIX "x64")
 else()
-    add_subdirectory(x86)
+    set(ARCH_SUFFIX "x86")
 endif()
+
+set_target_properties(scrDbgLib PROPERTIES OUTPUT_NAME "scrDbg-${ARCH_SUFFIX}")
+
+target_precompile_headers(scrDbgLib PUBLIC "${SRC_DIR}/Common.hpp")
+
+target_compile_definitions(scrDbgLib PRIVATE
+    _CRT_SECURE_NO_WARNINGS
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+)
+
+target_include_directories(scrDbgLib PRIVATE
+    "${SRC_DIR}"
+    "${SHARED_DIR}"
+    "${minhook_SOURCE_DIR}/include"
+    "${minhook_SOURCE_DIR}/src/hde"
+)
+
+target_link_libraries(scrDbgLib PRIVATE
+    minhook
+)

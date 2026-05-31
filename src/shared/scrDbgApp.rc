@@ -2,6 +2,7 @@
 #include <Windows.h>
 
 IDI_ICON1 ICON "../../resources/scrDbg.ico"
+X86_INJECTOR_EXE RCDATA "../../resources/scrDbg-x86-injector.exe"
 NATIVES_GTA4_BIN RCDATA "../../resources/natives-gta4.bin"
 NATIVES_GTA5_BIN RCDATA "../../resources/natives-gta5.bin"
 

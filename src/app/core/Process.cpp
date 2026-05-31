@@ -1,4 +1,5 @@
 #include "Process.hpp"
+#include "ResourceLoader.hpp"
 
 namespace scrDbgApp
 {
@@ -11,14 +12,13 @@ namespace scrDbgApp
         PROCESSENTRY32 entry;
         entry.dwSize = sizeof(entry);
 
-        uint32_t pid = 0;
         if (Process32First(snapshot, &entry))
         {
             do
             {
                 if (_wcsicmp(entry.szExeFile, processName) == 0)
                 {
-                    pid = entry.th32ProcessID;
+                    m_Pid = entry.th32ProcessID;
                     break;
                 }
             } while (Process32Next(snapshot, &entry));
@@ -26,10 +26,10 @@ namespace scrDbgApp
 
         CloseHandle(snapshot);
 
-        if (pid == 0)
+        if (m_Pid == 0)
             return false;
 
-        m_Handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+        m_Handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, m_Pid);
         if (!m_Handle)
             return false;
 
@@ -106,11 +106,11 @@ namespace scrDbgApp
 
     bool Process::InjectModuleImpl(const char* modulePath)
     {
-        if (!g_Game->Is64Bit())
-            return true; // TO-DO: Inject from a separate x86 exe
-
         char fullPath[MAX_PATH];
         GetFullPathNameA(modulePath, MAX_PATH, fullPath, nullptr);
+
+        if (!g_Game->Is64Bit())
+            return scrDbgShared::x86Injector::Run(GetModuleHandle(0), X86_INJECTOR_EXE, m_Pid, fullPath);
 
         size_t pathLen = strlen(fullPath) + 1;
 

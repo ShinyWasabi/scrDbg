@@ -24,7 +24,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "scrDbg.h"
 #include "Joaat.hpp"
 #include "core/Pointer.hpp"
 #include "game/Game.hpp"
+#include "scrDbg.h"

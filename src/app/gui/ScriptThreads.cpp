@@ -143,6 +143,7 @@ namespace scrDbgApp
         m_ViewStack = new QPushButton("View Stack");
         m_ViewStack->setToolTip("View the current callstack and stack frame of this script thread.");
         connect(m_ViewStack, &QPushButton::clicked, this, &ScriptThreadsWidget::OnViewStack);
+        m_ViewStack->setVisible(g_Game->GetType() != GameType::GTA4);
 
         m_ViewBreakpoints = new QPushButton("View Breakpoints");
         m_ViewBreakpoints->setToolTip("View currently set breakpoints.");

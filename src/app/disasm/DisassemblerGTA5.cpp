@@ -48,11 +48,11 @@ namespace scrDbgApp
             return GetU8(pc + 3);
 
         case Opcodes::PUSH_CONST_S16:
-            return GetU8(pc + 1);
+            return GetS16(pc + 1);
         case Opcodes::PUSH_CONST_U24:
-            return GetU8(pc + 1);
+            return GetU24(pc + 1);
         case Opcodes::PUSH_CONST_U32:
-            return GetU8(pc + 1);
+            return GetU32(pc + 1);
         }
 
         return std::nullopt;

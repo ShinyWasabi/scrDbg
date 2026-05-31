@@ -144,7 +144,7 @@ namespace scrDbgApp
 
     void LogsWidget::UpdateLog()
     {
-        QFile file("scrDbg.log");
+        QFile file("VM.log");
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
             return;
 
