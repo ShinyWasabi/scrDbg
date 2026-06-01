@@ -132,13 +132,13 @@ namespace scrDbgApp
     int32_t GTA5::GetGlobal(uint32_t index) const
     {
         uintptr_t block = m_Pointers.ScriptGlobals.GetArray<uintptr_t>((index >> 0x12) & 0x3F);
-        return Pointer(block).GetArray<int32_t>(index & 0x3FFFF);
+        return static_cast<int32_t>(Pointer(block).GetArray<int64_t>(index & 0x3FFFF));
     }
 
     void GTA5::SetGlobal(uint32_t index, int32_t value) const
     {
         uintptr_t block = m_Pointers.ScriptGlobals.GetArray<uintptr_t>((index >> 0x12) & 0x3F);
-        Pointer(block).SetArray<int32_t>(index & 0x3FFFF, value);
+        Pointer(block).SetArray<int64_t>(index & 0x3FFFF, static_cast<int32_t>(value));
     }
 
     uint32_t GTA5::GetGlobalBlockCount(uint32_t block) const

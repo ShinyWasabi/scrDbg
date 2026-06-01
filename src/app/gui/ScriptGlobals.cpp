@@ -22,6 +22,8 @@ namespace scrDbgApp
             int offset = address & 0x3FFFF;
             if (offset >= blockCount)
                 return false;
+
+            return true;
         }
 
         return address < g_Game->GetGlobalCount();

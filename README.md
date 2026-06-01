@@ -4,8 +4,19 @@
 
 # scrDbg
 
-ScrDbg is a script debugger for Grand Theft Auto V (Legacy & Enhanced).
+scrDbg is a script debugger for RAGE engine games.
 It allows you to inspect, manipulate, and debug game scripts in real-time.
+
+## Supported Games
+
+- Grand Theft Auto IV: The Complete Edition
+- Grand Theft Auto V (Legacy & Enhanced)
+
+## Planned Support
+
+- Max Payne 3
+- Red Dead Redemption
+- Red Dead Redemption 2
 
 ## Features
 
@@ -13,6 +24,8 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
 - Pause scripts
 - Kill scripts
 - Export disassembly, strings, statics, globals, and natives
+- Exception handling
+- View functions
 - View stack
   - View callstack
   - Edit stack frame (function args, locals, temps)
@@ -27,7 +40,7 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
 - Logging
   - Log script frame times
   - Log function calls
-  - Log native calls
+  - Log native calls with type information
   - Log static and global writes
 - Statics editor
 - Globals editor
@@ -89,11 +102,27 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
   <img src="screenshots/scrDbgScreenshot13.png" alt="Screenshot 13" width="400"/>
 </p>
 
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot14.png" alt="Screenshot 14" width="400"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot15.png" alt="Screenshot 15" width="400"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot16.png" alt="Screenshot 16" width="400"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/scrDbgScreenshot17.png" alt="Screenshot 17" width="400"/>
+</p>
+
 </details>
 
 ## Usage
 
-- Disable BattlEye from Rockstar Games Launcher.
+- Disable BattlEye from Rockstar Games Launcher for GTA V.
 - Launch the game.
 - Run `scrDbg.exe`.
 
