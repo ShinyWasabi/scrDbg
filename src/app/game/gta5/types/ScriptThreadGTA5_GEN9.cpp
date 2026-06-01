@@ -59,12 +59,12 @@ namespace scrDbgApp
 
     int32_t ScriptThreadGTA5_GEN9::GetStack(uint32_t index) const
     {
-        return m_Base.Add(STACK).Deref().GetArray<int32_t>(index);
+        return static_cast<int32_t>(m_Base.Add(STACK).Deref().GetArray<int64_t>(index));
     }
 
     void ScriptThreadGTA5_GEN9::SetStack(uint32_t index, int32_t value) const
     {
-        m_Base.Add(STACK).Deref().SetArray<int32_t>(index, value);
+        m_Base.Add(STACK).Deref().SetArray<int64_t>(index, static_cast<int64_t>(value));
     }
 
     std::string ScriptThreadGTA5_GEN9::GetCreateTime() const

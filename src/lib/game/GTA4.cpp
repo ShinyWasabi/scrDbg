@@ -37,14 +37,6 @@ namespace scrDbgLib
             m_Pointers.GetNextProtectedScriptSlot = addr.As<decltype(m_Pointers.GetNextProtectedScriptSlot)>();
         });
 
-        scanner.Add("A1 ? ? ? ? 53 55 8B E9 56 57", [this](Memory addr) {
-            m_Pointers.ScriptProgramCtor = addr.As<decltype(m_Pointers.ScriptProgramCtor)>();
-        });
-
-        scanner.Add("56 8B F1 57 FF 76 ? E8 ? ? ? ? 8B 56", [this](Memory addr) {
-            m_Pointers.ScriptProgramDtor = addr.As<decltype(m_Pointers.ScriptProgramDtor)>();
-        });
-
         scanner.Add("39 35 ? ? ? ? 75 ? C7 46", [this](Memory addr) {
             m_Pointers.CurrentScriptThread = *addr.Add(2).As<decltype(m_Pointers.CurrentScriptThread)*>();
         });

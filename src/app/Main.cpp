@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 
     if (!g_Game)
     {
-        QMessageBox::critical(nullptr, "Process", "Failed to initialize process. Please make sure the game is running.");
+        QMessageBox::critical(nullptr, "Process", "Failed to attach to a supported game process. Please make sure the game is running.");
         return 1;
     }
 

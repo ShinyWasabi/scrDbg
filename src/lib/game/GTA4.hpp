@@ -54,8 +54,6 @@ namespace scrDbgLib
             rage::scrValue** ScriptGlobals; // it's not paged
             uint8_t** ProtectedScriptGlobals;
             uint32_t (*GetNextProtectedScriptSlot)();
-            void* ScriptProgramCtor;
-            void* ScriptProgramDtor;
             rage::scrThread** CurrentScriptThread;
             rage::atArray<rage::scrThread*>* ScriptThreads;
             rage::scrHash<void (*)(rage::scrNativeContext*)>* CommandHandlers;

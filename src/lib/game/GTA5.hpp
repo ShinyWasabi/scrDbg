@@ -40,9 +40,6 @@ namespace scrDbgLib
         {
             rage::scrNativeRegistration* NativeRegistrationTable;
             rage::scrProgramRegistry* ScriptProgramRegistry;
-            void* ScriptProgramCtor; // for YSC
-            void* ScriptProgramDtor;
-            void* LoadScriptProgram; // for SCO
             rage::atArray<rage::scrThreadGEN8*>* ScriptThreadsGEN8;
             rage::atArray<rage::scrThreadGEN9*>* ScriptThreadsGEN9;
             void* RunScriptThread;

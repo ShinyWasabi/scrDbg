@@ -415,7 +415,7 @@ namespace scrDbgApp
 
         uint32_t start = pc;
         uint8_t argCount = GetU8(pc + 1);
-        uint16_t frameSize = GetS16(pc + 2);
+        uint16_t frameSize = GetU16(pc + 2);
         uint8_t nameLen = GetU8(pc + 4);
 
         std::string name = GetFunctionName(pc, nameLen);
