@@ -64,14 +64,14 @@ namespace scrDbgApp
         {
         }
 
-        virtual int32_t GetStatic(uint32_t index) const
+        virtual Pointer GetStatic(uint32_t index) const
         {
-            return 0;
+            return {};
         }
 
-        virtual int32_t GetProgramGlobal(uint32_t index) const
+        virtual Pointer GetProgramGlobal(uint32_t index) const
         {
-            return 0;
+            return {};
         }
 
         virtual uint64_t GetNative(uint32_t index) const
@@ -169,13 +169,9 @@ namespace scrDbgApp
             return 0;
         }
 
-        virtual int32_t GetStack(uint32_t index) const
+        virtual Pointer GetStack(uint32_t index) const
         {
-            return 0;
-        }
-
-        virtual void SetStack(uint32_t index, int32_t value) const
-        {
+            return {};
         }
 
         virtual std::string GetCreateTime() const

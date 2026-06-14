@@ -46,11 +46,11 @@ namespace scrDbgApp
         m_Base.Add(CODE).Deref32().Add(index).SetBuffer(bytes.data(), bytes.size());
     }
 
-    int32_t ScriptProgramGTA4::GetStatic(uint32_t index) const
+    Pointer ScriptProgramGTA4::GetStatic(uint32_t index) const
     {
         if (index >= GetStaticCount())
-            return 0;
+            return {};
 
-        return m_Base.Add(STATICS).Deref32().GetArray<int32_t>(index);
+        return m_Base.Add(STATICS).Deref32().Add(index * sizeof(uint32_t));
     }
 }

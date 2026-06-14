@@ -22,8 +22,8 @@ namespace scrDbgApp
         uint32_t GetStringsSize() const override;
         std::vector<uint8_t> GetCode() const override;
         void SetCode(uint32_t index, const std::vector<uint8_t>& bytes) const override;
-        int32_t GetStatic(uint32_t index) const override;
-        int32_t GetProgramGlobal(uint32_t index) const override;
+        Pointer GetStatic(uint32_t index) const override;
+        Pointer GetProgramGlobal(uint32_t index) const override;
         uint64_t GetNative(uint32_t index) const override;
         std::vector<std::string> GetStrings() const override;
         std::string GetString(uint32_t index) const override;

@@ -79,7 +79,7 @@ namespace scrDbgApp
 
             m_FramePointers[i] = fp;
 
-            fp = static_cast<uint32_t>(m_Thread->GetStack(fp + func->ArgCount + 1));
+            fp = m_Thread->GetStack(fp + func->ArgCount + 1).Get<int32_t>();
 
             m_CallStack->setItem(i, 0, new QTableWidgetItem(QString("0x%1").arg(QString::number(addr, 16).toUpper())));
             m_CallStack->setItem(i, 1, new QTableWidgetItem(QString::fromStdString(func->Name)));
@@ -106,7 +106,7 @@ namespace scrDbgApp
 
         for (int i = 0; i < func->ArgCount; i++)
         {
-            int value = m_Thread->GetStack(fp + i);
+            int value = m_Thread->GetStack(fp + i).Get<int32_t>();
             m_StackFrame->insertRow(row);
             m_StackFrame->setItem(row, 0, new QTableWidgetItem("Arg"));
             m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(i)));
@@ -117,7 +117,7 @@ namespace scrDbgApp
         int localCount = func->FrameSize - func->ArgCount - 2;
         for (int i = 0; i < localCount; i++)
         {
-            int value = m_Thread->GetStack(fp + func->ArgCount + 2 + i);
+            int value = m_Thread->GetStack(fp + func->ArgCount + 2 + i).Get<int32_t>();
             m_StackFrame->insertRow(row);
             m_StackFrame->setItem(row, 0, new QTableWidgetItem("Local"));
             m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func->ArgCount + 2 + i)));
@@ -128,7 +128,7 @@ namespace scrDbgApp
         int tempCount = sp - (fp + func->FrameSize);
         for (int i = 0; i < tempCount; i++)
         {
-            int value = m_Thread->GetStack(fp + func->FrameSize + i);
+            int value = m_Thread->GetStack(fp + func->FrameSize + i).Get<int32_t>();
             m_StackFrame->insertRow(row);
             m_StackFrame->setItem(row, 0, new QTableWidgetItem("Temp"));
             m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func->FrameSize + i)));
@@ -152,10 +152,10 @@ namespace scrDbgApp
 
         int index = m_StackFrame->item(row, 1)->text().toInt();
 
-        int current = m_Thread->GetStack(fp + index);
+        int current = m_Thread->GetStack(fp + index).Get<int32_t>();
         int value = static_cast<int>(QInputDialog::getInt(this, "Edit Stack", "Enter value:", current));
 
-        m_Thread->SetStack(fp + index, value);
+        m_Thread->GetStack(fp + index).Set<int32_t>(value);
         m_StackFrame->item(row, 2)->setText(QString::number(value));
     }
 }

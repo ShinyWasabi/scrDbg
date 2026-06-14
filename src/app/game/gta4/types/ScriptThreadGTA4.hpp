@@ -18,8 +18,7 @@ namespace scrDbgApp
         uint32_t GetFp() const override;
         uint32_t GetSp() const override;
         uint32_t GetStackSize() const override;
-        int32_t GetStack(uint32_t index) const override;
-        void SetStack(uint32_t index, int32_t value) const override;
+        Pointer GetStack(uint32_t index) const override;
         std::string GetKillReason() const override;
         uint32_t GetScriptHash() const override;
         std::string GetScriptName() const override;

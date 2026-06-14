@@ -82,21 +82,21 @@ namespace scrDbgApp
         Pointer(page).Add(index & 0x3FFF).SetBuffer(bytes.data(), bytes.size());
     }
 
-    int32_t ScriptProgramGTA5::GetStatic(uint32_t index) const
+    Pointer ScriptProgramGTA5::GetStatic(uint32_t index) const
     {
         if (index >= GetStaticCount())
-            return 0;
+            return {};
 
-        return m_Base.Add(STATICS).Deref().GetArray<int32_t>(index);
+        return m_Base.Add(STATICS).Deref().Add(index * sizeof(uint64_t));
     }
 
-    int32_t ScriptProgramGTA5::GetProgramGlobal(uint32_t index) const
+    Pointer ScriptProgramGTA5::GetProgramGlobal(uint32_t index) const
     {
         if (index >= GetGlobalCount())
-            return 0;
+            return {};
 
         uintptr_t page = m_Base.Add(GLOBAL_PAGES).Deref().GetArray<uintptr_t>(index >> 14);
-        return Pointer(page).GetArray<int32_t>(index & 0x3FFF);
+        return Pointer(page).Add((index & 0x3FFF) * sizeof(uint64_t));
     }
 
     uint64_t ScriptProgramGTA5::GetNative(uint32_t index) const

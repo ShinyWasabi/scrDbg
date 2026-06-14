@@ -42,14 +42,9 @@ namespace scrDbgApp
         return m_Base.Add(STACK_SIZE).Get<uint32_t>();
     }
 
-    int32_t ScriptThreadGTA4::GetStack(uint32_t index) const
+    Pointer ScriptThreadGTA4::GetStack(uint32_t index) const
     {
-        return m_Base.Add(STACK).Deref32().GetArray<int32_t>(index);
-    }
-
-    void ScriptThreadGTA4::SetStack(uint32_t index, int32_t value) const
-    {
-        m_Base.Add(STACK).Deref32().SetArray<int32_t>(index, value);
+        return m_Base.Add(STACK).Deref32().Add(index * sizeof(uint32_t));
     }
 
     std::string ScriptThreadGTA4::GetKillReason() const

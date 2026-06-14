@@ -34,13 +34,9 @@ namespace scrDbgApp
             return {};
         }
 
-        virtual int32_t GetGlobal(uint32_t index) const
+        virtual Pointer GetGlobal(uint32_t index) const
         {
-            return 0;
-        }
-
-        virtual void SetGlobal(uint32_t index, int32_t value) const
-        {
+            return {};
         }
 
         virtual uint32_t GetGlobalCount() const

@@ -122,7 +122,7 @@ namespace scrDbgApp
         }
 
         int value = m_GlobalNewValue->text().toInt();
-        g_Game->SetGlobal(address, value);
+        g_Game->GetGlobal(address).Set<int32_t>(value);
     }
 
     void ScriptGlobalsWidget::OnUpdateCurrentGlobalValue()
@@ -134,7 +134,7 @@ namespace scrDbgApp
             return;
         }
 
-        int value = g_Game->GetGlobal(address);
+        int value = g_Game->GetGlobal(address).Get<int32_t>();
         m_GlobalCurrentValue->setText(QString::number(value));
     }
 }

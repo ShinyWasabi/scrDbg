@@ -13,8 +13,7 @@ namespace scrDbgApp
         std::unique_ptr<Disassembler> CreateDisassembly(std::unique_ptr<ScriptProgram> program) const override;
 
         std::string GetGameBuild() const override;
-        int32_t GetGlobal(uint32_t index) const override;
-        void SetGlobal(uint32_t index, int32_t value) const override;
+        Pointer GetGlobal(uint32_t index) const override;
         uint32_t GetGlobalBlockCount(uint32_t block) const override;
         std::unique_ptr<ScriptProgram> GetProgram(uint32_t hash) const override;
         std::string_view GetNativeNameByHash(uint64_t hash) const override;

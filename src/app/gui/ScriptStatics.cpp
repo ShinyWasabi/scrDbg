@@ -127,7 +127,7 @@ namespace scrDbgApp
         }
 
         auto value = m_StaticNewValue->text().toInt();
-        thread->SetStack(address, value);
+        thread->GetStack(address).Set<int32_t>(value);
     }
 
     void ScriptStaticsWidget::OnUpdateCurrentStaticValue()
@@ -149,7 +149,7 @@ namespace scrDbgApp
             return;
         }
 
-        int value = thread->GetStack(address);
+        int value = thread->GetStack(address).Get<int32_t>();
         m_StaticCurrentValue->setText(QString("%1").arg(value));
     }
 }

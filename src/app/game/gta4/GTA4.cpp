@@ -56,14 +56,9 @@ namespace scrDbgApp
         return std::string(gameBuild);
     }
 
-    int32_t GTA4::GetGlobal(uint32_t index) const
+    Pointer GTA4::GetGlobal(uint32_t index) const
     {
-        return m_Pointers.ScriptGlobals.Deref32().GetArray<int32_t>(index);
-    }
-
-    void GTA4::SetGlobal(uint32_t index, int32_t value) const
-    {
-        m_Pointers.ScriptGlobals.Deref32().SetArray<int32_t>(index, value);
+        return m_Pointers.ScriptGlobals.Deref32().Add(index * sizeof(uint32_t));
     }
 
     uint32_t GTA4::GetGlobalCount() const

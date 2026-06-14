@@ -91,8 +91,8 @@ namespace scrDbgApp::ScriptExport
                 if (progress.wasCanceled())
                     return;
 
-                const int currentVal = thread->GetStack(i);
-                const int defaultVal = program->GetStatic(i);
+                const int currentVal = thread->GetStack(i).Get<int32_t>();
+                const int defaultVal = program->GetStatic(i).Get<int32_t>();
                 out << "Static_" << i << " = " << currentVal << " // Default: " << defaultVal << "\n";
 
                 if (i % 50 == 0)
@@ -144,7 +144,7 @@ namespace scrDbgApp::ScriptExport
                             return;
 
                         int globalIndex = (block << 18) + i;
-                        int value = g_Game->GetGlobal(globalIndex);
+                        int value = g_Game->GetGlobal(globalIndex).Get<int32_t>();
                         out << "Global_" << globalIndex << " = " << value << "\n";
 
                         if (globalIndex % 50 == 0)
@@ -180,8 +180,8 @@ namespace scrDbgApp::ScriptExport
                         return;
 
                     int globalIndex = (block << 0x12) + i;
-                    int currentVal = g_Game->GetGlobal(globalIndex);
-                    int defaultVal = program->GetProgramGlobal(i);
+                    int currentVal = g_Game->GetGlobal(globalIndex).Get<int32_t>();
+                    int defaultVal = program->GetProgramGlobal(i).Get<int32_t>();
                     out << "Global_" << globalIndex << " = " << currentVal << " // Default: " << defaultVal << "\n";
 
                     if (i % 50 == 0)

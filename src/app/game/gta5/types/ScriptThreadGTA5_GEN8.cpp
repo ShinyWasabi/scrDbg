@@ -57,14 +57,9 @@ namespace scrDbgApp
         return m_Base.Add(CALL_STACK).GetArray<uint32_t>(index);
     }
 
-    int32_t ScriptThreadGTA5_GEN8::GetStack(uint32_t index) const
+    Pointer ScriptThreadGTA5_GEN8::GetStack(uint32_t index) const
     {
-        return m_Base.Add(STACK).Deref().GetArray<int32_t>(index);
-    }
-
-    void ScriptThreadGTA5_GEN8::SetStack(uint32_t index, int32_t value) const
-    {
-        m_Base.Add(STACK).Deref().SetArray<int32_t>(index, value);
+        return m_Base.Add(STACK).Deref().Add(index * sizeof(uint64_t));
     }
 
     std::string ScriptThreadGTA5_GEN8::GetCreateTime() const

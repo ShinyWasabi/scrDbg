@@ -21,8 +21,7 @@ namespace scrDbgApp
         Priority GetPriority() const override;
         uint8_t GetCallDepth() const override;
         uint32_t GetCallStack(uint32_t index) const override;
-        int32_t GetStack(uint32_t index) const override;
-        void SetStack(uint32_t index, int32_t value) const override;
+        Pointer GetStack(uint32_t index) const override;
         std::string GetCreateTime() const override;
         std::string GetKillReason() const override;
         uint32_t GetScriptHash() const override;

@@ -17,7 +17,7 @@ namespace scrDbgApp
         uint32_t GetRefCount() const override;
         std::vector<uint8_t> GetCode() const override;
         void SetCode(uint32_t index, const std::vector<uint8_t>& bytes) const override;
-        int32_t GetStatic(uint32_t index) const override;
+        Pointer GetStatic(uint32_t index) const override;
 
     private:
         static constexpr size_t NAME_HASH = 0x04;
