@@ -34,7 +34,7 @@ namespace scrDbgApp
             return {};
 
         std::vector<uint8_t> code(codeSize);
-        m_Base.Add(CODE).Deref32().GetBuffer(code.data(), codeSize);
+        m_Base.Add(CODE).Deref().GetBuffer(code.data(), codeSize);
         return code;
     }
 
@@ -43,7 +43,7 @@ namespace scrDbgApp
         if (index >= GetCodeSize())
             return;
 
-        m_Base.Add(CODE).Deref32().Add(index).SetBuffer(bytes.data(), bytes.size());
+        m_Base.Add(CODE).Deref().Add(index).SetBuffer(bytes.data(), bytes.size());
     }
 
     Pointer ScriptProgramGTA4::GetStatic(uint32_t index) const
@@ -51,6 +51,6 @@ namespace scrDbgApp
         if (index >= GetStaticCount())
             return {};
 
-        return m_Base.Add(STATICS).Deref32().Add(index * sizeof(uint32_t));
+        return m_Base.Add(STATICS).Deref().Add(index * sizeof(uint32_t));
     }
 }

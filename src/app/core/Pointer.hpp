@@ -11,15 +11,7 @@ namespace scrDbgApp
         {
         }
 
-        Pointer Deref() const
-        {
-            return Pointer(Process::Read<uintptr_t>(m_Address));
-        }
-
-        Pointer Deref32() const
-        {
-            return Pointer(Process::Read<uint32_t>(m_Address));
-        }
+        Pointer Deref() const;
 
         Pointer Add(size_t offset) const
         {

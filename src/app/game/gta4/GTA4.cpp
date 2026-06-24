@@ -58,7 +58,7 @@ namespace scrDbgApp
 
     Pointer GTA4::GetGlobal(uint32_t index) const
     {
-        return m_Pointers.ScriptGlobals.Deref32().Add(index * sizeof(uint32_t));
+        return m_Pointers.ScriptGlobals.Deref().Add(index * sizeof(uint32_t));
     }
 
     uint32_t GTA4::GetGlobalCount() const
@@ -107,7 +107,7 @@ namespace scrDbgApp
     {
         std::vector<std::unique_ptr<ScriptThread>> threads;
 
-        Pointer base = m_Pointers.ScriptThreads.Deref32();
+        Pointer base = m_Pointers.ScriptThreads.Deref();
         uint16_t size = m_Pointers.ScriptThreads.Add(4).Get<uint16_t>();
 
         for (uint16_t i = 0; i < size; i++)
@@ -124,7 +124,7 @@ namespace scrDbgApp
         if (hash == 0)
             return nullptr;
 
-        Pointer base = m_Pointers.ScriptThreads.Deref32();
+        Pointer base = m_Pointers.ScriptThreads.Deref();
         uint16_t size = m_Pointers.ScriptThreads.Add(4).Get<uint16_t>();
 
         for (uint16_t i = 0; i < size; i++)
@@ -193,7 +193,7 @@ namespace scrDbgApp
             uint32_t KeyHash;
         };
 
-        Pointer data = m_Pointers.TextLabels.Add(0).Deref32();
+        Pointer data = m_Pointers.TextLabels.Add(0).Deref();
         int32_t count = m_Pointers.TextLabels.Add(4).Get<int32_t>();
         if (!data || count <= 0)
             return {};
@@ -208,7 +208,7 @@ namespace scrDbgApp
         if (it != entries.end() && it->KeyHash == hash)
         {
             std::vector<wchar_t> buffer(4096);
-            m_Pointers.TextLabels.Add(8).Deref32().Add(it->KeyOffset).GetBuffer(buffer.data(), buffer.size() * sizeof(wchar_t));
+            m_Pointers.TextLabels.Add(8).Deref().Add(it->KeyOffset).GetBuffer(buffer.data(), buffer.size() * sizeof(wchar_t));
 
             int32_t len = WideCharToMultiByte(CP_UTF8, 0, buffer.data(), -1, nullptr, 0, nullptr, nullptr);
             if (len <= 0)

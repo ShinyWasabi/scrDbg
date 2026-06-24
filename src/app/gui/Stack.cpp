@@ -1,4 +1,6 @@
 #include "Stack.hpp"
+#include "EditValueDialog.hpp"
+#include <QComboBox>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLabel>
@@ -36,8 +38,8 @@ namespace scrDbgApp
 
         auto stackFrameLabel = new QLabel("Stack Frame (double-click to edit):");
         m_StackFrame = new QTableWidget(this);
-        m_StackFrame->setColumnCount(3);
-        m_StackFrame->setHorizontalHeaderLabels({"Type", "Index", "Value"});
+        m_StackFrame->setColumnCount(4);
+        m_StackFrame->setHorizontalHeaderLabels({"Type", "Index", "Value Type", "Value"});
         m_StackFrame->horizontalHeader()->setStretchLastSection(true);
         m_StackFrame->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
         m_StackFrame->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -102,39 +104,63 @@ namespace scrDbgApp
 
         m_StackFrame->setRowCount(0);
 
-        int row = 0;
+        auto addRow = [&](const char* type, int index, Pointer pointer) {
+            int row = m_StackFrame->rowCount();
+            m_StackFrame->insertRow(row);
+            m_StackFrame->setItem(row, 0, new QTableWidgetItem(type));
+            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(index)));
+
+            QComboBox* combo = new QComboBox();
+            combo->addItems({"INT", "BITFIELD", "FLOAT", "TEXT_LABEL", "STRING"});
+            combo->setFrame(false);
+            connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, row, pointer](int type) {
+                UpdateStackValue(row, pointer, type);
+            });
+            m_StackFrame->setCellWidget(row, 2, combo);
+
+            m_StackFrame->setItem(row, 3, new QTableWidgetItem(QString::number(pointer.Get<int32_t>())));
+        };
 
         for (int i = 0; i < func->ArgCount; i++)
-        {
-            int value = m_Thread->GetStack(fp + i).Get<int32_t>();
-            m_StackFrame->insertRow(row);
-            m_StackFrame->setItem(row, 0, new QTableWidgetItem("Arg"));
-            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(i)));
-            m_StackFrame->setItem(row, 2, new QTableWidgetItem(QString::number(value)));
-            row++;
-        }
+            addRow("Arg", i, m_Thread->GetStack(fp + i));
 
         int localCount = func->FrameSize - func->ArgCount - 2;
         for (int i = 0; i < localCount; i++)
-        {
-            int value = m_Thread->GetStack(fp + func->ArgCount + 2 + i).Get<int32_t>();
-            m_StackFrame->insertRow(row);
-            m_StackFrame->setItem(row, 0, new QTableWidgetItem("Local"));
-            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func->ArgCount + 2 + i)));
-            m_StackFrame->setItem(row, 2, new QTableWidgetItem(QString::number(value)));
-            row++;
-        }
+            addRow("Local", func->ArgCount + 2 + i, m_Thread->GetStack(fp + func->ArgCount + 2 + i));
 
         int tempCount = sp - (fp + func->FrameSize);
         for (int i = 0; i < tempCount; i++)
+            addRow("Temp", func->FrameSize + i, m_Thread->GetStack(fp + func->FrameSize + i));
+    }
+
+    void StackDialog::UpdateStackValue(int row, Pointer ptr, int type)
+    {
+        QString text;
+
+        switch (type)
         {
-            int value = m_Thread->GetStack(fp + func->FrameSize + i).Get<int32_t>();
-            m_StackFrame->insertRow(row);
-            m_StackFrame->setItem(row, 0, new QTableWidgetItem("Temp"));
-            m_StackFrame->setItem(row, 1, new QTableWidgetItem(QString::number(func->FrameSize + i)));
-            m_StackFrame->setItem(row, 2, new QTableWidgetItem(QString::number(value)));
-            row++;
+        case ScriptValueType::INT:
+            text = QString::number(ptr.Get<int32_t>());
+            break;
+        case ScriptValueType::BIT_FIELD:
+            text = QString("%1").arg(ptr.Get<uint32_t>(), 8, 16, QChar('0')).toUpper();
+            break;
+        case ScriptValueType::FLOAT:
+            text = QString::number(ptr.Get<float>(), 'f', 6);
+            break;
+        case ScriptValueType::TEXT_LABEL:
+            text = QString::fromStdString(ptr.GetString(64));
+            break;
+        case ScriptValueType::STRING:
+            auto str = ptr.Deref();
+            if (str)
+                text = QString::fromStdString(ptr.Deref().GetString(256));
+            else
+                text = "";
+            break;
         }
+
+        m_StackFrame->item(row, 3)->setText(text);
     }
 
     void StackDialog::OnFrameSelected(int row, int column)
@@ -149,13 +175,17 @@ namespace scrDbgApp
         Q_UNUSED(column);
 
         uint32_t fp = m_FramePointers[m_CallStack->currentRow()];
-
         int index = m_StackFrame->item(row, 1)->text().toInt();
+        Pointer ptr = m_Thread->GetStack(fp + index);
 
-        int current = m_Thread->GetStack(fp + index).Get<int32_t>();
-        int value = static_cast<int>(QInputDialog::getInt(this, "Edit Stack", "Enter value:", current));
+        QComboBox* combo = qobject_cast<QComboBox*>(m_StackFrame->cellWidget(row, 2));
+        auto type = static_cast<ScriptValueType>(combo->currentIndex());
 
-        m_Thread->GetStack(fp + index).Set<int32_t>(value);
-        m_StackFrame->item(row, 2)->setText(QString::number(value));
+        EditValueDialog dlg(ptr, type, this);
+        if (dlg.exec() == QDialog::Accepted)
+        {
+            dlg.Apply();
+            UpdateStackValue(row, ptr, static_cast<int>(type));
+        }
     }
 }

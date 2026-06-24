@@ -19,6 +19,7 @@ namespace scrDbgApp
     private:
         void PopulateCallstack();
         void PopulateFrameDetails(int frameIndex);
+        void UpdateStackValue(int row, Pointer pointer, int type);
 
         std::unique_ptr<ScriptThread> m_Thread;
         Disassembler* m_Disassembler;
