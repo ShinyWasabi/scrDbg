@@ -307,9 +307,9 @@ namespace scrDbgApp
         return count == 1;
     }
 
-    Disassembler::StringSeachPattern DisassemblerGTA5::MakeStringSearchPatterns(const std::string& value) const
+    Disassembler::BinarySearchPattern DisassemblerGTA5::MakeStringSearchPatterns(const std::string& value) const
     {
-        StringSeachPattern result;
+        BinarySearchPattern result;
 
         std::string str = value;
         std::transform(str.begin(), str.end(), str.begin(), ::tolower);
@@ -356,7 +356,7 @@ namespace scrDbgApp
         };
 
         auto buildPeephole = [&](uint32_t index) {
-            StringSeachPattern out;
+            BinarySearchPattern out;
 
             if (index > 0xFF) // only U8 constants
                 return out;

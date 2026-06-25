@@ -1,4 +1,4 @@
-#include "Results.hpp"
+#include "ResultsDialog.hpp"
 #include <QHeaderView>
 #include <QLineEdit>
 #include <QSortFilterProxyModel>

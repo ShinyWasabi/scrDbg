@@ -1,5 +1,5 @@
 #include "EditValueDialog.hpp"
-#include "BitfieldWidget.hpp"
+#include "gui/widgets/BitfieldWidget.hpp"
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QLineEdit>

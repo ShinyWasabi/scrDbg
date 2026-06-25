@@ -16,7 +16,7 @@ namespace scrDbgApp
         bool IsXrefToPc(uint32_t pc, uint32_t targetPc) const override;
         std::string MakePattern(uint32_t start, int len) const override;
         bool IsPatternUnique(uint32_t start, int len) const override;
-        StringSeachPattern MakeStringSearchPatterns(const std::string& value) const override;
+        BinarySearchPattern MakeStringSearchPatterns(const std::string& value) const override;
         const char* GetInstructionDescription(uint8_t op) const override;
 
     protected:

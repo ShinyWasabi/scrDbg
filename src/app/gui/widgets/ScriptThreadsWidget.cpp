@@ -1,26 +1,21 @@
-#include "ScriptThreads.hpp"
-#include "BinarySearch.hpp"
-#include "Breakpoints.hpp"
-#include "Disassembly.hpp"
-#include "FunctionList.hpp"
-#include "Results.hpp"
-#include "ScriptExport.hpp"
-#include "Stack.hpp"
+#include "ScriptThreadsWidget.hpp"
 #include "game/Game.hpp"
+#include "gui/dialogs/BinarySearchDialog.hpp"
+#include "gui/dialogs/BreakpointsDialog.hpp"
+#include "gui/dialogs/ExportOptionsDialog.hpp"
+#include "gui/dialogs/StackDialog.hpp"
+#include "gui/menus/DisassemblyContextMenu.hpp"
+#include "gui/models/DisassemblyModel.hpp"
+#include "gui/models/FunctionListModel.hpp"
 #include "pipe/PipeCommands.hpp"
 #include <QCheckBox>
-#include <QClipboard>
 #include <QComboBox>
-#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLabel>
-#include <QMenu>
 #include <QMessageBox>
-#include <QProgressDialog>
 #include <QPushButton>
-#include <QRadioButton>
 #include <QScrollBar>
 #include <QSplitter>
 #include <QTableView>
@@ -73,7 +68,6 @@ namespace scrDbgApp
         QVBoxLayout* leftLayout = new QVBoxLayout();
         for (auto* lbl : leftLabels)
             leftLayout->addWidget(lbl);
-
         leftLayout->addStretch();
 
         m_GlobalVersion = new QLabel("Global Version: 0");
@@ -112,7 +106,6 @@ namespace scrDbgApp
         QVBoxLayout* rightLayout = new QVBoxLayout();
         for (auto* lbl : rightLabels)
             rightLayout->addWidget(lbl);
-
         rightLayout->addStretch();
 
         QHBoxLayout* columnsLayout = new QHBoxLayout();
@@ -243,7 +236,6 @@ namespace scrDbgApp
     {
         if (m_ScriptNames->currentIndex() < 0)
             return 0;
-
         return m_ScriptNames->currentData().toUInt();
     }
 
@@ -254,7 +246,6 @@ namespace scrDbgApp
         {
             uint32_t pc = m_Disassembler->GetInstruction(i);
             uint32_t size = m_Disassembler->GetInstructionSize(pc);
-
             if (address >= pc && address < pc + size)
             {
                 idx = m_Disassembly->model()->index(i, 0);
@@ -350,8 +341,8 @@ namespace scrDbgApp
             return;
 
         auto state = thread->GetState();
-
         auto activeBp = PipeCommands::GetActiveBreakpoint();
+
         m_BreakpointsPauseGame->setEnabled(!activeBp.has_value());
 
         bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame->isChecked();
@@ -374,13 +365,12 @@ namespace scrDbgApp
         }
 
         // clang-format off
-        QString stateStr = (state == ScriptThread::RUNNING) ? "RUNNING" : (state ==  ScriptThread::IDLE) ? "IDLE" : (state ==  ScriptThread::PAUSED) ? "PAUSED" : "KILLED";
+        QString stateStr = (state == ScriptThread::RUNNING) ? "RUNNING" : (state == ScriptThread::IDLE) ? "IDLE" : (state == ScriptThread::PAUSED) ? "PAUSED" : "KILLED";
         bool showBreakpointActive = isGlobalBreakpointPause || isLocalBreakpoint;
         m_State->setText("State: " + stateStr + (showBreakpointActive ? " (breakpoint active)" : ""));
 
         auto priority = thread->GetPriority();
-
-        QString priorityStr = (priority ==  ScriptThread::HIGHEST) ? "HIGHEST" : (priority ==  ScriptThread::NORMAL) ? "NORMAL" : (priority == ScriptThread::LOWEST) ? "LOWEST" : "MANUAL_UPDATE";
+        QString priorityStr = (priority == ScriptThread::HIGHEST) ? "HIGHEST" : (priority == ScriptThread::NORMAL) ? "NORMAL" : (priority == ScriptThread::LOWEST) ? "LOWEST" : "MANUAL_UPDATE";
         m_Priority->setText("Priority: " + priorityStr);
         // clang-format on
 
@@ -430,12 +420,8 @@ namespace scrDbgApp
                 aliveScripts.push_back(name);
         }
 
-        bool changed = false;
-        if (m_ScriptNames->count() != aliveScripts.size())
-        {
-            changed = true;
-        }
-        else
+        bool changed = (m_ScriptNames->count() != static_cast<int>(aliveScripts.size()));
+        if (!changed)
         {
             for (int i = 0; i < m_ScriptNames->count(); ++i)
             {
@@ -450,14 +436,12 @@ namespace scrDbgApp
         if (changed)
         {
             m_ScriptNames->blockSignals(true);
-
             m_ScriptNames->clear();
             for (auto& name : aliveScripts)
             {
                 uint32_t hash = JOAAT(name);
                 m_ScriptNames->addItem(QString::fromStdString(name), QVariant::fromValue(hash));
             }
-
             m_ScriptNames->blockSignals(false);
 
             int newIndex = m_ScriptNames->findText(currentScript);
@@ -479,13 +463,11 @@ namespace scrDbgApp
     void ScriptThreadsWidget::OnTogglePauseScript()
     {
         auto hash = GetCurrentScriptHash();
-
-        auto thread = g_Game->GetThread(GetCurrentScriptHash());
+        auto thread = g_Game->GetThread(hash);
         if (!thread)
             return;
 
         auto activeBp = PipeCommands::GetActiveBreakpoint();
-
         bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame->isChecked();
         bool isLocalBreakpoint = activeBp.has_value() && activeBp->first == hash;
 
@@ -508,104 +490,8 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnExportOptionsDialog()
     {
-        QDialog dlg(this);
-        dlg.setWindowTitle("Export Options");
-
-        QPushButton* exportDisassembly = new QPushButton("Export Disassembly");
-        exportDisassembly->setToolTip("Export the disassembly of this script program.");
-
-        QPushButton* exportStatics = new QPushButton("Export Statics");
-        exportStatics->setToolTip("Export the static variables of this script program.");
-
-        QPushButton* exportGlobals = new QPushButton("Export Globals");
-        exportGlobals->setToolTip("Export the global variables of this script program.");
-
-        QPushButton* exportNatives = new QPushButton("Export Natives");
-        exportNatives->setToolTip("Export the native commands of this script program.");
-
-        QPushButton* exportStrings = new QPushButton("Export Strings");
-        exportStrings->setToolTip("Export the string literals of this script program.");
-
-        int maxButtonWidth = std::max({exportDisassembly->sizeHint().width(),
-            exportStatics->sizeHint().width(),
-            exportGlobals->sizeHint().width(),
-            exportNatives->sizeHint().width(),
-            exportStrings->sizeHint().width()});
-
-        exportDisassembly->setMinimumWidth(maxButtonWidth);
-        exportStatics->setMinimumWidth(maxButtonWidth);
-        exportGlobals->setMinimumWidth(maxButtonWidth);
-        exportNatives->setMinimumWidth(maxButtonWidth);
-        exportStrings->setMinimumWidth(maxButtonWidth);
-
-        QCheckBox* exportAllGlobals = new QCheckBox("Export all");
-        exportAllGlobals->setToolTip("Export all the global blocks.");
-
-        QCheckBox* exportAllNatives = new QCheckBox("Export all");
-        exportAllNatives->setToolTip("Export all the native commands in the game.");
-
-        QCheckBox* onlyTextLabels = new QCheckBox("Only text labels");
-        onlyTextLabels->setToolTip("Export only text labels with their translations.");
-
-        QGridLayout* grid = new QGridLayout(&dlg);
-
-        int row = 0;
-        grid->addWidget(exportDisassembly, row++, 0);
-        grid->addWidget(exportStatics, row++, 0);
-        grid->addWidget(exportGlobals, row, 0);
-        grid->addWidget(exportAllGlobals, row++, 1);
-        grid->addWidget(exportNatives, row, 0);
-        grid->addWidget(exportAllNatives, row++, 1);
-        grid->addWidget(exportStrings, row, 0);
-        grid->addWidget(onlyTextLabels, row++, 1);
-
-        connect(exportDisassembly, &QPushButton::clicked, this, &ScriptThreadsWidget::OnExportDisassembly);
-        connect(exportStatics, &QPushButton::clicked, this, &ScriptThreadsWidget::OnExportStatics);
-
-        connect(exportGlobals, &QPushButton::clicked, this, [this, exportAllGlobals]() {
-            OnExportGlobals(exportAllGlobals->isChecked());
-        });
-
-        connect(exportNatives, &QPushButton::clicked, this, [this, exportAllNatives]() {
-            OnExportNatives(exportAllNatives->isChecked());
-        });
-
-        connect(exportStrings, &QPushButton::clicked, this, [this, onlyTextLabels]() {
-            OnExportStrings(onlyTextLabels->isChecked());
-        });
-
-        dlg.setLayout(grid);
+        ExportOptionsDialog dlg(GetCurrentScriptHash(), m_Disassembly, this);
         dlg.exec();
-    }
-
-    void ScriptThreadsWidget::OnExportDisassembly()
-    {
-        if (auto view = m_Disassembly)
-            ScriptExport::ExportDisassembly(view);
-    }
-
-    void ScriptThreadsWidget::OnExportStatics()
-    {
-        if (auto hash = GetCurrentScriptHash())
-            ScriptExport::ExportStatics(hash);
-    }
-
-    void ScriptThreadsWidget::OnExportGlobals(bool exportAll)
-    {
-        if (auto hash = GetCurrentScriptHash())
-            ScriptExport::ExportGlobals(hash, exportAll);
-    }
-
-    void ScriptThreadsWidget::OnExportNatives(bool exportAll)
-    {
-        if (auto hash = GetCurrentScriptHash())
-            ScriptExport::ExportNatives(hash, exportAll);
-    }
-
-    void ScriptThreadsWidget::OnExportStrings(bool onlyTextLabels)
-    {
-        if (auto hash = GetCurrentScriptHash())
-            ScriptExport::ExportStrings(hash, onlyTextLabels);
     }
 
     void ScriptThreadsWidget::OnJumpToAddress()
@@ -635,113 +521,10 @@ namespace scrDbgApp
         if (!GetCurrentScriptHash())
             return;
 
-        QDialog dlg(this);
-        dlg.setWindowTitle("Binary Search");
-
-        QVBoxLayout* layout = new QVBoxLayout(&dlg);
-        QLineEdit* edit = new QLineEdit();
-        layout->addWidget(edit);
-
-        QRadioButton* patternBtn = new QRadioButton("Pattern");
-        QRadioButton* hexadecimalBtn = new QRadioButton("Hexadecimal");
-        QRadioButton* decimalBtn = new QRadioButton("Decimal");
-        QRadioButton* floatBtn = new QRadioButton("Float");
-        QRadioButton* stringBtn = new QRadioButton("String");
-
-        patternBtn->setChecked(true);
-        patternBtn->setToolTip("Search for a IDA-style pattern (e.g., 61 ? ? ? 41 16 56).");
-        hexadecimalBtn->setToolTip("Search for a hexadecimal value (e.g., 0x99B507EA).");
-        decimalBtn->setToolTip("Search for a decimal value (e.g., 2578778090).");
-        floatBtn->setToolTip("Search for a float value, (e.g., 3.14).");
-        stringBtn->setToolTip("Search for a string inside the string table.");
-
-        layout->addWidget(patternBtn);
-        layout->addWidget(hexadecimalBtn);
-        layout->addWidget(decimalBtn);
-        layout->addWidget(floatBtn);
-        layout->addWidget(stringBtn);
-
-        QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-        layout->addWidget(buttons);
-        connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-        connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-        if (dlg.exec() != QDialog::Accepted || edit->text().isEmpty())
-            return;
-
-        auto type = BinarySearch::SearchType::PATTERN;
-        if (hexadecimalBtn->isChecked())
-            type = BinarySearch::SearchType::HEXADECIMAL;
-        else if (decimalBtn->isChecked())
-            type = BinarySearch::SearchType::DECIMAL;
-        else if (floatBtn->isChecked())
-            type = BinarySearch::SearchType::FLOAT;
-        else if (stringBtn->isChecked())
-            type = BinarySearch::SearchType::STRING;
-
-        const bool isStringSearch = type == BinarySearch::SearchType::STRING;
-
-        Disassembler::StringSeachPattern patterns;
-        if (isStringSearch)
-        {
-            patterns = BinarySearch::ParseBinarySearchString(edit->text(), m_Disassembler.get());
-            if (patterns.empty())
-            {
-                QMessageBox::warning(this, "Binary Search", "No string matches found.");
-                return;
-            }
-        }
-        else
-        {
-            auto pattern = BinarySearch::ParseBinarySearch(edit->text(), type);
-            if (pattern.empty())
-            {
-                QMessageBox::warning(this, "Binary Search", "Could not parse the input.");
-                return;
-            }
-            patterns.push_back(std::move(pattern));
-        }
-
-        std::vector<uint32_t> allMatches;
-        for (auto& pat : patterns)
-        {
-            auto addrs = m_Disassembler->ScanPattern(pat);
-            allMatches.insert(allMatches.end(), addrs.begin(), addrs.end());
-        }
-
-        if (allMatches.empty())
-        {
-            QMessageBox::warning(this, "Binary Search", "No matches found.");
-            return;
-        }
-
-        std::vector<ResultsDialog::Entry> results;
-        for (int i = 0; i < m_Disassembler->GetInstructionCount(); i++)
-        {
-            uint32_t pc = m_Disassembler->GetInstruction(i);
-            uint32_t size = m_Disassembler->GetInstructionSize(pc);
-
-            for (uint32_t addr : allMatches)
-            {
-                if (addr < pc || addr >= pc + size)
-                    continue;
-
-                bool isGta5 = g_Game->GetType() == GameType::GTA5_GEN8 || g_Game->GetType() == GameType::GTA5_GEN9;
-                // For string searches, show the STRING opcode that follows the PUSH_CONST
-                int decodeIndex = (isGta5 && isStringSearch && i + 1 < m_Disassembler->GetInstructionCount()) ? i + 1 : i;
-
-                auto func = m_Disassembler->GetFunctionForPc(pc);
-                auto decoded = m_Disassembler->DecodeInstruction(decodeIndex);
-
-                results.push_back({m_Disassembler->GetInstruction(decodeIndex), func ? func->Name : std::string{}, decoded.Instruction});
-            }
-        }
-
-        ResultsDialog resDlg("Binary Search", results, this);
-        connect(&resDlg, &ResultsDialog::EntryDoubleClicked, this, [this](uint32_t addr) {
+        BinarySearchDialog dlg(this);
+        dlg.Execute(m_Disassembler.get(), [this](uint32_t addr) {
             ScrollToAddress(addr);
         });
-        resDlg.exec();
     }
 
     void ScriptThreadsWidget::OnViewStack()
@@ -796,198 +579,13 @@ namespace scrDbgApp
         if (!index.isValid())
             return;
 
-        QMenu menu(this);
-        QAction* copyAction = menu.addAction("Copy");
-        QAction* nopAction = menu.addAction("NOP Instruction");
-        QAction* patchAction = menu.addAction("Custom Patch");
-        QAction* patternAction = menu.addAction("Generate Pattern");
-        QAction* xrefAction = menu.addAction("View Xrefs");
-
-        connect(copyAction, &QAction::triggered, [this, index]() {
-            OnCopyInstruction(index);
-        });
-
-        connect(nopAction, &QAction::triggered, [this, index]() {
-            OnNopInstruction(index);
-        });
-
-        connect(patchAction, &QAction::triggered, [this, index]() {
-            OnPatchInstruction(index);
-        });
-
-        connect(patternAction, &QAction::triggered, [this, index]() {
-            OnGeneratePattern(index);
-        });
-
-        connect(xrefAction, &QAction::triggered, [this, index]() {
-            OnViewXrefsDialog(index);
-        });
-
-        auto& code = m_Disassembler->GetCode();
-        uint32_t pc = m_Disassembler->GetInstruction(index.row());
-
-        if (m_Disassembler->IsJumpOrCall(code[pc]))
-        {
-            QAction* jumpAction = menu.addAction("Jump to Address");
-            connect(jumpAction, &QAction::triggered, [this, index]() {
-                OnJumpToInstructionAddress(index);
-            });
-        }
-
-        bool exists = PipeCommands::BreakpointExists(GetCurrentScriptHash(), pc);
-        QAction* breakpointAction = exists ? menu.addAction("Remove Breakpoint") : menu.addAction("Set Breakpoint");
-        connect(breakpointAction, &QAction::triggered, [this, index, exists]() {
-            OnSetBreakpoint(index, !exists);
-        });
-
+        DisassemblyContextMenu menu(index, m_Disassembler.get(), GetCurrentScriptHash(), this);
+        connect(&menu, &DisassemblyContextMenu::JumpToAddressRequested, this, &ScriptThreadsWidget::OnJumpToAddressFromMenu);
         menu.exec(m_Disassembly->viewport()->mapToGlobal(pos));
     }
 
-    void ScriptThreadsWidget::OnCopyInstruction(const QModelIndex& index)
+    void ScriptThreadsWidget::OnJumpToAddressFromMenu(uint32_t address)
     {
-        auto model = index.model();
-        int row = index.row();
-
-        QStringList rowData;
-        for (int col = 0; col < model->columnCount(); ++col)
-            rowData << model->data(model->index(row, col), Qt::DisplayRole).toString();
-
-        QGuiApplication::clipboard()->setText(rowData.join('\t'));
-    }
-
-    void ScriptThreadsWidget::OnNopInstruction(const QModelIndex& index)
-    {
-        uint32_t pc = m_Disassembler->GetInstruction(index.row());
-        uint32_t size = m_Disassembler->GetInstructionSize(pc);
-
-        std::vector<std::uint8_t> patch(size, 0);
-        m_Disassembler->GetProgram()->SetCode(pc, patch);
-
-        m_Disassembler->Refresh();
-        static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
-    }
-
-    void ScriptThreadsWidget::OnPatchInstruction(const QModelIndex& index)
-    {
-        uint32_t pc = m_Disassembler->GetInstruction(index.row());
-        uint32_t instrSize = m_Disassembler->GetInstructionSize(pc);
-
-        bool ok = false;
-        QString input = QInputDialog::getText(this, "Custom Patch", QString("Enter up to %1 bytes in hex (space separated):").arg(instrSize), QLineEdit::Normal, "", &ok);
-        if (!ok || input.isEmpty())
-            return;
-
-        QStringList parts = input.split(' ', Qt::SkipEmptyParts);
-        if (parts.size() > instrSize)
-        {
-            QMessageBox::warning(this, "Too Long", "Too many bytes entered!");
-            return;
-        }
-
-        QByteArray newBytes;
-        for (const QString& part : parts)
-        {
-            bool okByte;
-            uint8_t byte = static_cast<uint8_t>(part.toUInt(&okByte, 16));
-            if (!okByte)
-            {
-                QMessageBox::warning(this, "Invalid Byte", "Invalid hex byte entered: " + part);
-                return;
-            }
-            newBytes.append(byte);
-        }
-
-        bool fillWithNops = false;
-        if (newBytes.size() < instrSize)
-            fillWithNops = QMessageBox::question(this, "Fill Remaining?", QString("You entered %1 of %2 bytes.\nFill remaining %3 bytes with NOPs?").arg(newBytes.size()).arg(instrSize).arg(instrSize - newBytes.size()), QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
-
-        std::vector<uint8_t> patch;
-        for (int i = 0; i < instrSize; i++)
-        {
-            if (i < newBytes.size())
-                patch.push_back(static_cast<uint8_t>(newBytes[i]));
-            else if (fillWithNops)
-                patch.push_back(0);
-            else
-                break; // Leave as is
-        }
-
-        m_Disassembler->GetProgram()->SetCode(pc, patch);
-
-        m_Disassembler->Refresh();
-        static_cast<DisassemblyModel*>(m_Disassembly->model())->layoutChanged();
-    }
-
-    void ScriptThreadsWidget::OnGeneratePattern(const QModelIndex& index)
-    {
-        if (!index.isValid())
-            return;
-
-        auto& code = m_Disassembler->GetCode();
-        uint32_t pc = m_Disassembler->GetInstruction(index.row());
-
-        std::string uniquePattern;
-
-        int patternLength = 4;
-        for (; patternLength <= 32; ++patternLength)
-        {
-            if (m_Disassembler->IsPatternUnique(pc, patternLength))
-            {
-                uniquePattern = m_Disassembler->MakePattern(pc, patternLength);
-                break;
-            }
-        }
-
-        if (uniquePattern.empty())
-        {
-            QMessageBox::warning(this, "Failed", "Failed to generate pattern.");
-            return;
-        }
-
-        QGuiApplication::clipboard()->setText(QString::fromStdString(uniquePattern));
-        QMessageBox::information(this, "Generate Pattern", QString("Pattern copied to clipboard:\n%2").arg(QString::fromStdString(uniquePattern)));
-    }
-
-    void ScriptThreadsWidget::OnViewXrefsDialog(const QModelIndex& index)
-    {
-        uint32_t targetPc = m_Disassembler->GetInstruction(index.row());
-
-        std::vector<ResultsDialog::Entry> results;
-
-        for (int i = 0; i < m_Disassembler->GetInstructionCount(); i++)
-        {
-            uint32_t pc = m_Disassembler->GetInstruction(i);
-            if (!m_Disassembler->IsXrefToPc(pc, targetPc))
-                continue;
-
-            auto func = m_Disassembler->GetFunctionForPc(pc);
-            auto decoded = m_Disassembler->DecodeInstruction(i);
-            results.push_back({pc, func ? func->Name : std::string{}, decoded.Instruction});
-        }
-
-        if (results.empty())
-        {
-            QMessageBox::warning(this, "No Xrefs", "No xrefs found for this address.");
-            return;
-        }
-
-        ResultsDialog dlg("Xrefs", results, this);
-        connect(&dlg, &ResultsDialog::EntryDoubleClicked, this, [this, &dlg](uint32_t addr) {
-            ScrollToAddress(addr);
-        });
-        dlg.exec();
-    }
-
-    void ScriptThreadsWidget::OnJumpToInstructionAddress(const QModelIndex& index)
-    {
-        uint32_t pc = m_Disassembler->GetInstruction(index.row());
-        ScrollToAddress(m_Disassembler->GetJumpTarget(pc));
-    }
-
-    void ScriptThreadsWidget::OnSetBreakpoint(const QModelIndex& index, bool set)
-    {
-        uint32_t script = GetCurrentScriptHash();
-        uint32_t pc = m_Disassembler->GetInstruction(index.row());
-        PipeCommands::SetBreakpoint(script, pc, set);
+        ScrollToAddress(address);
     }
 }

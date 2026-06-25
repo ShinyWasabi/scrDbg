@@ -1,4 +1,4 @@
-#include "Breakpoints.hpp"
+#include "BreakpointsDialog.hpp"
 #include "pipe/PipeCommands.hpp"
 #include <QHeaderView>
 #include <QMessageBox>

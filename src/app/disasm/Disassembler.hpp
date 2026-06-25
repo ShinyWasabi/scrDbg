@@ -5,7 +5,7 @@ namespace scrDbgApp
     class Disassembler
     {
     public:
-        using StringSeachPattern = std::vector<std::vector<std::optional<uint8_t>>>;
+        using BinarySearchPattern = std::vector<std::vector<std::optional<uint8_t>>>;
 
         struct FunctionInfo
         {
@@ -47,7 +47,7 @@ namespace scrDbgApp
         virtual bool IsXrefToPc(uint32_t pc, uint32_t targetPc) const = 0;
         virtual std::string MakePattern(uint32_t start, int len) const = 0;
         virtual bool IsPatternUnique(uint32_t start, int len) const = 0;
-        virtual StringSeachPattern MakeStringSearchPatterns(const std::string& value) const = 0;
+        virtual BinarySearchPattern MakeStringSearchPatterns(const std::string& value) const = 0;
         virtual const char* GetInstructionDescription(uint8_t op) const = 0;
 
     protected:

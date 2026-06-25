@@ -1,4 +1,4 @@
-#include "FunctionList.hpp"
+#include "FunctionListModel.hpp"
 
 namespace scrDbgApp
 {

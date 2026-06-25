@@ -1,4 +1,4 @@
-#include "Stack.hpp"
+#include "StackDialog.hpp"
 #include "EditValueDialog.hpp"
 #include <QComboBox>
 #include <QHeaderView>
@@ -133,28 +133,28 @@ namespace scrDbgApp
             addRow("Temp", func->FrameSize + i, m_Thread->GetStack(fp + func->FrameSize + i));
     }
 
-    void StackDialog::UpdateStackValue(int row, Pointer ptr, int type)
+    void StackDialog::UpdateStackValue(int row, Pointer pointer, int type)
     {
         QString text;
 
         switch (type)
         {
         case ScriptValueType::INT:
-            text = QString::number(ptr.Get<int32_t>());
+            text = QString::number(pointer.Get<int32_t>());
             break;
         case ScriptValueType::BIT_FIELD:
-            text = QString("%1").arg(ptr.Get<uint32_t>(), 8, 16, QChar('0')).toUpper();
+            text = QString("%1").arg(pointer.Get<uint32_t>(), 8, 16, QChar('0')).toUpper();
             break;
         case ScriptValueType::FLOAT:
-            text = QString::number(ptr.Get<float>(), 'f', 6);
+            text = QString::number(pointer.Get<float>(), 'f', 6);
             break;
         case ScriptValueType::TEXT_LABEL:
-            text = QString::fromStdString(ptr.GetString(64));
+            text = QString::fromStdString(pointer.GetString(64));
             break;
         case ScriptValueType::STRING:
-            auto str = ptr.Deref();
+            auto str = pointer.Deref();
             if (str)
-                text = QString::fromStdString(ptr.Deref().GetString(256));
+                text = QString::fromStdString(pointer.Deref().GetString(256));
             else
                 text = "";
             break;

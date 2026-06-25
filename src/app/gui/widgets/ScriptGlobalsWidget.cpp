@@ -1,10 +1,12 @@
-#include "ScriptStatics.hpp"
+#include "ScriptGlobalsWidget.hpp"
 #include "BitfieldWidget.hpp"
-#include "EditValueDialog.hpp"
+#include "gui/dialogs/EditValueDialog.hpp"
 #include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
-#include <QHBoxLayout>
+#include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -16,20 +18,17 @@
 
 namespace scrDbgApp
 {
-    ScriptStaticsWidget::ScriptStaticsWidget(QWidget* parent)
+    ScriptGlobalsWidget::ScriptGlobalsWidget(QWidget* parent)
         : QWidget(parent)
     {
         QFormLayout* formLayout = new QFormLayout();
         formLayout->setLabelAlignment(Qt::AlignRight);
 
-        m_ScriptName = new QLineEdit(this);
-        formLayout->addRow("Script Name", m_ScriptName);
-
-        m_StaticIndex = new QSpinBox(this);
-        m_StaticIndex->setRange(0, INT_MAX);
-        m_StaticIndex->setValue(0);
-        m_StaticIndex->setButtonSymbols(QAbstractSpinBox::NoButtons);
-        formLayout->addRow("Base Address", m_StaticIndex);
+        m_GlobalIndex = new QSpinBox(this);
+        m_GlobalIndex->setRange(0, INT_MAX);
+        m_GlobalIndex->setValue(0);
+        m_GlobalIndex->setButtonSymbols(QAbstractSpinBox::NoButtons);
+        formLayout->addRow("Base Address", m_GlobalIndex);
 
         for (int i = 0; i < 5; i++)
         {
@@ -38,14 +37,14 @@ namespace scrDbgApp
             offsetInput->setValue(0);
             offsetInput->setButtonSymbols(QAbstractSpinBox::NoButtons);
             offsetInput->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-            m_StaticOffsets.push_back(offsetInput);
+            m_GlobalOffsets.push_back(offsetInput);
 
             QSpinBox* sizeInput = new QSpinBox(this);
             sizeInput->setRange(0, INT_MAX);
             sizeInput->setValue(0);
             sizeInput->setButtonSymbols(QAbstractSpinBox::NoButtons);
             sizeInput->setFixedWidth(60);
-            m_StaticSizes.push_back(sizeInput);
+            m_GlobalSizes.push_back(sizeInput);
 
             QWidget* row = new QWidget(this);
             QHBoxLayout* hl = new QHBoxLayout(row);
@@ -57,7 +56,7 @@ namespace scrDbgApp
         }
 
         m_ValueType = new QComboBox(this);
-        m_ValueType->addItems({"INT", "BITFIELD", "FLOAT", "TEXT_LABEL", "STRING"});
+        m_ValueType->addItems({"INT", "BITFIELD", "FLOAT", "TEXT_LABEL"}); // Globals cannot be declared as STRING
         connect(m_ValueType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
             m_CurrentValueStack->setCurrentIndex(index);
             if (index == 1)
@@ -87,25 +86,20 @@ namespace scrDbgApp
         m_CurrentValueTextLabel->setReadOnly(true);
         m_CurrentValueTextLabel->setMaxLength(64);
 
-        m_CurrentValueString = new QLineEdit(this);
-        m_CurrentValueString->setReadOnly(true);
-        m_CurrentValueString->setMaxLength(256);
-
         m_CurrentValueStack->addWidget(m_CurrentValueInt);
         m_CurrentValueStack->addWidget(m_CurrentValueBitfield);
         m_CurrentValueStack->addWidget(m_CurrentValueFloat);
         m_CurrentValueStack->addWidget(m_CurrentValueTextLabel);
-        m_CurrentValueStack->addWidget(m_CurrentValueString);
         m_CurrentValueStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         m_CurrentValueStack->setFixedHeight(m_ValueType->sizeHint().height());
 
         formLayout->addRow("Value", m_CurrentValueStack);
 
         m_EditValueButton = new QPushButton("Edit Value", this);
-        connect(m_EditValueButton, &QPushButton::clicked, this, &ScriptStaticsWidget::OnEditValue);
+        connect(m_EditValueButton, &QPushButton::clicked, this, &ScriptGlobalsWidget::OnEditValue);
 
         m_ResetButton = new QPushButton("Reset", this);
-        connect(m_ResetButton, &QPushButton::clicked, this, &ScriptStaticsWidget::OnReset);
+        connect(m_ResetButton, &QPushButton::clicked, this, &ScriptGlobalsWidget::OnReset);
 
         QHBoxLayout* buttonRow = new QHBoxLayout();
         buttonRow->addWidget(m_EditValueButton);
@@ -113,7 +107,7 @@ namespace scrDbgApp
 
         m_UpdateTimer = new QTimer(this);
         m_UpdateTimer->setInterval(100);
-        connect(m_UpdateTimer, &QTimer::timeout, this, &ScriptStaticsWidget::OnUpdateCurrentStaticValue);
+        connect(m_UpdateTimer, &QTimer::timeout, this, &ScriptGlobalsWidget::OnUpdateCurrentGlobalValue);
         m_UpdateTimer->start();
 
         QVBoxLayout* layout = new QVBoxLayout(this);
@@ -123,31 +117,37 @@ namespace scrDbgApp
         setLayout(layout);
     }
 
-    bool ScriptStaticsWidget::IsStaticAddressValid(uint32_t script, int address)
+    bool ScriptGlobalsWidget::IsGlobalAddressValid(int address)
     {
         if (address < 0)
             return false;
 
-        auto program = g_Game->GetProgram(script);
-        if (!program)
-            return false; // or not?
+        if (g_Game->Is64Bit())
+        {
+            int blockIndex = (address >> 0x12) & 0x3F;
+            if (blockIndex >= 64)
+                return false;
 
-        int count = program->GetStaticCount();
-        if (address >= count)
-            return false;
+            int blockCount = g_Game->GetGlobalBlockCount(blockIndex);
+            int offset = address & 0x3FFFF;
+            if (offset >= blockCount)
+                return false;
 
-        return true;
+            return true;
+        }
+
+        return address < g_Game->GetGlobalCount();
     }
 
-    int ScriptStaticsWidget::ComputeStaticAddress()
+    int ScriptGlobalsWidget::ComputeGlobalAddress()
     {
-        int base = m_StaticIndex->value();
+        int base = m_GlobalIndex->value();
 
         for (int i = 0; i < 5; i++)
         {
-            int offset = m_StaticOffsets[i]->value();
+            int offset = m_GlobalOffsets[i]->value();
 
-            int size = m_StaticSizes[i]->value();
+            int size = m_GlobalSizes[i]->value();
             if (size > 0)
                 base += (1 + (offset * size));
             else
@@ -157,94 +157,61 @@ namespace scrDbgApp
         return base;
     }
 
-    void ScriptStaticsWidget::OnUpdateCurrentStaticValue()
+    void ScriptGlobalsWidget::OnUpdateCurrentGlobalValue()
     {
-        std::string name = m_ScriptName->text().toStdString();
-        uint32_t hash = JOAAT(name);
-        auto thread = g_Game->GetThread(hash);
-
-        if (!thread)
+        int address = ComputeGlobalAddress();
+        if (!IsGlobalAddressValid(address))
         {
             m_CurrentValueInt->setValue(0);
             m_CurrentValueBitfield->SetValue(0);
             m_CurrentValueFloat->setValue(0.0);
             m_CurrentValueTextLabel->setText("");
-            m_CurrentValueString->setText("");
             return;
         }
 
-        int address = ComputeStaticAddress();
-        if (!IsStaticAddressValid(hash, address))
-        {
-            m_CurrentValueInt->setValue(0);
-            m_CurrentValueBitfield->SetValue(0);
-            m_CurrentValueFloat->setValue(0.0);
-            m_CurrentValueTextLabel->setText("");
-            m_CurrentValueString->setText("");
-            return;
-        }
-
-        auto _static = thread->GetStack(address);
+        auto global = g_Game->GetGlobal(address);
 
         switch (m_CurrentValueStack->currentIndex())
         {
         case ScriptValueType::INT:
-            m_CurrentValueInt->setValue(_static.Get<int32_t>());
+            m_CurrentValueInt->setValue(global.Get<int32_t>());
             break;
         case ScriptValueType::BIT_FIELD:
-            m_CurrentValueBitfield->SetValue(_static.Get<int32_t>());
+            m_CurrentValueBitfield->SetValue(global.Get<int32_t>());
             break;
         case ScriptValueType::FLOAT:
-            m_CurrentValueFloat->setValue(_static.Get<float>());
+            m_CurrentValueFloat->setValue(global.Get<float>());
             break;
         case ScriptValueType::TEXT_LABEL:
-            m_CurrentValueTextLabel->setText(QString::fromStdString(_static.GetString(64)));
-            break;
-        case ScriptValueType::STRING:
-            auto ptr = _static.Deref();
-            if (ptr)
-                m_CurrentValueString->setText(QString::fromStdString(_static.Deref().GetString(255)));
-            else
-                m_CurrentValueString->setText("");
+            m_CurrentValueTextLabel->setText(QString::fromStdString(global.GetString(64)));
             break;
         }
     }
 
-    void ScriptStaticsWidget::OnEditValue()
+    void ScriptGlobalsWidget::OnEditValue()
     {
-        std::string name = m_ScriptName->text().toStdString();
-        auto hash = JOAAT(name);
-        auto thread = g_Game->GetThread(hash);
-
-        if (!thread)
+        int address = ComputeGlobalAddress();
+        if (!IsGlobalAddressValid(address))
         {
-            QMessageBox::warning(this, "Invalid Script", "Script thread not found!");
+            QMessageBox::warning(this, "Invalid Address", "Invalid global address!");
             return;
         }
 
-        int address = ComputeStaticAddress();
-        if (!IsStaticAddressValid(hash, address))
-        {
-            QMessageBox::warning(this, "Invalid Address", "Invalid static address!");
-            return;
-        }
-
-        auto _static = thread->GetStack(address);
+        auto global = g_Game->GetGlobal(address);
         auto type = static_cast<ScriptValueType>(m_ValueType->currentIndex());
 
-        EditValueDialog dlg(_static, type, this);
+        EditValueDialog dlg(global, type, this);
         if (dlg.exec() == QDialog::Accepted)
             dlg.Apply();
     }
 
-    void ScriptStaticsWidget::OnReset()
+    void ScriptGlobalsWidget::OnReset()
     {
-        m_ScriptName->clear();
-        m_StaticIndex->setValue(0);
+        m_GlobalIndex->setValue(0);
         for (int i = 0; i < 5; i++)
         {
-            m_StaticOffsets[i]->setValue(0);
-            m_StaticSizes[i]->setValue(0);
+            m_GlobalOffsets[i]->setValue(0);
+            m_GlobalSizes[i]->setValue(0);
         }
         m_ValueType->setCurrentIndex(0);
     }

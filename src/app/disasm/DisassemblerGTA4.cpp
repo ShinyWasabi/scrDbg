@@ -191,9 +191,9 @@ namespace scrDbgApp
         return count == 1;
     }
 
-    Disassembler::StringSeachPattern DisassemblerGTA4::MakeStringSearchPatterns(const std::string& value) const
+    Disassembler::BinarySearchPattern DisassemblerGTA4::MakeStringSearchPatterns(const std::string& value) const
     {
-        StringSeachPattern result;
+        BinarySearchPattern result;
 
         uint32_t pc = 0;
         while (pc < m_Code.size())

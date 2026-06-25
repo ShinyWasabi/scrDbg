@@ -1,4 +1,4 @@
-#include "Disassembly.hpp"
+#include "DisassemblyModel.hpp"
 #include "disasm/Disassembler.hpp"
 #include "pipe/PipeCommands.hpp"
 

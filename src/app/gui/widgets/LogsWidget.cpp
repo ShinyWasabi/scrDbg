@@ -1,4 +1,4 @@
-#include "Logs.hpp"
+#include "LogsWidget.hpp"
 #include "pipe/PipeCommands.hpp"
 #include <QButtonGroup>
 #include <QCheckBox>

@@ -1,15 +1,91 @@
-#include "ScriptExport.hpp"
+#include "ExportOptionsDialog.hpp"
+#include <QCheckBox>
 #include <QCoreApplication>
 #include <QFileDialog>
+#include <QGridLayout>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QPushButton>
 #include <QTableView>
+#include <algorithm>
 
-// TO-DO: a lot of code repetition here, consider refactoring
-
-namespace scrDbgApp::ScriptExport
+namespace scrDbgApp
 {
-    void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb)
+    ExportOptionsDialog::ExportOptionsDialog(uint32_t scriptHash, QTableView* disassembly, QWidget* parent)
+        : QDialog(parent)
+    {
+        setWindowTitle("Export Options");
+
+        m_ExportDisassembly = new QPushButton("Export Disassembly");
+        m_ExportDisassembly->setToolTip("Export the disassembly of this script program.");
+
+        m_ExportStatics = new QPushButton("Export Statics");
+        m_ExportStatics->setToolTip("Export the static variables of this script program.");
+
+        m_ExportGlobals = new QPushButton("Export Globals");
+        m_ExportGlobals->setToolTip("Export the global variables of this script program.");
+
+        m_ExportNatives = new QPushButton("Export Natives");
+        m_ExportNatives->setToolTip("Export the native commands of this script program.");
+
+        m_ExportStrings = new QPushButton("Export Strings");
+        m_ExportStrings->setToolTip("Export the string literals of this script program.");
+
+        int maxButtonWidth = std::max({m_ExportDisassembly->sizeHint().width(),
+            m_ExportStatics->sizeHint().width(),
+            m_ExportGlobals->sizeHint().width(),
+            m_ExportNatives->sizeHint().width(),
+            m_ExportStrings->sizeHint().width()});
+
+        m_ExportDisassembly->setMinimumWidth(maxButtonWidth);
+        m_ExportStatics->setMinimumWidth(maxButtonWidth);
+        m_ExportGlobals->setMinimumWidth(maxButtonWidth);
+        m_ExportNatives->setMinimumWidth(maxButtonWidth);
+        m_ExportStrings->setMinimumWidth(maxButtonWidth);
+
+        m_ExportAllGlobals = new QCheckBox("Export all");
+        m_ExportAllGlobals->setToolTip("Export all the global blocks.");
+
+        m_ExportAllNatives = new QCheckBox("Export all");
+        m_ExportAllNatives->setToolTip("Export all the native commands in the game.");
+
+        m_OnlyTextLabels = new QCheckBox("Only text labels");
+        m_OnlyTextLabels->setToolTip("Export only text labels with their translations.");
+
+        QGridLayout* grid = new QGridLayout(this);
+
+        int row = 0;
+        grid->addWidget(m_ExportDisassembly, row++, 0);
+        grid->addWidget(m_ExportStatics, row++, 0);
+        grid->addWidget(m_ExportGlobals, row, 0);
+        grid->addWidget(m_ExportAllGlobals, row++, 1);
+        grid->addWidget(m_ExportNatives, row, 0);
+        grid->addWidget(m_ExportAllNatives, row++, 1);
+        grid->addWidget(m_ExportStrings, row, 0);
+        grid->addWidget(m_OnlyTextLabels, row++, 1);
+
+        connect(m_ExportDisassembly, &QPushButton::clicked, this, [disassembly]() {
+            ExportDisassembly(disassembly);
+        });
+
+        connect(m_ExportStatics, &QPushButton::clicked, this, [scriptHash]() {
+            ExportStatics(scriptHash);
+        });
+
+        connect(m_ExportGlobals, &QPushButton::clicked, this, [this, scriptHash]() {
+            ExportGlobals(scriptHash, m_ExportAllGlobals->isChecked());
+        });
+
+        connect(m_ExportNatives, &QPushButton::clicked, this, [this, scriptHash]() {
+            ExportNatives(scriptHash, m_ExportAllNatives->isChecked());
+        });
+
+        connect(m_ExportStrings, &QPushButton::clicked, this, [this, scriptHash]() {
+            ExportStrings(scriptHash, m_OnlyTextLabels->isChecked());
+        });
+    }
+
+    void ExportOptionsDialog::ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb)
     {
         QString name = QFileDialog::getSaveFileName(nullptr, title, filename, "Text Files (*.txt);;All Files (*)");
         if (name.isEmpty())
@@ -34,7 +110,7 @@ namespace scrDbgApp::ScriptExport
         file.close();
     }
 
-    void ExportDisassembly(QTableView* view)
+    void ExportOptionsDialog::ExportDisassembly(QTableView* view)
     {
         const int count = view->model()->rowCount();
 
@@ -71,7 +147,7 @@ namespace scrDbgApp::ScriptExport
         });
     }
 
-    void ExportStatics(uint32_t scriptHash)
+    void ExportOptionsDialog::ExportStatics(uint32_t scriptHash)
     {
         auto thread = g_Game->GetThread(scriptHash);
         auto program = g_Game->GetProgram(scriptHash);
@@ -107,7 +183,7 @@ namespace scrDbgApp::ScriptExport
         });
     }
 
-    void ExportGlobals(uint32_t scriptHash, bool exportAll)
+    void ExportOptionsDialog::ExportGlobals(uint32_t scriptHash, bool exportAll)
     {
         if (exportAll)
         {
@@ -197,7 +273,7 @@ namespace scrDbgApp::ScriptExport
         }
     }
 
-    void ExportNatives(uint32_t scriptHash, bool exportAll)
+    void ExportOptionsDialog::ExportNatives(uint32_t scriptHash, bool exportAll)
     {
         if (exportAll)
         {
@@ -275,7 +351,7 @@ namespace scrDbgApp::ScriptExport
         }
     }
 
-    void ExportStrings(uint32_t scriptHash, bool onlyTextLabels)
+    void ExportOptionsDialog::ExportStrings(uint32_t scriptHash, bool onlyTextLabels)
     {
         auto program = g_Game->GetProgram(scriptHash);
         if (!program)

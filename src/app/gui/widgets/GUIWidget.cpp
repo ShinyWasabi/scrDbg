@@ -1,8 +1,8 @@
-#include "GUI.hpp"
-#include "Logs.hpp"
-#include "ScriptGlobals.hpp"
-#include "ScriptStatics.hpp"
-#include "ScriptThreads.hpp"
+#include "GUIWidget.hpp"
+#include "LogsWidget.hpp"
+#include "ScriptGlobalsWidget.hpp"
+#include "ScriptStaticsWidget.hpp"
+#include "ScriptThreadsWidget.hpp"
 #include <QVBoxLayout>
 
 namespace scrDbgApp

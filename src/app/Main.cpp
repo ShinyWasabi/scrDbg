@@ -1,8 +1,8 @@
-#include "GUI/GUI.hpp"
 #include "ResourceLoader.hpp"
 #include "core/PipeClient.hpp"
 #include "game/gta4/GTA4.hpp"
 #include "game/gta5/GTA5.hpp"
+#include "gui/widgets/GUIWidget.hpp"
 
 int main(int argc, char* argv[])
 {

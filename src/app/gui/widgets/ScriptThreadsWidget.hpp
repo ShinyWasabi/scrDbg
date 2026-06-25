@@ -24,11 +24,6 @@ namespace scrDbgApp
         void OnTogglePauseScript();
         void OnKillScript();
         void OnExportOptionsDialog();
-        void OnExportDisassembly();
-        void OnExportStatics();
-        void OnExportGlobals(bool exportAll);
-        void OnExportNatives(bool exportAll);
-        void OnExportStrings(bool onlyTextLabels);
         void OnJumpToAddress();
         void OnBinarySearch();
         void OnViewStack();
@@ -36,13 +31,7 @@ namespace scrDbgApp
         void OnUpdateDisassemblyInfoByScroll();
         void OnUpdateDisassemblyInfoBySelection();
         void OnDisassemblyContextMenu(const QPoint& pos);
-        void OnCopyInstruction(const QModelIndex& index);
-        void OnNopInstruction(const QModelIndex& index);
-        void OnPatchInstruction(const QModelIndex& index);
-        void OnGeneratePattern(const QModelIndex& index);
-        void OnViewXrefsDialog(const QModelIndex& index);
-        void OnJumpToInstructionAddress(const QModelIndex& index);
-        void OnSetBreakpoint(const QModelIndex& index, bool set);
+        void OnJumpToAddressFromMenu(uint32_t address);
 
     private:
         uint32_t GetCurrentScriptHash();
