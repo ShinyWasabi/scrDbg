@@ -43,7 +43,7 @@ namespace scrDbgLib
 
     bool GTA5_GEN8::InitHooks() const
     {
-        Hooking::AddHook(m_Pointers.RunScriptThread, rage::scrThreadGEN8::RunThread);
+        Hooking::AddHook(m_Pointers.RunScriptThread, rage::gta5::scrThreadGEN8::RunThread);
 
         return Hooking::Init();
     }
@@ -83,7 +83,7 @@ namespace scrDbgLib
 
     bool GTA5_GEN9::InitHooks() const
     {
-        Hooking::AddHook(m_Pointers.RunScriptThread, rage::scrThreadGEN9::RunThread);
+        Hooking::AddHook(m_Pointers.RunScriptThread, rage::gta5::scrThreadGEN9::RunThread);
 
         return Hooking::Init();
     }

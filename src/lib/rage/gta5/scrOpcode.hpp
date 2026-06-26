@@ -2,7 +2,7 @@
 
 #if defined(_M_X64)
 
-namespace rage
+namespace rage::gta5
 {
     enum class scrOpcode : uint8_t
     {

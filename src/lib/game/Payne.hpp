@@ -1,4 +1,5 @@
 #pragma once
+#include "rage/payne/scrCommand.hpp"
 
 #if defined(_M_IX86)
 
@@ -8,10 +9,9 @@ namespace rage
     class scrHash;
     template <typename T>
     class atArray;
-    class scrNativeContext;
     union scrValue;
 
-    namespace gta4
+    namespace payne
     {
         class scrProgram;
         class scrThread;
@@ -20,24 +20,24 @@ namespace rage
 
 namespace scrDbgLib
 {
-    class GTA4 : public Game
+    class Payne : public Game
     {
     public:
         struct Pointers;
 
-        explicit GTA4();
+        explicit Payne();
 
         bool InitPointers() const override;
         bool InitHooks() const override;
 
         GameType GetType() const override
         {
-            return GameType::GTA4;
+            return GameType::PAYNE;
         }
 
         int GetResourceId() const override
         {
-            return NATIVES_GTA4_BIN;
+            return NATIVES_PAYNE_BIN;
         }
 
         static const Pointers& GetPointers()
@@ -48,14 +48,13 @@ namespace scrDbgLib
     private:
         struct Pointers
         {
-            rage::scrHash<rage::gta4::scrProgram*>* ScriptPrograms;
+            rage::scrHash<rage::payne::scrProgram*>* ScriptPrograms;
             int32_t* ScriptGlobalsCount;
-            rage::scrValue** ScriptGlobals; // it's not paged
-            uint8_t** ProtectedScriptGlobals;
-            uint32_t (*GetNextProtectedScriptSlot)();
-            rage::gta4::scrThread** CurrentScriptThread;
-            rage::atArray<rage::gta4::scrThread*>* ScriptThreads;
-            rage::scrHash<void (*)(rage::scrNativeContext*)>* CommandHandlers;
+            rage::scrValue** ScriptGlobals;
+            rage::payne::scrThread** CurrentScriptThread;
+            const char** CurrentScriptThreadName;
+            rage::atArray<rage::payne::scrThread*>* ScriptThreads;
+            rage::scrHash<rage::payne::scrCommand::Context::Handler>* CommandHandlers;
             void* RunScriptThread;
             bool* TimerUserPause;
             bool* TimerScriptPause;

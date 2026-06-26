@@ -1,7 +1,7 @@
 #include "scrThread.hpp"
 #include "ResourceLoader.hpp"
 #include "debugger/VMLogger.hpp"
-#include "game/GTA4.hpp"
+#include "game/Payne.hpp"
 #include "rage/shared/atArray.hpp"
 #include "rage/shared/scrHash.hpp"
 #include "rage/shared/scrString.hpp"
@@ -9,35 +9,14 @@
 
 #if defined(_M_IX86)
 
-namespace rage::gta4
+namespace rage::payne
 {
     using namespace scrDbgLib;
     using namespace scrDbgShared;
 
-    static int32_t g_NullContainer = 0;
-
-    static std::string FormatNativeTypes(scrValue value, NativesBin::NativeTypes type)
-    {
-        switch (type)
-        {
-        case NativesBin::NativeTypes::INT:
-            return std::to_string(value.Int);
-        case NativesBin::NativeTypes::BOOL:
-            return value.Int ? "TRUE" : "FALSE";
-        case NativesBin::NativeTypes::FLOAT:
-            return std::to_string(value.Float);
-        case NativesBin::NativeTypes::STRING:
-            return value.String ? "\"" + std::string(value.String) + "\"" : "NULL";
-        case NativesBin::NativeTypes::REFERENCE:
-            return "0x" + std::to_string(reinterpret_cast<uintptr_t>(value.Reference));
-        }
-
-        return std::to_string(value.Int);
-    }
-
     scrThread* scrThread::GetByHash(uint32_t hash)
     {
-        auto threads = GTA4::GetPointers().ScriptThreads;
+        auto threads = Payne::GetPointers().ScriptThreads;
         if (!threads)
             return nullptr;
 
@@ -50,22 +29,52 @@ namespace rage::gta4
         return nullptr;
     }
 
-    scrNativeContext::Handler scrThread::GetCommandHandler(uint32_t hash)
+    scrCommand::Context::Handler scrThread::GetCommandHandler(uint32_t hash)
     {
-        auto handlers = GTA4::GetPointers().CommandHandlers;
+        auto handlers = Payne::GetPointers().CommandHandlers;
         if (!handlers)
             return nullptr;
 
         return handlers->Lookup(hash);
     }
 
-    uint32_t scrThread::GetCommandHash(scrNativeContext::Handler handler)
+    uint32_t scrThread::GetCommandHash(scrCommand::Context::Handler handler)
     {
-        auto handlers = GTA4::GetPointers().CommandHandlers;
+        auto handlers = Payne::GetPointers().CommandHandlers;
         if (!handlers)
             return 0;
 
         return handlers->LookupHash(handler);
+    }
+
+    scrValue* scrThread::ResolveAddress(scrValue* ref, scrProgram* program, scrValue* globals)
+    {
+        uint32_t encoded = ref->Uns;
+        RefType type = static_cast<RefType>((encoded >> 29) & 7);
+        uint32_t offset = encoded & 0x1FFFFFFFu;
+
+        switch (type)
+        {
+        case RefType::LOCAL:
+        case RefType::STATIC:
+            return reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(m_Stack) + offset);
+        case RefType::GLOBAL:
+            return reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + offset);
+        case RefType::STRING:
+            return reinterpret_cast<scrValue*>(program->m_Code + offset);
+        case RefType::REFERENCE:
+            return reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(m_Stack) + offset)->Reference;
+        }
+
+        return nullptr;
+    }
+
+    scrValue* scrThread::PopStack()
+    {
+        if (m_Context.m_Sp > 0)
+            return &m_Stack[--m_Context.m_Sp];
+
+        return nullptr;
     }
 
     scrThread::State scrThread::OnException(uint32_t pc, scrOpcode op, const char* fmt, ...)
@@ -89,58 +98,70 @@ namespace rage::gta4
         return m_Context.m_State = State::KILLED;
     }
 
-    scrThread::State __fastcall scrThread::RunThread(scrThread* _this, void* edx, int32_t insnCount)
+// we don't actually need this since GrowStack is unused, but better to keep
+#define ENSURE_STACK(count)                                                         \
+    do                                                                              \
+    {                                                                               \
+        if (sp + count >= stackEnd)                                                 \
+        {                                                                           \
+            _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);          \
+            if (!_this->GrowStack(static_cast<int32_t>(_this->m_Context.m_Sp + 1))) \
+            {                                                                       \
+                _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);      \
+                _this->m_Context.m_Pc = pc;                                         \
+                return _this->OnException(pc, op, "Stack overflow!");               \
+            }                                                                       \
+            stack = _this->m_Stack;                                                 \
+            sp = &stack[_this->m_Context.m_Sp - 1];                                 \
+            stackEnd = &stack[_this->m_Context.m_StackSize];                        \
+        }                                                                           \
+    } while (0)
+
+    scrThread::State scrThread::RunThread(scrThread* _this, void* edx, int32_t insnCount)
     {
         if (_this->m_Context.m_State == State::KILLED || _this->m_Context.m_State == State::PAUSED)
             return _this->m_Context.m_State;
 
-        scrThread** curThread = GTA4::GetPointers().CurrentScriptThread;
+        auto& pointers = Payne::GetPointers();
 
-        scrThread* prevThread = *curThread;
-        *curThread = _this;
+        scrThread* prevThread = *pointers.CurrentScriptThread;
+        const char* prevThreadName = *pointers.CurrentScriptThreadName;
+        *pointers.CurrentScriptThread = _this;
+        *pointers.CurrentScriptThreadName = _this->GetScriptName();
 
         struct ThreadRestore
         {
             scrThread** Current;
             scrThread* Previous;
+            const char** CurrentName;
+            const char* PreviousName;
 
             ~ThreadRestore()
             {
                 *Current = Previous;
+                *CurrentName = PreviousName;
             }
-        } restore{curThread, prevThread};
+        } restore{pointers.CurrentScriptThread, prevThread, pointers.CurrentScriptThreadName, prevThreadName};
 
         scrProgram* program = scrProgram::GetProgram(_this->m_Context.m_ProgramHash);
-        if (!program || program->m_NameHash == "remindermp"_J) // We use hash comparison here which is ~36x faster than R*'s _stricmp check from what I tested.
+        if (!program)
             return _this->m_Context.m_State = State::KILLED;
-
-        auto frameStart = std::chrono::high_resolution_clock::now();
-
-        Debugger* debugger = g_Game->GetDebugger();
-        auto& pointers = GTA4::GetPointers();
 
         uint8_t* code = program->m_Code;
         scrValue* stack = _this->m_Stack;
         scrValue* globals = *pointers.ScriptGlobals;
-        uint8_t* protectedGlobals = *pointers.ProtectedScriptGlobals;
-        uint32_t (*getNextSlot)() = pointers.GetNextProtectedScriptSlot;
-        uint32_t globalsCount = *pointers.ScriptGlobalsCount;
 
         uint32_t pc = _this->m_Context.m_Pc;
-        scrValue* sp = &_this->m_Stack[_this->m_Context.m_Sp - 1];
+        scrValue* sp = &stack[_this->m_Context.m_Sp - 1];
+        scrValue* stackEnd = &stack[_this->m_Context.m_StackSize];
+
+        _this->m_InsnCount = 0;
 
         while (insnCount-- > 0)
         {
-            // Update these per opcode start
-            _this->m_Context.m_Pc = pc;
-            _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
-
-            if (debugger->ProcessBreakpoints(_this->m_Context.m_ProgramHash, pc, (uint32_t*)&_this->m_Context.m_State))
-                return _this->m_Context.m_State; // If we do not return here, the VM will end up executing opcodes until the next NATIVE call.
+            _this->m_InsnCount++;
 
             scrOpcode op = static_cast<scrOpcode>(code[pc++]);
-            if (debugger->ShouldBreakTracking(static_cast<uint8_t>(op)))
-                debugger->BreakTracking();
 
             switch (op)
             {
@@ -151,7 +172,6 @@ namespace rage::gta4
             case scrOpcode::IADD:
             {
                 --sp;
-                debugger->AddFieldOffset(sp[1].Int);
                 sp[0].Int += sp[1].Int;
                 break;
             }
@@ -398,12 +418,14 @@ namespace rage::gta4
             }
             case scrOpcode::F2V:
             {
+                ENSURE_STACK(2);
                 sp += 2;
                 sp[-1].Int = sp[0].Int = sp[-2].Int;
                 break;
             }
             case scrOpcode::PUSH_CONST_S16:
             {
+                ENSURE_STACK(1);
                 ++sp;
                 sp[0].Int = *reinterpret_cast<int16_t*>(&code[pc]);
                 pc += 2;
@@ -412,6 +434,7 @@ namespace rage::gta4
             case scrOpcode::PUSH_CONST_U32:
             case scrOpcode::PUSH_CONST_F:
             {
+                ENSURE_STACK(1);
                 ++sp;
                 sp[0].Uns = *reinterpret_cast<uint32_t*>(&code[pc]);
                 pc += 4;
@@ -419,6 +442,7 @@ namespace rage::gta4
             }
             case scrOpcode::DUP:
             {
+                ENSURE_STACK(1);
                 ++sp;
                 sp[0].Int = sp[-1].Int;
                 break;
@@ -434,87 +458,56 @@ namespace rage::gta4
 
                 uint8_t argCount = code[pc++];
                 uint8_t retCount = code[pc++];
-                uint32_t nativeAddr = *reinterpret_cast<uint32_t*>(&code[pc]);
+                scrCommand* command = *reinterpret_cast<scrCommand**>(&code[pc]);
                 pc += 4;
-
-                scrNativeContext::Handler handler = reinterpret_cast<scrNativeContext::Handler>(nativeAddr);
-                if (!handler)
-                    return _this->OnException(pc, op, "Missing native command");
 
                 _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
 
-                scrNativeContext ctx{};
-                ctx.m_Args = &stack[_this->m_Context.m_Sp - argCount];
+                scrCommand::Context ctx{};
+                ctx.m_Thread = _this;
                 ctx.m_ArgCount = argCount;
+                ctx.m_Args = &stack[_this->m_Context.m_Sp - argCount];
                 ctx.m_Rets = retCount ? &stack[_this->m_Context.m_Sp - argCount] : nullptr;
+                ctx.m_Command = command;
                 ctx.m_VectorRefCount = 0;
 
-                uint32_t hash{};
-                std::string_view name{};
-                std::string argsStr{};
-                std::string retsStr{};
-                bool shouldLog = VMLogger::ShouldLog(VMLogType::NATIVE_CALLS, _this->m_Context.m_ProgramHash);
-
-                // log args before calling the native because rets will be written to the same stack slot
-                if (shouldLog)
-                {
-                    hash = GetCommandHash(handler);
-                    name = NativesBin::GetNameByHash(hash);
-
-                    auto args = NativesBin::GetArgsByHash(hash);
-                    if (argCount > 0 && ctx.m_Args && args && !args->empty())
-                    {
-                        for (int32_t i = 0; i < argCount; i++)
-                        {
-                            auto type = (i < args->size()) ? (*args)[i] : NativesBin::NativeTypes::NONE;
-                            argsStr += FormatNativeTypes(ctx.m_Args[i], type);
-
-                            if (i < argCount - 1)
-                                argsStr += ", ";
-                        }
-                    }
-                }
-
-                (*handler)(&ctx);
-
-                if (shouldLog)
-                {
-                    auto rets = NativesBin::GetRetsByHash(hash);
-                    if (retCount > 0 && ctx.m_Rets && rets && !rets->empty())
-                    {
-                        retsStr += " -> (";
-                        for (int32_t i = 0; i < retCount; i++)
-                        {
-                            auto type = (i < rets->size()) ? (*rets)[i] : NativesBin::NativeTypes::NONE;
-                            retsStr += FormatNativeTypes(ctx.m_Rets[i], type);
-
-                            if (i < retCount - 1)
-                                retsStr += ", ";
-                        }
-                        retsStr += ")";
-                    }
-
-                    // now log the entire thing
-                    if (!name.empty())
-                        VMLogger::Logf("[%s+0x%08X] %s(%s)%s", _this->m_ScriptName, pc - 7, name.data(), argsStr.c_str(), retsStr.c_str());
-                    else
-                        VMLogger::Logf("[%s+0x%08X] unk_0x%08X(%s)%s", _this->m_ScriptName, pc - 7, hash, argsStr.c_str(), retsStr.c_str());
-                }
+                if ((_this->m_Context.m_TypedFlags & 3) == 2 && (command->m_Flags & 4) != 0)
+                    _this->InvokeSynchronizedCommand(command, &ctx, retCount);
+                else
+                    command->m_Handler(&ctx);
 
                 if (_this->m_Context.m_State == State::REFRESH)
                 {
-                    insnCount = 1100000;
+                    insnCount = 1000000;
                     _this->m_Context.m_State = State::RUNNING;
+                }
+                else if (_this->m_Context.m_State == State::THROW)
+                {
+                    scrValue* exceptionVal = _this->PopStack();
+                    if (!exceptionVal)
+                        return _this->OnException(pc, op, "Stack underflow!");
+
+                    if (uint32_t catchPc = _this->m_Context.m_CatchPc)
+                    {
+                        pc = catchPc;
+                        _this->m_Context.m_Fp = _this->m_Context.m_CatchFp;
+                        _this->m_Context.m_Sp = _this->m_Context.m_CatchSp;
+
+                        stack = _this->m_Stack;
+                        sp = &stack[_this->m_Context.m_Sp]; // sp points to the slot we're about to write
+                        ENSURE_STACK(1);
+                        sp[0].Int = exceptionVal->Int;
+
+                        return _this->m_Context.m_State = State::RUNNING;
+                    }
+                    else
+                    {
+                        _this->m_Context.m_Pc = pc;
+                        return _this->OnException(pc, op, "Native threw with no CATCH block");
+                    }
                 }
                 else if (_this->m_Context.m_State != State::RUNNING)
                 {
-                    if (VMLogger::ShouldLog(VMLogType::FRAME_TIME, _this->m_Context.m_ProgramHash))
-                    {
-                        auto frameEnd = std::chrono::high_resolution_clock::now();
-                        auto duration = std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
-                        VMLogger::Logf("[%s] %.3f ms", _this->m_ScriptName, duration);
-                    }
-
                     _this->m_Context.m_Pc = pc - 7;
                     return _this->m_Context.m_State;
                 }
@@ -529,6 +522,7 @@ namespace rage::gta4
             {
                 uint32_t retPc = pc + 4;
                 pc = *reinterpret_cast<uint32_t*>(&code[pc]);
+                ENSURE_STACK(1);
                 ++sp;
                 sp[0].Int = retPc;
                 break;
@@ -538,36 +532,36 @@ namespace rage::gta4
                 uint8_t argCount = code[pc++];
                 uint16_t localCount = *reinterpret_cast<uint16_t*>(&code[pc]);
                 pc += 2;
+                uint8_t nameLen = code[pc++];
+                pc += nameLen;
 
+                ENSURE_STACK(1);
                 ++sp;
                 sp[0].Int = _this->m_Context.m_Fp;
-
-                uint32_t callsitePc = sp[-1].Uns - 5;
 
                 uint32_t newSp = static_cast<uint32_t>(sp - stack + 1);
                 _this->m_Context.m_Sp = newSp;
                 _this->m_Context.m_Fp = newSp - argCount - 2;
+
+                if (sp + localCount >= stackEnd)
+                {
+                    if (!_this->GrowStack(static_cast<int32_t>(newSp + localCount)))
+                    {
+                        _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+                        _this->m_Context.m_Pc = pc;
+                        return _this->OnException(pc, op, "Script thread stackoverflow!");
+                    }
+
+                    stack = _this->m_Stack;
+                    sp = &stack[_this->m_Context.m_Sp - 1];
+                    stackEnd = &stack[_this->m_Context.m_StackSize];
+                }
 
                 for (uint32_t i = 0; i < localCount; i++)
                     stack[_this->m_Context.m_Sp + i].Int = 0;
 
                 _this->m_Context.m_Sp += localCount - argCount;
                 sp = &stack[_this->m_Context.m_Sp - 1];
-
-                if (VMLogger::ShouldLog(VMLogType::FUNCTION_CALLS, _this->m_Context.m_ProgramHash))
-                {
-                    auto funcName = program->GetFuncName(pc - 4);
-
-                    std::string argsStr = "";
-                    for (int i = 0; i < argCount; i++)
-                    {
-                        argsStr += std::to_string(stack[_this->m_Context.m_Fp + 2 + i].Int);
-                        if (i != argCount - 1)
-                            argsStr += ", ";
-                    }
-
-                    VMLogger::Logf("[%s+0x%08X] %s(%s)", _this->m_ScriptName, callsitePc, funcName.c_str(), argsStr.c_str());
-                }
                 break;
             }
             case scrOpcode::LEAVE:
@@ -601,85 +595,111 @@ namespace rage::gta4
             }
             case scrOpcode::LOAD:
             {
-                sp[0].Int = sp[0].Reference->Int;
+                sp[0].Int = _this->ResolveAddress(sp, program, globals)->Int;
                 break;
             }
             case scrOpcode::STORE:
             {
-                scrValue* addr = sp[0].Reference;
+                scrValue* addr = _this->ResolveAddress(sp, program, globals);
                 int32_t val = sp[-1].Int;
                 sp -= 2;
                 addr->Int = val;
-                debugger->FinalizeTracking(_this->m_ScriptName, pc - 1, val, false);
                 break;
             }
             case scrOpcode::STORE_REV:
             {
                 int32_t val = sp[0].Int;
-                scrValue* addr = sp[-1].Reference;
+                scrValue* addr = _this->ResolveAddress(sp - 1, program, globals);
                 --sp;
                 addr->Int = val;
                 break;
             }
-            case scrOpcode::ARRAY_LOAD:
+            case scrOpcode::LOAD_N:
             {
-                scrValue* addr = sp[0].Reference;
+                scrValue* addr = _this->ResolveAddress(sp, program, globals);
                 int32_t count = sp[-1].Int;
                 sp -= 2;
+
+                if (sp + count >= stackEnd)
+                {
+                    _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+                    if (!_this->GrowStack(static_cast<int32_t>(_this->m_Context.m_Sp + count)))
+                    {
+                        _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+                        _this->m_Context.m_Pc = pc;
+                        return _this->OnException(pc, op, "Script thread stackoverflow!");
+                    }
+
+                    stack = _this->m_Stack;
+                    sp = &stack[_this->m_Context.m_Sp - 1];
+                    stackEnd = &stack[_this->m_Context.m_StackSize];
+                }
+
                 for (int32_t i = 0; i < count; i++)
                     (++sp)[0].Int = addr[i].Int;
                 break;
             }
-            case scrOpcode::ARRAY_STORE:
+            case scrOpcode::STORE_N:
             {
-                scrValue* addr = sp[0].Reference;
+                scrValue* addr = _this->ResolveAddress(sp, program, globals);
                 int32_t count = sp[-1].Int;
                 sp -= 2;
                 for (int32_t i = count - 1; i >= 0; i--)
                     addr[i].Int = (sp--)[0].Int;
-                debugger->FinalizeTracking(_this->m_ScriptName, pc - 1, count, true);
                 break;
             }
-            case scrOpcode::LOCAL_0:
-            case scrOpcode::LOCAL_1:
-            case scrOpcode::LOCAL_2:
-            case scrOpcode::LOCAL_3:
-            case scrOpcode::LOCAL_4:
-            case scrOpcode::LOCAL_5:
-            case scrOpcode::LOCAL_6:
-            case scrOpcode::LOCAL_7:
+            case scrOpcode::LOCAL_U8_0:
+            case scrOpcode::LOCAL_U8_1:
+            case scrOpcode::LOCAL_U8_2:
+            case scrOpcode::LOCAL_U8_3:
+            case scrOpcode::LOCAL_U8_4:
+            case scrOpcode::LOCAL_U8_5:
+            case scrOpcode::LOCAL_U8_6:
+            case scrOpcode::LOCAL_U8_7:
             {
-                (++sp)[0].Reference = &stack[_this->m_Context.m_Fp + (static_cast<uint8_t>(op) - static_cast<uint8_t>(scrOpcode::LOCAL_0))];
+                uint32_t slot = static_cast<uint8_t>(op) - static_cast<uint8_t>(scrOpcode::LOCAL_U8_0);
+                ENSURE_STACK(1);
+                (++sp)[0].Uns = static_cast<uint32_t>(AddrType::LOCAL) | ((_this->m_Context.m_Fp + slot) * sizeof(scrValue));
                 break;
             }
             case scrOpcode::LOCAL:
             {
-                sp[0].Reference = &stack[_this->m_Context.m_Fp + sp[0].Int];
+                uint32_t slot = static_cast<uint32_t>(sp[0].Int);
+                sp[0].Uns = static_cast<uint32_t>(AddrType::LOCAL) | ((_this->m_Context.m_Fp + slot) * sizeof(scrValue));
                 break;
             }
             case scrOpcode::STATIC:
             {
-                debugger->BeginTracking(_this->m_Context.m_ProgramHash, sp[0].Int, false);
-                sp[0].Reference = &stack[sp[0].Int];
+                uint32_t idx = static_cast<uint32_t>(sp[0].Int);
+                sp[0].Uns = static_cast<uint32_t>(AddrType::STATIC) | (idx * sizeof(scrValue));
                 break;
             }
             case scrOpcode::GLOBAL:
             {
-                debugger->BeginTracking(_this->m_Context.m_ProgramHash, sp[0].Int, true);
-                sp[0].Reference = &globals[sp[0].Int];
+                uint32_t idx = static_cast<uint32_t>(sp[0].Int);
+                sp[0].Uns = static_cast<uint32_t>(AddrType::GLOBAL) | (idx * sizeof(scrValue));
                 break;
             }
             case scrOpcode::ARRAY:
             {
+                uint32_t encodedArray = sp[-2].Uns;
                 int32_t itemSize = sp[-1].Int;
-                scrValue* addr = sp[0].Reference;
+                int32_t index = sp[0].Int;
                 sp -= 2;
 
-                if (sp[0].Int < 0 || sp[0].Int >= addr->Int)
-                    return _this->OnException(pc, op, "Array overrun: %u >= %u", sp[0].Int, addr->Int);
+                // Resolve the array base to get the bounds (first slot = count)
+                scrValue tmpRef;
+                tmpRef.Uns = encodedArray;
+                scrValue* arrayBase = _this->ResolveAddress(&tmpRef, program, globals);
+                int32_t arraySize = arrayBase ? arrayBase->Int : 0;
+                if (index < 0 || index >= arraySize)
+                {
+                    _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+                    _this->m_Context.m_Pc = pc;
+                    return _this->OnException(pc, op, "Array overrun: %d >= %d", index, arraySize);
+                }
 
-                debugger->AddArrayIndex(sp[0].Int, addr->Int);
-                sp[0].Reference = &addr[1 + (sp[0].Int * itemSize)];
+                sp[0].Uns = encodedArray + static_cast<uint32_t>((1 + index * itemSize) * sizeof(scrValue));
                 break;
             }
             case scrOpcode::SWITCH:
@@ -709,14 +729,21 @@ namespace rage::gta4
             }
             case scrOpcode::STRING:
             {
-                uint8_t len = code[pc++];
-                (++sp)[0].String = reinterpret_cast<const char*>(&code[pc]);
+                uint32_t len = code[pc++];
+                if (len == 0)
+                {
+                    len = static_cast<uint32_t>(code[pc]) | (static_cast<uint32_t>(code[pc + 1]) << 8);
+                    pc += 2;
+                }
+                ENSURE_STACK(1);
+                (++sp)[0].Uns = pc | static_cast<uint32_t>(AddrType::STRING);
                 pc += len;
                 break;
             }
             case scrOpcode::_NULL:
             {
-                (++sp)[0].Reference = reinterpret_cast<scrValue*>(&g_NullContainer);
+                ENSURE_STACK(1);
+                (++sp)[0].Int = 0;
                 break;
             }
             case scrOpcode::TEXT_LABEL_ASSIGN_STRING:
@@ -769,7 +796,8 @@ namespace rage::gta4
                 _this->m_Context.m_CatchPc = pc;
                 _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
                 _this->m_Context.m_CatchSp = static_cast<uint32_t>(sp - stack + 1);
-                (++sp)[0].Int = -1;
+                ENSURE_STACK(1);
+                (++sp)[0].Int = -1; // exception slot, -1 = no exception yet
                 break;
             }
             case scrOpcode::THROW:
@@ -783,259 +811,21 @@ namespace rage::gta4
                 _this->m_Context.m_Fp = _this->m_Context.m_CatchFp;
                 _this->m_Context.m_Sp = _this->m_Context.m_CatchSp;
                 sp = &stack[_this->m_Context.m_Sp];
+                ENSURE_STACK(1);
                 sp[0].Int = val;
                 break;
-            }
-            case scrOpcode::TEXT_LABEL_COPY:
-            {
-                int32_t count = sp[-1].Int;
-                uint32_t* dest = reinterpret_cast<uint32_t*>(sp[0].Reference);
-                int32_t srcCount = sp[-2].Int;
-                sp -= 3;
-
-                if (srcCount > count)
-                    srcCount = count;
-
-                for (int32_t i = srcCount - 1; i >= 0; i--)
-                    dest[i] = (sp--)[0].Int;
-
-                reinterpret_cast<char*>(dest)[(4 * srcCount) - 1] = 0;
-                break;
-            }
-            case scrOpcode::GETXPROTECT:
-            {
-                scrValue* addr = sp[0].Reference;
-                sp = sp - 1; // will push result back at sp+1 below
-
-                bool isGlobal;
-                uint8_t* protectedStorage;
-                if (addr < globals || addr >= &globals[globalsCount])
-                {
-                    isGlobal = false;
-                    protectedStorage = _this->m_ProtectedStack;
-                }
-                else
-                {
-                    isGlobal = true;
-                    protectedStorage = protectedGlobals;
-                }
-
-                uint32_t slotIndex = addr->Uns;
-                bool freshSlot = false;
-                if (slotIndex == 0)
-                {
-                    freshSlot = true;
-                    if (isGlobal)
-                    {
-                        slotIndex = getNextSlot();
-                        addr->Uns = slotIndex;
-                    }
-                    else
-                    {
-                        if (_this->m_ProtectedSlotIndex < 2048)
-                        {
-                            slotIndex = (_this->m_ProtectedSlotIndex + 1) * 4;
-                            addr->Uns = slotIndex;
-                            _this->m_ProtectedSlotIndex++;
-                        }
-                        else
-                        {
-                            slotIndex = 0;
-                            return _this->OnException(pc, op, "Protected slot overrun: %d", _this->m_ProtectedSlotIndex);
-                        }
-                    }
-                }
-
-                ++sp;
-
-                if (protectedStorage)
-                {
-                    if (freshSlot)
-                        reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int = 0;
-                    sp[0].Int = reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int;
-                }
-                else
-                {
-                    sp[0].Int = 0;
-                }
-                break;
-            }
-            case scrOpcode::SETXPROTECT:
-            {
-                scrValue* addr = sp[0].Reference;
-                int32_t value = sp[-1].Int;
-                sp -= 2;
-
-                bool isGlobal;
-                uint8_t* protectedStorage;
-                if (addr < globals || addr >= &globals[globalsCount])
-                {
-                    isGlobal = false;
-                    protectedStorage = _this->m_ProtectedStack;
-                }
-                else
-                {
-                    isGlobal = true;
-                    protectedStorage = protectedGlobals;
-                }
-
-                uint32_t slotIndex = addr->Uns;
-                if (slotIndex == 0)
-                {
-                    if (isGlobal)
-                    {
-                        slotIndex = getNextSlot();
-                        addr->Uns = slotIndex;
-                    }
-                    else
-                    {
-                        if (_this->m_ProtectedSlotIndex < 2048)
-                        {
-                            slotIndex = (_this->m_ProtectedSlotIndex + 1) * 4;
-                            addr->Uns = slotIndex;
-                            _this->m_ProtectedSlotIndex++;
-                        }
-                        else
-                        {
-                            slotIndex = 0;
-                            return _this->OnException(pc, op, "Protected slot overrun: %d", _this->m_ProtectedSlotIndex);
-                        }
-                    }
-                }
-
-                if (protectedStorage)
-                {
-                    reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int = value;
-                    debugger->FinalizeTracking(_this->m_ScriptName, pc - 1, value);
-                }
-                break;
-            }
-            case scrOpcode::REFXPROTECT:
-            {
-                uint32_t flags = sp[0].Uns;
-                int32_t count = sp[-1].Int;
-                scrValue* addr = sp[-2].Reference;
-                sp -= 3;
-
-                bool isGlobal;
-                uint8_t* protectedStorage;
-                if (addr < globals || addr >= &globals[globalsCount])
-                {
-                    isGlobal = false;
-                    protectedStorage = _this->m_ProtectedStack;
-                }
-                else
-                {
-                    isGlobal = true;
-                    protectedStorage = protectedGlobals;
-                }
-
-                if ((flags & 1) != 0)
-                {
-                    bool pushedRef = false;
-                    for (int32_t i = 0; i < count; i++)
-                    {
-                        int32_t resolvedValue = 0;
-                        if (i == 0 && (flags & 4) != 0)
-                        {
-                            resolvedValue = addr->Int;
-                        }
-                        else
-                        {
-                            uint32_t* slotPtr = &addr[i].Uns;
-                            uint32_t slotIndex = *slotPtr;
-                            if (slotIndex == 0)
-                            {
-                                if (isGlobal)
-                                {
-                                    slotIndex = getNextSlot();
-                                    *slotPtr = slotIndex;
-                                }
-                                else
-                                {
-                                    if (_this->m_ProtectedSlotIndex < 2048)
-                                    {
-                                        slotIndex = (_this->m_ProtectedSlotIndex + 1) * 4;
-                                        *slotPtr = slotIndex;
-                                        _this->m_ProtectedSlotIndex++;
-                                    }
-                                    else
-                                    {
-                                        return _this->OnException(pc, op, "Protected slot overrun: %d", _this->m_ProtectedSlotIndex);
-                                    }
-                                }
-                            }
-
-                            if (protectedStorage)
-                                resolvedValue = reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int;
-                        }
-
-                        _this->m_ProtectedTempStack[++_this->m_Context.m_ProtectedSp].Int = resolvedValue;
-
-                        if (!pushedRef)
-                        {
-                            ++sp;
-                            sp[0].Reference = &_this->m_ProtectedTempStack[_this->m_Context.m_ProtectedSp];
-                            pushedRef = true;
-                        }
-                    }
-                }
-                else if ((flags & 2) != 0)
-                {
-                    for (int32_t i = count - 1; i >= 0; i--)
-                    {
-                        uint32_t protectedSp = _this->m_Context.m_ProtectedSp--;
-                        int32_t storedVal = _this->m_ProtectedTempStack[protectedSp].Int;
-                        if (i == 0 && (flags & 4) != 0)
-                        {
-                            addr->Int = storedVal;
-                        }
-                        else
-                        {
-                            uint32_t* slotPtr = &addr[i].Uns;
-                            uint32_t slotIndex = *slotPtr;
-                            if (!slotIndex)
-                            {
-                                if (isGlobal)
-                                {
-                                    slotIndex = getNextSlot();
-                                    *slotPtr = slotIndex;
-                                }
-                                else
-                                {
-                                    if (_this->m_ProtectedSlotIndex < 2048)
-                                    {
-                                        slotIndex = (_this->m_ProtectedSlotIndex + 1) * 4;
-                                        *slotPtr = slotIndex;
-                                        _this->m_ProtectedSlotIndex++;
-                                    }
-                                    else
-                                    {
-                                        slotIndex = 0;
-                                        return _this->OnException(pc, op, "Protected storage overrun: %d", _this->m_ProtectedSlotIndex);
-                                    }
-                                }
-                            }
-
-                            if (protectedStorage)
-                                reinterpret_cast<scrValue*>(protectedStorage + slotIndex)->Int = storedVal;
-                        }
-                    }
-                }
-                break;
-            }
-            case scrOpcode::EXIT:
-            {
-                return _this->m_Context.m_State = State::KILLED;
             }
             default:
             {
                 if (op >= scrOpcode::PUSH_CONST_M16 && op <= scrOpcode::PUSH_CONST_159)
                 {
+                    ENSURE_STACK(1);
                     (++sp)[0].Int = static_cast<uint8_t>(op) - 96;
                 }
                 else
                 {
+                    _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+                    _this->m_Context.m_Pc = pc;
                     return _this->OnException(pc, op, "Invalid opcode: %02X", op);
                 }
                 break;
@@ -1043,8 +833,8 @@ namespace rage::gta4
             }
         }
 
-        _this->m_Context.m_Pc = pc;
         _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+        _this->m_Context.m_Pc = pc;
         return State::RUNNING;
     }
 }

@@ -6,6 +6,7 @@ namespace scrDbgLib
     enum class GameType
     {
         GTA4,
+        PAYNE,
         GTA5_GEN8,
         GTA5_GEN9,
     };
@@ -17,9 +18,13 @@ namespace scrDbgLib
 
         virtual bool InitPointers() const = 0;
         virtual bool InitHooks() const = 0;
-        virtual Debugger* GetDebugger() const = 0;
         virtual GameType GetType() const = 0;
         virtual int GetResourceId() const = 0;
+
+        Debugger* GetDebugger() const
+        {
+            return m_Debugger.get();
+        }
 
         static void Cleanup(const std::string& message = {});
 

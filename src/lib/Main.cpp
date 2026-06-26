@@ -3,6 +3,7 @@
 #include "debugger/VMLogger.hpp"
 #if defined(_M_IX86)
 #include "game/GTA4.hpp"
+#include "game/Payne.hpp"
 #elif defined(_M_X64)
 #include "game/GTA5.hpp"
 #endif
@@ -31,6 +32,11 @@ namespace scrDbgLib
         case "GTAIV.exe"_J:
         {
             g_Game = std::make_unique<GTA4>();
+            break;
+        }
+        case "MaxPayne3.exe"_J:
+        {
+            g_Game = std::make_unique<Payne>();
             break;
         }
 #elif defined(_M_X64)

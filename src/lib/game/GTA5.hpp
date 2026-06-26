@@ -4,13 +4,17 @@
 
 namespace rage
 {
-    class scrNativeRegistration;
-    class scrProgramRegistry;
-    union scrValue;
-    class scrThreadGEN8;
-    class scrThreadGEN9;
     template <typename T>
     class atArray;
+    union scrValue;
+
+    namespace gta5
+    {
+        class scrNativeRegistration;
+        class scrProgramRegistry;
+        class scrThreadGEN8;
+        class scrThreadGEN9;
+    }
 }
 
 namespace scrDbgLib
@@ -19,11 +23,6 @@ namespace scrDbgLib
     {
     public:
         struct Pointers;
-
-        Debugger* GetDebugger() const override
-        {
-            return m_Debugger.get();
-        }
 
         int GetResourceId() const override
         {
@@ -38,10 +37,10 @@ namespace scrDbgLib
     protected:
         struct Pointers
         {
-            rage::scrNativeRegistration* NativeRegistrationTable;
-            rage::scrProgramRegistry* ScriptProgramRegistry;
-            rage::atArray<rage::scrThreadGEN8*>* ScriptThreadsGEN8;
-            rage::atArray<rage::scrThreadGEN9*>* ScriptThreadsGEN9;
+            rage::gta5::scrNativeRegistration* NativeRegistrationTable;
+            rage::gta5::scrProgramRegistry* ScriptProgramRegistry;
+            rage::atArray<rage::gta5::scrThreadGEN8*>* ScriptThreadsGEN8;
+            rage::atArray<rage::gta5::scrThreadGEN9*>* ScriptThreadsGEN9;
             void* RunScriptThread;
             bool* TimerUserPause;
             bool* TimerScriptPause;

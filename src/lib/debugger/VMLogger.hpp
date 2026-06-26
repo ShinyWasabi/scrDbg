@@ -47,7 +47,7 @@ namespace scrDbgLib
 
         static void Log(const char* message)
         {
-            GetInstance().Log(message);
+            GetInstance().LogImpl(message);
         }
 
         static void Logf(const char* fmt, ...)

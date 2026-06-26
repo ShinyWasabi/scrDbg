@@ -63,7 +63,7 @@ namespace scrDbgLib
 
     bool GTA4::InitHooks() const
     {
-        Hooking::AddHook(m_Pointers.RunScriptThread, rage::scrThread::RunThread);
+        Hooking::AddHook(m_Pointers.RunScriptThread, rage::gta4::scrThread::RunThread);
 
         return Hooking::Init();
     }

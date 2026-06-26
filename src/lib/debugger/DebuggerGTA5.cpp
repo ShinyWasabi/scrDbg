@@ -22,7 +22,7 @@ namespace scrDbgLib
         if (m_ActiveBreakpoint)
         {
             auto thread = T::GetByHash(m_ActiveBreakpoint->ScriptHash);
-            if (!thread || thread->m_Context.m_State == rage::scrThreadState::KILLED)
+            if (!thread || thread->m_Context.m_State == rage::gta5::scrThreadState::KILLED)
             {
                 // Script died when the breakpoint was active
                 m_StepOverBreakpoint = false;
@@ -55,7 +55,7 @@ namespace scrDbgLib
             }
             else
             {
-                *state = static_cast<uint32_t>(rage::scrThreadState::PAUSED);
+                *state = static_cast<uint32_t>(rage::gta5::scrThreadState::PAUSED);
             }
 
             return true; // Return here to signal the VM that a BP is active, no need to check for others as there can only be one active at a time
@@ -81,7 +81,7 @@ namespace scrDbgLib
         }
         else
         {
-            thread->m_Context.m_State = rage::scrThreadState::RUNNING;
+            thread->m_Context.m_State = rage::gta5::scrThreadState::RUNNING;
         }
 
         m_StepOverBreakpoint = true;
@@ -91,24 +91,24 @@ namespace scrDbgLib
 
     bool DebuggerGTA5::IsChainOpcode(uint8_t op) const
     {
-        switch (static_cast<rage::scrOpcode>(op))
+        switch (static_cast<rage::gta5::scrOpcode>(op))
         {
         // continuation opcodes
-        case rage::scrOpcode::IOFFSET:
-        case rage::scrOpcode::IOFFSET_U8:
-        case rage::scrOpcode::IOFFSET_S16:
-        case rage::scrOpcode::ARRAY_U8:
-        case rage::scrOpcode::ARRAY_U16:
-        case rage::scrOpcode::PUSH_CONST_S16:
-        case rage::scrOpcode::PUSH_CONST_U24:
+        case rage::gta5::scrOpcode::IOFFSET:
+        case rage::gta5::scrOpcode::IOFFSET_U8:
+        case rage::gta5::scrOpcode::IOFFSET_S16:
+        case rage::gta5::scrOpcode::ARRAY_U8:
+        case rage::gta5::scrOpcode::ARRAY_U16:
+        case rage::gta5::scrOpcode::PUSH_CONST_S16:
+        case rage::gta5::scrOpcode::PUSH_CONST_U24:
 
         // finalizer opcodes
-        case rage::scrOpcode::STORE:
-        case rage::scrOpcode::STORE_N:
-        case rage::scrOpcode::IOFFSET_U8_STORE:
-        case rage::scrOpcode::IOFFSET_S16_STORE:
-        case rage::scrOpcode::ARRAY_U8_STORE:
-        case rage::scrOpcode::ARRAY_U16_STORE:
+        case rage::gta5::scrOpcode::STORE:
+        case rage::gta5::scrOpcode::STORE_N:
+        case rage::gta5::scrOpcode::IOFFSET_U8_STORE:
+        case rage::gta5::scrOpcode::IOFFSET_S16_STORE:
+        case rage::gta5::scrOpcode::ARRAY_U8_STORE:
+        case rage::gta5::scrOpcode::ARRAY_U16_STORE:
             return true;
         }
 
@@ -116,11 +116,11 @@ namespace scrDbgLib
         return false;
     }
 
-    template bool DebuggerGTA5::ProcessBreakpointsInternal<rage::scrThreadGEN8>(uint32_t, uint32_t, uint32_t*);
-    template bool DebuggerGTA5::ResumeBreakpointInternal<rage::scrThreadGEN8>();
+    template bool DebuggerGTA5::ProcessBreakpointsInternal<rage::gta5::scrThreadGEN8>(uint32_t, uint32_t, uint32_t*);
+    template bool DebuggerGTA5::ResumeBreakpointInternal<rage::gta5::scrThreadGEN8>();
 
-    template bool DebuggerGTA5::ProcessBreakpointsInternal<rage::scrThreadGEN9>(uint32_t, uint32_t, uint32_t*);
-    template bool DebuggerGTA5::ResumeBreakpointInternal<rage::scrThreadGEN9>();
+    template bool DebuggerGTA5::ProcessBreakpointsInternal<rage::gta5::scrThreadGEN9>(uint32_t, uint32_t, uint32_t*);
+    template bool DebuggerGTA5::ResumeBreakpointInternal<rage::gta5::scrThreadGEN9>();
 }
 
 #endif

@@ -1,14 +1,14 @@
-#include "DebuggerGTA4.hpp"
-#include "game/GTA4.hpp"
-#include "rage/gta4/scrThread.hpp"
+#include "DebuggerPayne.hpp"
+#include "game/Payne.hpp"
+#include "rage/payne/scrThread.hpp"
 
 #if defined(_M_IX86)
 
 namespace scrDbgLib
 {
-    void DebuggerGTA4::PauseGame(bool pause)
+    void DebuggerPayne::PauseGame(bool pause)
     {
-        auto& pointers = GTA4::GetPointers();
+        auto& pointers = Payne::GetPointers();
         if (!pointers.TimerUserPause || !pointers.TimerScriptPause)
             return;
 
@@ -16,12 +16,12 @@ namespace scrDbgLib
         *pointers.TimerScriptPause = pause;
     }
 
-    bool DebuggerGTA4::ProcessBreakpoints(uint32_t scriptHash, uint32_t pc, uint32_t* state)
+    bool DebuggerPayne::ProcessBreakpoints(uint32_t scriptHash, uint32_t pc, uint32_t* state)
     {
         if (m_ActiveBreakpoint)
         {
-            auto thread = rage::gta4::scrThread::GetByHash(m_ActiveBreakpoint->ScriptHash);
-            if (!thread || thread->m_Context.m_State == rage::gta4::scrThread::State::KILLED)
+            auto thread = rage::payne::scrThread::GetByHash(m_ActiveBreakpoint->ScriptHash);
+            if (!thread || thread->m_Context.m_State == rage::payne::scrThread::State::KILLED)
             {
                 // Script died when the breakpoint was active
                 m_StepOverBreakpoint = false;
@@ -42,7 +42,7 @@ namespace scrDbgLib
 
             // Show the message first so scrDbgApp doesn't attempt to resume when MessageBoxA is active
             char message[128];
-            std::snprintf(message, sizeof(message), "Breakpoint hit, paused %s at 0x%X!", (*GTA4::GetPointers().CurrentScriptThread)->m_ScriptName, pc);
+            std::snprintf(message, sizeof(message), "Breakpoint hit, paused %s at 0x%X!", (*Payne::GetPointers().CurrentScriptThread)->m_ScriptName, pc);
             MessageBoxA(0, message, "Breakpoint", MB_OK);
 
             m_ActiveBreakpoint = bp;
@@ -54,7 +54,7 @@ namespace scrDbgLib
             }
             else
             {
-                *state = static_cast<uint32_t>(rage::gta4::scrThread::State::PAUSED);
+                *state = static_cast<uint32_t>(rage::payne::scrThread::State::PAUSED);
             }
 
             return true; // Return here to signal the VM that a BP is active, no need to check for others as there can only be one active at a time
@@ -63,12 +63,12 @@ namespace scrDbgLib
         return false;
     }
 
-    bool DebuggerGTA4::ResumeBreakpoint()
+    bool DebuggerPayne::ResumeBreakpoint()
     {
         if (!m_ActiveBreakpoint)
             return false;
 
-        auto thread = rage::gta4::scrThread::GetByHash(m_ActiveBreakpoint->ScriptHash);
+        auto thread = rage::payne::scrThread::GetByHash(m_ActiveBreakpoint->ScriptHash);
         if (!thread)
             return false;
 
@@ -79,7 +79,7 @@ namespace scrDbgLib
         }
         else
         {
-            thread->m_Context.m_State = rage::gta4::scrThread::State::RUNNING;
+            thread->m_Context.m_State = rage::payne::scrThread::State::RUNNING;
         }
 
         m_StepOverBreakpoint = true;
@@ -87,28 +87,8 @@ namespace scrDbgLib
         return true;
     }
 
-    bool DebuggerGTA4::IsChainOpcode(uint8_t op) const
+    bool DebuggerPayne::IsChainOpcode(uint8_t op) const
     {
-        auto scrOp = static_cast<rage::gta4::scrOpcode>(op);
-
-        switch (scrOp)
-        {
-        // continuation opcodes
-        case rage::gta4::scrOpcode::PUSH_CONST_S16:
-        case rage::gta4::scrOpcode::PUSH_CONST_U32:
-        case rage::gta4::scrOpcode::IADD:
-        case rage::gta4::scrOpcode::ARRAY:
-
-        // finalizer opcodes
-        case rage::gta4::scrOpcode::STORE:
-        case rage::gta4::scrOpcode::ARRAY_STORE:
-        case rage::gta4::scrOpcode::SETXPROTECT:
-            return true;
-        }
-
-        // continuation opcodes
-        if (scrOp >= rage::gta4::scrOpcode::PUSH_CONST_0 && scrOp <= rage::gta4::scrOpcode::PUSH_CONST_159)
-            return true;
 
         // everything else breaks the chain
         return false;

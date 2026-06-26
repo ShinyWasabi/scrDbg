@@ -1,11 +1,10 @@
 #pragma once
 #include "rage/shared/scrNativeContext.hpp"
-#include "rage/shared/scrValue.hpp"
 #include "scrOpcode.hpp"
 
 #if defined(_M_IX86)
 
-namespace rage
+namespace rage::gta4
 {
     class scrThread
     {

@@ -2,7 +2,7 @@
 
 #if defined(_M_X64)
 
-namespace rage
+namespace rage::gta5
 {
     class scrThreadGEN8;
     class scrThreadGEN9;
@@ -30,12 +30,12 @@ namespace scrDbgLib
     public:
         bool ProcessBreakpoints(uint32_t scriptHash, uint32_t pc, uint32_t* state) override
         {
-            return ProcessBreakpointsInternal<rage::scrThreadGEN8>(scriptHash, pc, state);
+            return ProcessBreakpointsInternal<rage::gta5::scrThreadGEN8>(scriptHash, pc, state);
         }
 
         bool ResumeBreakpoint() override
         {
-            return ResumeBreakpointInternal<rage::scrThreadGEN8>();
+            return ResumeBreakpointInternal<rage::gta5::scrThreadGEN8>();
         }
     };
 
@@ -44,12 +44,12 @@ namespace scrDbgLib
     public:
         bool ProcessBreakpoints(uint32_t scriptHash, uint32_t pc, uint32_t* state) override
         {
-            return ProcessBreakpointsInternal<rage::scrThreadGEN9>(scriptHash, pc, state);
+            return ProcessBreakpointsInternal<rage::gta5::scrThreadGEN9>(scriptHash, pc, state);
         }
 
         bool ResumeBreakpoint() override
         {
-            return ResumeBreakpointInternal<rage::scrThreadGEN9>();
+            return ResumeBreakpointInternal<rage::gta5::scrThreadGEN9>();
         }
     };
 }

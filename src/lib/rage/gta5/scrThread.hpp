@@ -4,7 +4,7 @@
 
 #if defined(_M_X64)
 
-namespace rage
+namespace rage::gta5
 {
     class scrProgram;
 

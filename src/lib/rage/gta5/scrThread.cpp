@@ -10,12 +10,12 @@
 
 #if defined(_M_X64)
 
-namespace rage
+namespace rage::gta5
 {
     using namespace scrDbgLib;
     using namespace scrDbgShared;
 
-    static std::string FormatNativeTypes(rage::scrValue value, NativesBin::NativeTypes type)
+    static std::string FormatNativeTypes(scrValue value, NativesBin::NativeTypes type)
     {
         switch (type)
         {
@@ -57,7 +57,7 @@ namespace rage
     T GetByHashInternal(uint32_t hash)
     {
         auto threads = []() {
-            if constexpr (std::is_same_v<T, rage::scrThreadGEN8*>)
+            if constexpr (std::is_same_v<T, scrThreadGEN8*>)
                 return GTA5::GetPointers().ScriptThreadsGEN8;
             else
                 return GTA5::GetPointers().ScriptThreadsGEN9;
@@ -1279,11 +1279,11 @@ namespace rage
         return T::OnException(pc, op, "Invalid opcode: 0x%02X", static_cast<uint8_t>(op));
     }
 
-    template rage::scrThreadGEN8::TLS GetTLSInternal<rage::scrThreadGEN8::TLS>();
-    template rage::scrThreadGEN9::TLS GetTLSInternal<rage::scrThreadGEN9::TLS>();
+    template scrThreadGEN8::TLS GetTLSInternal<scrThreadGEN8::TLS>();
+    template scrThreadGEN9::TLS GetTLSInternal<scrThreadGEN9::TLS>();
 
-    template rage::scrThreadGEN8* GetByHashInternal<rage::scrThreadGEN8*>(uint32_t);
-    template rage::scrThreadGEN9* GetByHashInternal<rage::scrThreadGEN9*>(uint32_t);
+    template scrThreadGEN8* GetByHashInternal<scrThreadGEN8*>(uint32_t);
+    template scrThreadGEN9* GetByHashInternal<scrThreadGEN9*>(uint32_t);
 
     template scrThreadState OnExceptionInternal<scrThreadGEN8>(uint32_t, scrOpcode, const char*, va_list);
     template scrThreadState OnExceptionInternal<scrThreadGEN9>(uint32_t, scrOpcode, const char*, va_list);

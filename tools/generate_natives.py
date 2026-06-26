@@ -75,8 +75,9 @@ def build_bin(input_file, output_file):
 
 
 def main():
-    build_bin("natives-gta5.txt", "../resources/natives-gta5.bin")
     build_bin("natives-gta4.txt", "../resources/natives-gta4.bin")
+    build_bin("natives-payne.txt", "../resources/natives-payne.bin")
+    build_bin("natives-gta5.txt", "../resources/natives-gta5.bin")
 
 
 if __name__ == "__main__":
