@@ -12,9 +12,7 @@ namespace rage::payne
     {
         if (size > 0)
         {
-            auto code = &m_Code[pc];
-
-            std::string name(reinterpret_cast<const char*>(&code[5]));
+            std::string name(reinterpret_cast<const char*>(&m_Code[pc + 7])); // 7 instead of 5 to skip the profiler placeholders (MP3 uses � (FF) unlike GTA 5 which uses _)
             if (!name.empty())
                 return name;
         }

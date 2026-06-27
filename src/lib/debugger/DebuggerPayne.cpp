@@ -9,11 +9,10 @@ namespace scrDbgLib
     void DebuggerPayne::PauseGame(bool pause)
     {
         auto& pointers = Payne::GetPointers();
-        if (!pointers.TimerUserPause || !pointers.TimerScriptPause)
+        if (!pointers.TimerUserPause)
             return;
 
         *pointers.TimerUserPause = pause;
-        *pointers.TimerScriptPause = pause;
     }
 
     bool DebuggerPayne::ProcessBreakpoints(uint32_t scriptHash, uint32_t pc, uint32_t* state)
@@ -89,6 +88,25 @@ namespace scrDbgLib
 
     bool DebuggerPayne::IsChainOpcode(uint8_t op) const
     {
+        auto scrOp = static_cast<rage::payne::scrOpcode>(op);
+
+        switch (scrOp)
+        {
+        // continuation opcodes
+        case rage::payne::scrOpcode::PUSH_CONST_S16:
+        case rage::payne::scrOpcode::PUSH_CONST_U32:
+        case rage::payne::scrOpcode::IADD:
+        case rage::payne::scrOpcode::ARRAY:
+
+        // finalizer opcodes
+        case rage::payne::scrOpcode::STORE:
+        case rage::payne::scrOpcode::STORE_N:
+            return true;
+        }
+
+        // continuation opcodes
+        if (scrOp >= rage::payne::scrOpcode::PUSH_CONST_0 && scrOp <= rage::payne::scrOpcode::PUSH_CONST_159)
+            return true;
 
         // everything else breaks the chain
         return false;

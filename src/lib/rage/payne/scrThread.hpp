@@ -23,7 +23,7 @@ namespace rage::payne
 
         enum class RefType : uint32_t
         {
-            INVALID = 0U,  // resolves to nullptr
+            INVALID = 0U,  // resolves to NULL
             LOCAL = 1U,    // function local variable
             STATIC = 2U,   // static variable
             GLOBAL = 3U,   // global variable
@@ -100,8 +100,8 @@ namespace rage::payne
         State OnException(uint32_t pc, scrOpcode op, const char* fmt, ...);
 
         static scrThread* GetByHash(uint32_t hash);
-        static scrCommand::Context::Handler GetCommandHandler(uint32_t hash);
-        static uint32_t GetCommandHash(scrCommand::Context::Handler handler);
+        static scrCommand* GetCommand(uint32_t hash);
+        static uint32_t GetCommandHash(scrCommand* command);
         static State __fastcall RunThread(scrThread* _this, void* edx, int32_t insnCount);
     };
 }

@@ -52,6 +52,7 @@ namespace scrDbgApp
         QLabel* m_FramePointer;
         QLabel* m_StackPointer;
         QLabel* m_StackSize;
+        QLabel* m_TypedFlags;
         QLabel* m_CreateTime;
         QLabel* m_GlobalVersion;
         QLabel* m_CodeSize;
@@ -62,6 +63,7 @@ namespace scrDbgApp
         QLabel* m_NativeCount;
         QLabel* m_RefCount;
         QLabel* m_StringsSize;
+        QLabel* m_IsPTScript;
         QComboBox* m_ScriptNames;
         QPushButton* m_TogglePauseScript;
         QPushButton* m_KillScript;

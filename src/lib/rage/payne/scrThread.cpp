@@ -14,6 +14,33 @@ namespace rage::payne
     using namespace scrDbgLib;
     using namespace scrDbgShared;
 
+    static int32_t g_NullContainer = 0;
+
+    static std::string FormatNativeTypes(scrValue value, scrThread* thread, scrProgram* program, scrValue* globals, NativesBin::NativeTypes type)
+    {
+        switch (type)
+        {
+        case NativesBin::NativeTypes::INT:
+            return std::to_string(value.Int);
+        case NativesBin::NativeTypes::BOOL:
+            return value.Int ? "TRUE" : "FALSE";
+        case NativesBin::NativeTypes::FLOAT:
+            return std::to_string(value.Float);
+        case NativesBin::NativeTypes::STRING:
+        {
+            auto str = reinterpret_cast<const char*>(thread->ResolveAddress(&value, program, globals));
+            return str ? "\"" + std::string(str) + "\"" : "NULL";
+        }
+        case NativesBin::NativeTypes::REFERENCE:
+        {
+            auto ref = thread->ResolveAddress(&value, program, globals)->Reference;
+            return "0x" + std::to_string(reinterpret_cast<uintptr_t>(ref));
+        }
+        }
+
+        return std::to_string(value.Int);
+    }
+
     scrThread* scrThread::GetByHash(uint32_t hash)
     {
         auto threads = Payne::GetPointers().ScriptThreads;
@@ -29,29 +56,29 @@ namespace rage::payne
         return nullptr;
     }
 
-    scrCommand::Context::Handler scrThread::GetCommandHandler(uint32_t hash)
+    scrCommand* scrThread::GetCommand(uint32_t hash)
     {
-        auto handlers = Payne::GetPointers().CommandHandlers;
-        if (!handlers)
+        auto commands = Payne::GetPointers().Commands;
+        if (!commands)
             return nullptr;
 
-        return handlers->Lookup(hash);
+        return commands->Lookup(hash);
     }
 
-    uint32_t scrThread::GetCommandHash(scrCommand::Context::Handler handler)
+    uint32_t scrThread::GetCommandHash(scrCommand* command)
     {
-        auto handlers = Payne::GetPointers().CommandHandlers;
-        if (!handlers)
+        auto commands = Payne::GetPointers().Commands;
+        if (!commands)
             return 0;
 
-        return handlers->LookupHash(handler);
+        return commands->LookupHash(command);
     }
 
     scrValue* scrThread::ResolveAddress(scrValue* ref, scrProgram* program, scrValue* globals)
     {
         uint32_t encoded = ref->Uns;
         RefType type = static_cast<RefType>((encoded >> 29) & 7);
-        uint32_t offset = encoded & 0x1FFFFFFFu;
+        uint32_t offset = encoded & 0x1FFFFFFFU;
 
         switch (type)
         {
@@ -66,7 +93,7 @@ namespace rage::payne
             return reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(m_Stack) + offset)->Reference;
         }
 
-        return nullptr;
+        return reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(&g_NullContainer) + offset);
     }
 
     scrValue* scrThread::PopStack()
@@ -123,11 +150,12 @@ namespace rage::payne
             return _this->m_Context.m_State;
 
         auto& pointers = Payne::GetPointers();
+        Debugger* debugger = g_Game->GetDebugger();
 
         scrThread* prevThread = *pointers.CurrentScriptThread;
         const char* prevThreadName = *pointers.CurrentScriptThreadName;
         *pointers.CurrentScriptThread = _this;
-        *pointers.CurrentScriptThreadName = _this->GetScriptName();
+        *pointers.CurrentScriptThreadName = _this->GetScriptName2();
 
         struct ThreadRestore
         {
@@ -147,6 +175,8 @@ namespace rage::payne
         if (!program)
             return _this->m_Context.m_State = State::KILLED;
 
+        auto frameStart = std::chrono::high_resolution_clock::now();
+
         uint8_t* code = program->m_Code;
         scrValue* stack = _this->m_Stack;
         scrValue* globals = *pointers.ScriptGlobals;
@@ -159,9 +189,17 @@ namespace rage::payne
 
         while (insnCount-- > 0)
         {
+            // Update these per opcode start
             _this->m_InsnCount++;
+            _this->m_Context.m_Pc = pc;
+            _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+
+            if (debugger->ProcessBreakpoints(_this->m_Context.m_ProgramHash, pc, (uint32_t*)&_this->m_Context.m_State))
+                return _this->m_Context.m_State; // If we do not return here, the VM will end up executing opcodes until the next NATIVE call.
 
             scrOpcode op = static_cast<scrOpcode>(code[pc++]);
+            if (debugger->ShouldBreakTracking(static_cast<uint8_t>(op)))
+                debugger->BreakTracking();
 
             switch (op)
             {
@@ -172,6 +210,7 @@ namespace rage::payne
             case scrOpcode::IADD:
             {
                 --sp;
+                debugger->AddFieldOffset(sp[1].Int);
                 sp[0].Int += sp[1].Int;
                 break;
             }
@@ -471,10 +510,60 @@ namespace rage::payne
                 ctx.m_Command = command;
                 ctx.m_VectorRefCount = 0;
 
+                uint32_t hash{};
+                std::string_view name{};
+                std::string argsStr{};
+                std::string retsStr{};
+                bool shouldLog = VMLogger::ShouldLog(VMLogType::NATIVE_CALLS, _this->m_Context.m_ProgramHash);
+
+                // log args before calling the native because rets will be written to the same stack slot
+                if (shouldLog)
+                {
+                    hash = GetCommandHash(command);
+                    name = NativesBin::GetNameByHash(hash);
+
+                    auto args = NativesBin::GetArgsByHash(hash);
+                    if (argCount > 0 && ctx.m_Args && args && !args->empty())
+                    {
+                        for (int32_t i = 0; i < argCount; i++)
+                        {
+                            auto type = (i < args->size()) ? (*args)[i] : NativesBin::NativeTypes::NONE;
+                            argsStr += FormatNativeTypes(ctx.m_Args[i], _this, program, globals, type);
+
+                            if (i < argCount - 1)
+                                argsStr += ", ";
+                        }
+                    }
+                }
+
                 if ((_this->m_Context.m_TypedFlags & 3) == 2 && (command->m_Flags & 4) != 0)
                     _this->InvokeSynchronizedCommand(command, &ctx, retCount);
                 else
                     command->m_Handler(&ctx);
+
+                if (shouldLog)
+                {
+                    auto rets = NativesBin::GetRetsByHash(hash);
+                    if (retCount > 0 && ctx.m_Rets && rets && !rets->empty())
+                    {
+                        retsStr += " -> (";
+                        for (int32_t i = 0; i < retCount; i++)
+                        {
+                            auto type = (i < rets->size()) ? (*rets)[i] : NativesBin::NativeTypes::NONE;
+                            retsStr += FormatNativeTypes(ctx.m_Rets[i], _this, program, globals, type);
+
+                            if (i < retCount - 1)
+                                retsStr += ", ";
+                        }
+                        retsStr += ")";
+                    }
+
+                    // now log the entire thing
+                    if (!name.empty())
+                        VMLogger::Logf("[%s+0x%08X] %s(%s)%s", _this->m_ScriptName, pc - 7, name.data(), argsStr.c_str(), retsStr.c_str());
+                    else
+                        VMLogger::Logf("[%s+0x%08X] unk_0x%08X(%s)%s", _this->m_ScriptName, pc - 7, hash, argsStr.c_str(), retsStr.c_str());
+                }
 
                 if (_this->m_Context.m_State == State::REFRESH)
                 {
@@ -508,6 +597,13 @@ namespace rage::payne
                 }
                 else if (_this->m_Context.m_State != State::RUNNING)
                 {
+                    if (VMLogger::ShouldLog(VMLogType::FRAME_TIME, _this->m_Context.m_ProgramHash))
+                    {
+                        auto frameEnd = std::chrono::high_resolution_clock::now();
+                        auto duration = std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
+                        VMLogger::Logf("[%s] %.3f ms", _this->m_ScriptName, duration);
+                    }
+
                     _this->m_Context.m_Pc = pc - 7;
                     return _this->m_Context.m_State;
                 }
@@ -539,6 +635,8 @@ namespace rage::payne
                 ++sp;
                 sp[0].Int = _this->m_Context.m_Fp;
 
+                uint32_t callsitePc = sp[-1].Uns - 5;
+
                 uint32_t newSp = static_cast<uint32_t>(sp - stack + 1);
                 _this->m_Context.m_Sp = newSp;
                 _this->m_Context.m_Fp = newSp - argCount - 2;
@@ -562,6 +660,21 @@ namespace rage::payne
 
                 _this->m_Context.m_Sp += localCount - argCount;
                 sp = &stack[_this->m_Context.m_Sp - 1];
+
+                if (VMLogger::ShouldLog(VMLogType::FUNCTION_CALLS, _this->m_Context.m_ProgramHash))
+                {
+                    auto funcName = program->GetFuncName(pc - nameLen - 5, nameLen);
+
+                    std::string argsStr = "";
+                    for (int i = 0; i < argCount; i++)
+                    {
+                        argsStr += std::to_string(stack[_this->m_Context.m_Fp + 2 + i].Int);
+                        if (i != argCount - 1)
+                            argsStr += ", ";
+                    }
+
+                    VMLogger::Logf("[%s+0x%08X] %s(%s)", _this->m_ScriptName, callsitePc, funcName.c_str(), argsStr.c_str());
+                }
                 break;
             }
             case scrOpcode::LEAVE:
@@ -604,6 +717,7 @@ namespace rage::payne
                 int32_t val = sp[-1].Int;
                 sp -= 2;
                 addr->Int = val;
+                debugger->FinalizeTracking(_this->m_ScriptName, pc - 1, val, false);
                 break;
             }
             case scrOpcode::STORE_REV:
@@ -646,6 +760,7 @@ namespace rage::payne
                 sp -= 2;
                 for (int32_t i = count - 1; i >= 0; i--)
                     addr[i].Int = (sp--)[0].Int;
+                debugger->FinalizeTracking(_this->m_ScriptName, pc - 1, count, true);
                 break;
             }
             case scrOpcode::LOCAL_U8_0:
@@ -670,36 +785,35 @@ namespace rage::payne
             }
             case scrOpcode::STATIC:
             {
+                debugger->BeginTracking(_this->m_Context.m_ProgramHash, sp[0].Int, false);
                 uint32_t idx = static_cast<uint32_t>(sp[0].Int);
                 sp[0].Uns = static_cast<uint32_t>(AddrType::STATIC) | (idx * sizeof(scrValue));
                 break;
             }
             case scrOpcode::GLOBAL:
             {
+                debugger->BeginTracking(_this->m_Context.m_ProgramHash, sp[0].Int, true);
                 uint32_t idx = static_cast<uint32_t>(sp[0].Int);
                 sp[0].Uns = static_cast<uint32_t>(AddrType::GLOBAL) | (idx * sizeof(scrValue));
                 break;
             }
             case scrOpcode::ARRAY:
             {
-                uint32_t encodedArray = sp[-2].Uns;
+                uint32_t index = sp[-2].Uns;
                 int32_t itemSize = sp[-1].Int;
-                int32_t index = sp[0].Int;
+                scrValue encoded = sp[0];
                 sp -= 2;
 
-                // Resolve the array base to get the bounds (first slot = count)
-                scrValue tmpRef;
-                tmpRef.Uns = encodedArray;
-                scrValue* arrayBase = _this->ResolveAddress(&tmpRef, program, globals);
-                int32_t arraySize = arrayBase ? arrayBase->Int : 0;
-                if (index < 0 || index >= arraySize)
+                uint32_t size = _this->ResolveAddress(&encoded, program, globals)->Int;
+                if (index < 0 || index >= size)
                 {
                     _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
                     _this->m_Context.m_Pc = pc;
-                    return _this->OnException(pc, op, "Array overrun: %d >= %d", index, arraySize);
+                    return _this->OnException(pc, op, "Array overrun: %d >= %d", index, size);
                 }
 
-                sp[0].Uns = encodedArray + static_cast<uint32_t>((1 + index * itemSize) * sizeof(scrValue));
+                debugger->AddArrayIndex(sp[0].Int, size);
+                sp[0].Uns = encoded.Uns + static_cast<uint32_t>((1 + index * itemSize) * sizeof(scrValue));
                 break;
             }
             case scrOpcode::SWITCH:
@@ -748,20 +862,25 @@ namespace rage::payne
             }
             case scrOpcode::TEXT_LABEL_ASSIGN_STRING:
             {
-                char* dest = const_cast<char*>(sp[0].String);
-                const char* src = sp[-1].String;
+                scrValue* destRef = sp;
+                scrValue* srcRef = sp - 1;
                 uint8_t capacity = code[pc++];
                 sp -= 2;
+
+                char* dest = reinterpret_cast<char*>(_this->ResolveAddress(destRef, program, globals));
+                const char* src = reinterpret_cast<const char*>(_this->ResolveAddress(srcRef, program, globals));
 
                 scrStringAssign(dest, capacity, src);
                 break;
             }
             case scrOpcode::TEXT_LABEL_ASSIGN_INT:
             {
-                char* dest = const_cast<char*>(sp[0].String);
+                scrValue* destRef = sp;
                 int32_t val = sp[-1].Int;
                 uint8_t capacity = code[pc++];
                 sp -= 2;
+
+                char* dest = reinterpret_cast<char*>(_this->ResolveAddress(destRef, program, globals));
 
                 char buf[32];
                 scrStringItoa(buf, val);
@@ -770,20 +889,25 @@ namespace rage::payne
             }
             case scrOpcode::TEXT_LABEL_APPEND_STRING:
             {
-                char* dest = const_cast<char*>(sp[0].String);
-                const char* src = sp[-1].String;
+                scrValue* destRef = sp;
+                scrValue* srcRef = sp - 1;
                 uint8_t capacity = code[pc++];
                 sp -= 2;
+
+                char* dest = reinterpret_cast<char*>(_this->ResolveAddress(destRef, program, globals));
+                const char* src = reinterpret_cast<const char*>(_this->ResolveAddress(srcRef, program, globals));
 
                 scrStringAppend(dest, capacity, src);
                 break;
             }
             case scrOpcode::TEXT_LABEL_APPEND_INT:
             {
-                char* dest = const_cast<char*>(sp[0].String);
+                scrValue* destRef = sp;
                 int32_t val = sp[-1].Int;
                 uint8_t capacity = code[pc++];
                 sp -= 2;
+
+                char* dest = reinterpret_cast<char*>(_this->ResolveAddress(destRef, program, globals));
 
                 char buf[32];
                 scrStringItoa(buf, val);
@@ -813,6 +937,34 @@ namespace rage::payne
                 sp = &stack[_this->m_Context.m_Sp];
                 ENSURE_STACK(1);
                 sp[0].Int = val;
+                break;
+            }
+            case scrOpcode::TEXT_LABEL_COPY:
+            {
+                scrValue* destRef = sp;
+                int32_t count = sp[-1].Int;
+                int32_t srcCount = sp[-2].Int;
+                sp -= 3;
+
+                uint32_t* dest = reinterpret_cast<uint32_t*>(_this->ResolveAddress(destRef, program, globals));
+
+                if (srcCount > count)
+                {
+                    sp -= (srcCount - count);
+                    srcCount = count;
+                }
+
+                for (int32_t i = srcCount - 1; i >= 0; i--)
+                    dest[i] = (sp--)[0].Int;
+
+                reinterpret_cast<char*>(dest)[(4 * srcCount) - 1] = 0;
+                break;
+            }
+            case scrOpcode::CALLINDIRECT:
+            {
+                uint32_t target = sp[0].Uns;
+                sp[0].Uns = pc;
+                pc = target;
                 break;
             }
             default:

@@ -42,19 +42,16 @@ namespace scrDbgLib
         });
 
         scanner.Add("89 1D ? ? ? ? 66 3B 0D", [this](Memory addr) {
-            m_Pointers.CommandHandlers = *addr.Add(2).As<decltype(m_Pointers.CommandHandlers)*>();
+            m_Pointers.Commands = *addr.Add(2).As<decltype(m_Pointers.Commands)*>();
         });
 
         scanner.Add("55 8B EC 83 E4 ? 81 EC ? ? ? ? 53 56 57 8B F9 8B 47 ? 83 F8", [this](Memory addr) {
             m_Pointers.RunScriptThread = addr.As<decltype(m_Pointers.RunScriptThread)>();
         });
 
-        /*
         scanner.Add("A0 ? ? ? ? 8A C8 0A 0D", [this](Memory addr) {
             m_Pointers.TimerUserPause = *addr.Add(1).As<decltype(m_Pointers.TimerUserPause)*>();
-            // m_Pointers.TimerScriptPause;
         });
-        */
 
         return scanner.Scan();
     }

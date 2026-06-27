@@ -93,6 +93,11 @@ namespace scrDbgApp
         {
             return {};
         }
+
+        virtual bool IsPTScript() const
+        {
+            return false;
+        }
     };
 
     class ScriptThread
@@ -150,6 +155,11 @@ namespace scrDbgApp
         }
 
         virtual uint32_t GetStackSize() const
+        {
+            return 0;
+        }
+
+        virtual uint32_t GetTypedFlags() const
         {
             return 0;
         }

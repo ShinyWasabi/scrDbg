@@ -1,5 +1,4 @@
 #pragma once
-#include "rage/payne/scrCommand.hpp"
 
 #if defined(_M_IX86)
 
@@ -15,6 +14,7 @@ namespace rage
     {
         class scrProgram;
         class scrThread;
+        class scrCommand;
     }
 }
 
@@ -54,10 +54,9 @@ namespace scrDbgLib
             rage::payne::scrThread** CurrentScriptThread;
             const char** CurrentScriptThreadName;
             rage::atArray<rage::payne::scrThread*>* ScriptThreads;
-            rage::scrHash<rage::payne::scrCommand::Context::Handler>* CommandHandlers;
+            rage::scrHash<rage::payne::scrCommand*>* Commands;
             void* RunScriptThread;
             bool* TimerUserPause;
-            bool* TimerScriptPause;
         };
 
         static inline Pointers m_Pointers;

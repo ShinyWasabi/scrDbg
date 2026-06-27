@@ -64,7 +64,11 @@ namespace scrDbgApp
         m_StackSize = new QLabel("Stack Size: 0");
         m_StackSize->setToolTip("Total stack size this script thread needs.");
 
-        QVector<QLabel*> leftLabels = {m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_CreateTime, m_StackSize};
+        m_TypedFlags = new QLabel("Typed Flags: 0");
+        m_TypedFlags->setToolTip("Flags set by START_NEW_SCRIPT_TYPED for this script thread.");
+        m_TypedFlags->setVisible(g_Game->GetType() == GameType::PAYNE);
+
+        QVector<QLabel*> leftLabels = {m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_CreateTime, m_StackSize, m_TypedFlags};
         QVBoxLayout* leftLayout = new QVBoxLayout();
         for (auto* lbl : leftLabels)
             leftLayout->addWidget(lbl);
@@ -102,7 +106,11 @@ namespace scrDbgApp
         m_StringsSize->setToolTip("Total size, in bytes, of all string literals defined in this script program.");
         m_StringsSize->setVisible(isGta5);
 
-        QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_RefCount, m_StringsSize};
+        m_IsPTScript = new QLabel("Is PT Script: FALSE");
+        m_IsPTScript->setToolTip("Flag indicating whether a script is a Payne Thresolds script.");
+        m_IsPTScript->setVisible(g_Game->GetType() == GameType::PAYNE);
+
+        QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_RefCount, m_StringsSize, m_IsPTScript};
         QVBoxLayout* rightLayout = new QVBoxLayout();
         for (auto* lbl : rightLabels)
             rightLayout->addWidget(lbl);
@@ -136,7 +144,7 @@ namespace scrDbgApp
         m_ViewStack = new QPushButton("View Stack");
         m_ViewStack->setToolTip("View the current callstack and stack frame of this script thread.");
         connect(m_ViewStack, &QPushButton::clicked, this, &ScriptThreadsWidget::OnViewStack);
-        m_ViewStack->setVisible(g_Game->GetType() != GameType::GTA4);
+        m_ViewStack->setVisible(isGta5);
 
         m_ViewBreakpoints = new QPushButton("View Breakpoints");
         m_ViewBreakpoints->setToolTip("View currently set breakpoints.");
@@ -382,6 +390,7 @@ namespace scrDbgApp
         m_FramePointer->setText(QString("Frame Pointer: 0x%1").arg(QString::number(thread->GetFp(), 16).toUpper()));
         m_StackPointer->setText(QString("Stack Pointer: 0x%1").arg(QString::number(thread->GetSp(), 16).toUpper()));
         m_StackSize->setText(QString("Stack Size: %1").arg(thread->GetStackSize()));
+        m_TypedFlags->setText(QString("Typed Flags: %1").arg(thread->GetTypedFlags()));
         m_CreateTime->setText(QString("Create Time: %1").arg(thread->GetCreateTime()));
 
         auto program = g_Game->GetProgram(thread->GetProgramHash());
@@ -397,6 +406,7 @@ namespace scrDbgApp
         m_NativeCount->setText(QString("Native Count: %1").arg(program->GetNativeCount()));
         m_RefCount->setText(QString("Ref Count: %1").arg(program->GetRefCount()));
         m_StringsSize->setText(QString("String Size: %1").arg(program->GetStringsSize()));
+        m_IsPTScript->setText(QString("Is PT Script: %1").arg(program->IsPTScript() ? "TRUE" : "FALSE"));
 
         if (m_LastThreadId != id)
         {

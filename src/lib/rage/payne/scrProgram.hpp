@@ -18,7 +18,7 @@ namespace rage::payne
         uint16_t m_StaticCount;
         uint16_t m_ArgCount;
         uint16_t m_RefCount;
-        bool m_IsTyped; // not really sure about this, but it routes scripts to the secondary thread array in scrThread::CreateThread
+        bool m_IsPTScript; // PT = Payne Thresolds (it looks like R* forgot to turn off function names for these)
 
         int GetInsnSize(uint32_t pc) const
         {
@@ -49,8 +49,6 @@ namespace rage::payne
             case scrOpcode::TEXT_LABEL_APPEND_STRING:
             case scrOpcode::TEXT_LABEL_APPEND_INT:
                 return 2;
-            default:
-                return 1;
             }
 
             return 1;
