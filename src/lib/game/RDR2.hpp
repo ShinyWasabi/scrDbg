@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(_M_IX86)
+#if defined(_M_X64)
 
 namespace rage
 {
@@ -8,36 +8,36 @@ namespace rage
     class scrHash;
     template <typename T>
     class atArray;
+    class scrNativeContext;
     union scrValue;
 
-    namespace payne
+    namespace rdr2
     {
         class scrProgram;
         class scrThread;
-        class scrCommand;
     }
 }
 
 namespace scrDbgLib
 {
-    class Payne : public Game
+    class RDR2 : public Game
     {
     public:
         struct Pointers;
 
-        explicit Payne();
+        explicit RDR2();
 
         bool InitPointers() const override;
         bool InitHooks() const override;
 
         GameType GetType() const override
         {
-            return GameType::PAYNE;
+            return GameType::RDR2;
         }
 
         int GetResourceId() const override
         {
-            return NATIVES_PAYNE_BIN;
+            return NATIVES_RDR2_BIN;
         }
 
         static const Pointers& GetPointers()
@@ -48,14 +48,15 @@ namespace scrDbgLib
     private:
         struct Pointers
         {
-            rage::scrHash<rage::payne::scrProgram*>* ScriptPrograms;
-            rage::scrValue** ScriptGlobals;
-            rage::payne::scrThread** CurrentScriptThread;
+            rage::scrHash<rage::rdr2::scrProgram*>* ScriptPrograms;
+            rage::scrValue** ScriptGlobals; // addressed in 4-byte slots although scrValue is 8 bytes
+            rage::rdr2::scrThread** CurrentScriptThread;
             const char** CurrentScriptThreadName;
-            rage::atArray<rage::payne::scrThread*>* ScriptThreads;
-            rage::scrHash<rage::payne::scrCommand*>* Commands;
+            rage::atArray<rage::rdr2::scrThread*>* ScriptThreads;
+            rage::scrHash<void (*)(rage::scrNativeContext*)>* CommandHandlers;
             void* RunScriptThread;
             bool* TimerUserPause;
+            bool* TimerScriptPause;
         };
 
         static inline Pointers m_Pointers;

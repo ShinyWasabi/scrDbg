@@ -25,5 +25,18 @@ namespace rage
             }
             m_VectorRefCount = 0;
         }
+
+        // RDR1 specific
+        void CopyVectorsOut2()
+        {
+            for (int i = 0; i < m_VectorRefCount; i++)
+            {
+                uint8_t* base = reinterpret_cast<uint8_t*>(m_VectorRefOutput[i]);
+                *reinterpret_cast<float*>(base + 0) = m_VectorRefInput[i].x;
+                *reinterpret_cast<float*>(base + 4) = m_VectorRefInput[i].y;
+                *reinterpret_cast<float*>(base + 8) = m_VectorRefInput[i].z;
+            }
+            m_VectorRefCount = 0;
+        }
     };
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#if defined(_M_IX86)
-
 namespace rage
 {
     template <typename T /*, int DefaultSize*/>
@@ -122,5 +120,3 @@ namespace rage
         }
     };
 }
-
-#endif

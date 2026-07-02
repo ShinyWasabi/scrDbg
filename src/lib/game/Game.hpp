@@ -6,6 +6,7 @@ namespace scrDbgLib
     enum class GameType
     {
         GTA4,
+        RDR2,
         PAYNE,
         GTA5_GEN8,
         GTA5_GEN9,

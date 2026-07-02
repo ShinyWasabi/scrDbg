@@ -21,10 +21,6 @@ namespace scrDbgLib
             m_Pointers.ScriptPrograms = *addr.Add(1).As<decltype(m_Pointers.ScriptPrograms)*>();
         });
 
-        scanner.Add("8B 3D ? ? ? ? 8B 4E", [this](Memory addr) {
-            m_Pointers.ScriptGlobalsCount = *addr.Add(2).As<decltype(m_Pointers.ScriptGlobalsCount)*>();
-        });
-
         scanner.Add("2B 3D ? ? ? ? 8B F1", [this](Memory addr) {
             m_Pointers.ScriptGlobals = *addr.Add(2).As<decltype(m_Pointers.ScriptGlobals)*>();
         });
