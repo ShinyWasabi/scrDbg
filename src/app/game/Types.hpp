@@ -94,6 +94,11 @@ namespace scrDbgApp
             return {};
         }
 
+        virtual bool IsRsc() const
+        {
+            return false;
+        }
+
         virtual bool IsPTScript() const
         {
             return false;
@@ -106,10 +111,11 @@ namespace scrDbgApp
         enum State : uint32_t
         {
             RUNNING,
-            IDLE,
+            WAITING,
             KILLED,
             PAUSED,
-            REFRESH
+            REFRESH,
+            THROW
         };
 
         enum Priority : uint32_t
@@ -179,6 +185,11 @@ namespace scrDbgApp
             return 0;
         }
 
+        virtual bool IsPatched() const
+        {
+            return false;
+        }
+
         virtual Pointer GetStack(uint32_t index) const
         {
             return {};
@@ -200,6 +211,11 @@ namespace scrDbgApp
         }
 
         virtual std::string GetScriptName() const
+        {
+            return {};
+        }
+
+        virtual std::string GetFullScriptName() const
         {
             return {};
         }

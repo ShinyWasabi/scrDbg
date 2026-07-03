@@ -8,6 +8,7 @@ namespace scrDbgApp
     {
         UNKNOWN = -1,
         GTA4,
+        RDR2,
         PAYNE,
         GTA5_GEN8,
         GTA5_GEN9
@@ -15,6 +16,7 @@ namespace scrDbgApp
 
     constexpr const std::pair<GameType, const wchar_t*> g_Games[] = {
         {GameType::GTA4, L"GTAIV.exe"},
+        {GameType::RDR2, L"RDR.exe"},
         {GameType::PAYNE, L"MaxPayne3.exe"},
         {GameType::GTA5_GEN8, L"GTA5.exe"},
         {GameType::GTA5_GEN9, L"GTA5_Enhanced.exe"}};

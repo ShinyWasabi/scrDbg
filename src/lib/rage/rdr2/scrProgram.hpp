@@ -88,12 +88,12 @@ namespace rage::rdr2
                 case scrOpcode::CALL_U8H_F:
                 case scrOpcode::J:
                 case scrOpcode::JZ:
-                case scrOpcode::INE_JZ:
-                case scrOpcode::IEQ_JZ:
-                case scrOpcode::ILE_JZ:
-                case scrOpcode::ILT_JZ:
-                case scrOpcode::IGE_JZ:
-                case scrOpcode::IGT_JZ:
+                case scrOpcode::INE_J:
+                case scrOpcode::IEQ_J:
+                case scrOpcode::ILE_J:
+                case scrOpcode::ILT_J:
+                case scrOpcode::IGE_J:
+                case scrOpcode::IGT_J:
                     return 3;
                 case scrOpcode::PUSH_CONST_U8_U8_U8:
                 case scrOpcode::GLOBAL_U24:
@@ -157,7 +157,9 @@ namespace rage::rdr2
 
         struct PatchData : Data
         {
-            char m_Pad1[0x10];
+            uint32_t m_PatchCount2;
+            uint32_t m_PatchCount1;
+            uint32_t m_Unk3;
             PatchEntry m_Entries[16];
         };
 

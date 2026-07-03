@@ -52,16 +52,25 @@ namespace scrDbgApp
         if (role != Qt::DisplayRole)
             return QVariant();
 
-        auto insn = m_Disassembler->DecodeInstruction(index.row());
+        // DecodeInstruction builds Address/Bytes/Instruction together in one
+        // pass. data() gets called once per column per row by Qt, so without
+        // this cache we would redo the full decode 3x per row on every repaint.
+        // Qt queries columns for a row consecutively, so a single-row memo
+        // collapses that back down to one decode per row.
+        if (index.row() != m_CachedRow)
+        {
+            m_CachedInsn = m_Disassembler->DecodeInstruction(index.row());
+            m_CachedRow = index.row();
+        }
 
         switch (index.column())
         {
         case 0:
-            return QString::fromStdString(insn.Address);
+            return QString::fromStdString(m_CachedInsn.Address);
         case 1:
-            return QString::fromStdString(insn.Bytes);
+            return QString::fromStdString(m_CachedInsn.Bytes);
         case 2:
-            return QString::fromStdString(insn.Instruction);
+            return QString::fromStdString(m_CachedInsn.Instruction);
         }
 
         return QVariant();

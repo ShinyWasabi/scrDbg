@@ -122,7 +122,8 @@ namespace scrDbgApp
         if (address < 0)
             return false;
 
-        if (g_Game->Is64Bit())
+        auto type = g_Game->GetType();
+        if (g_Game->GetType() == GameType::GTA5_GEN8 || type == GameType::GTA5_GEN9)
         {
             int blockIndex = (address >> 0x12) & 0x3F;
             if (blockIndex >= 64)

@@ -55,8 +55,7 @@ namespace scrDbgLib
             rage::atArray<rage::rdr2::scrThread*>* ScriptThreads;
             rage::scrHash<void (*)(rage::scrNativeContext*)>* CommandHandlers;
             void* RunScriptThread;
-            bool* TimerUserPause;
-            bool* TimerScriptPause;
+            uint32_t* PauseGameFlags;
         };
 
         static inline Pointers m_Pointers;

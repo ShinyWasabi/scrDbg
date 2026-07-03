@@ -17,6 +17,9 @@ namespace scrDbgApp
         QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
     private:
+        mutable int m_CachedRow = -1;
+        mutable Disassembler::DecodedInstruction m_CachedInsn;
+
         const Disassembler* m_Disassembler;
     };
 }

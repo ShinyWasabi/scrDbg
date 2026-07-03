@@ -16,6 +16,25 @@ namespace rage::rdr2
 
     static uint64_t g_NullContainer = 0;
 
+    static std::string FormatNativeTypes(scrValue value, NativesBin::NativeTypes type)
+    {
+        switch (type)
+        {
+        case NativesBin::NativeTypes::INT:
+            return std::to_string(value.Int);
+        case NativesBin::NativeTypes::BOOL:
+            return value.Int ? "TRUE" : "FALSE";
+        case NativesBin::NativeTypes::FLOAT:
+            return std::to_string(value.Float);
+        case NativesBin::NativeTypes::STRING:
+            return value.String ? "\"" + std::string(value.String) + "\"" : "NULL";
+        case NativesBin::NativeTypes::REFERENCE:
+            return "0x" + std::to_string(reinterpret_cast<uintptr_t>(value.Reference));
+        }
+
+        return std::to_string(value.Any);
+    }
+
     scrThread* scrThread::GetByHash(uint32_t hash)
     {
         auto threads = RDR2::GetPointers().ScriptThreads;
@@ -59,7 +78,7 @@ namespace rage::rdr2
         va_end(args);
 
         const char* scriptName = "???";
-        if (!m_Context.m_Tls[0].Any != 0)
+        if (m_Context.m_Tls[0].Any != 0)
             scriptName = reinterpret_cast<const char*>(m_Context.m_Tls[0].Any + 112);
 
         char fullMessage[600];
@@ -90,11 +109,16 @@ namespace rage::rdr2
             return _this->OnException(_this->m_Context.m_Pc, scrOpcode::NOP, "Invalid program");
 
         auto& pointers = RDR2::GetPointers();
+        Debugger* debugger = g_Game->GetDebugger();
+        auto frameStart = std::chrono::high_resolution_clock::now();
 
         scrThread* prevThread = *pointers.CurrentScriptThread;
         const char* prevThreadName = *pointers.CurrentScriptThreadName;
         *pointers.CurrentScriptThread = _this;
         *pointers.CurrentScriptThreadName = program->m_Name;
+
+        std::string name = std::filesystem::path(*pointers.CurrentScriptThreadName).stem().string();
+        const char* rawScriptName = name.c_str();
 
         struct ThreadRestore
         {
@@ -129,6 +153,13 @@ namespace rage::rdr2
         {
             _this->m_InsnCount++;
 
+            if (debugger->ProcessBreakpoints(_this->m_Context.m_ProgramHash, pc, (uint32_t*)&_this->m_Context.m_State))
+            {
+                _this->m_Context.m_Pc = pc;
+                _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+                return _this->m_Context.m_State; // If we do not return here, the VM will end up executing opcodes until the next NATIVE call.
+            }
+
             scrOpcode op = static_cast<scrOpcode>(*curData->GetCode(pc));
 
             if (op == scrOpcode::PATCH_RET)
@@ -141,7 +172,11 @@ namespace rage::rdr2
                 _this->m_Context.m_Patched = false;
             }
 
+            uint32_t opPc = pc;
             ++pc;
+
+            if (debugger->ShouldBreakTracking(static_cast<uint8_t>(op)))
+                debugger->BreakTracking();
 
             switch (op)
             {
@@ -426,7 +461,7 @@ namespace rage::rdr2
             }
             case scrOpcode::NATIVE:
             {
-                _this->m_Context.m_Pc = pc - 1;
+                _this->m_Context.m_Pc = opPc;
 
                 uint8_t byte1 = GET_U8;
                 uint8_t byte2 = GET_U8;
@@ -444,7 +479,58 @@ namespace rage::rdr2
                 ctx.m_ArgCount = argCount;
                 ctx.m_Args = &stack[_this->m_Context.m_Sp - argCount];
                 ctx.m_VectorRefCount = 0;
+
+                uint32_t hash{};
+                std::string_view name{};
+                std::string argsStr{};
+                std::string retsStr{};
+                bool shouldLog = VMLogger::ShouldLog(VMLogType::NATIVE_CALLS, _this->m_Context.m_ProgramHash);
+
+                // log args before calling the native because rets will be written to the same stack slot
+                if (shouldLog)
+                {
+                    hash = GetCommandHash(handler);
+                    name = NativesBin::GetNameByHash(hash);
+
+                    auto args = NativesBin::GetArgsByHash(hash);
+                    if (argCount > 0 && ctx.m_Args && args && !args->empty())
+                    {
+                        for (int32_t i = 0; i < argCount; i++)
+                        {
+                            auto type = (i < args->size()) ? (*args)[i] : NativesBin::NativeTypes::NONE;
+                            argsStr += FormatNativeTypes(ctx.m_Args[i], type);
+
+                            if (i < argCount - 1)
+                                argsStr += ", ";
+                        }
+                    }
+                }
+
                 (*handler)(&ctx);
+
+                if (shouldLog)
+                {
+                    auto rets = NativesBin::GetRetsByHash(hash);
+                    if (retCount > 0 && ctx.m_Rets && rets && !rets->empty())
+                    {
+                        retsStr += " -> (";
+                        for (int32_t i = 0; i < retCount; i++)
+                        {
+                            auto type = (i < rets->size()) ? (*rets)[i] : NativesBin::NativeTypes::NONE;
+                            retsStr += FormatNativeTypes(ctx.m_Rets[i], type);
+
+                            if (i < retCount - 1)
+                                retsStr += ", ";
+                        }
+                        retsStr += ")";
+                    }
+
+                    // now log the entire thing
+                    if (!name.empty())
+                        VMLogger::Logf("[%s+0x%08X] %s(%s)%s", rawScriptName, opPc, name.data(), argsStr.c_str(), retsStr.c_str());
+                    else
+                        VMLogger::Logf("[%s+0x%08X] unk_0x%08X(%s)%s", rawScriptName, opPc, hash, argsStr.c_str(), retsStr.c_str());
+                }
 
                 if (_this->m_Context.m_State == State::REFRESH)
                 {
@@ -453,7 +539,14 @@ namespace rage::rdr2
                 }
                 else if (_this->m_Context.m_State != State::RUNNING)
                 {
-                    _this->m_Context.m_Pc = pc - 3;
+                    if (VMLogger::ShouldLog(VMLogType::FRAME_TIME, _this->m_Context.m_ProgramHash))
+                    {
+                        auto frameEnd = std::chrono::high_resolution_clock::now();
+                        auto duration = std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
+                        VMLogger::Logf("[%s] %.3f ms", rawScriptName, duration);
+                    }
+
+                    _this->m_Context.m_Pc = opPc;
                     return _this->m_Context.m_State;
                 }
 
@@ -473,6 +566,8 @@ namespace rage::rdr2
                 ++sp;
                 sp[0].Int = _this->m_Context.m_Fp;
 
+                uint32_t callsitePc = sp[-1].Uns - 3;
+
                 uint32_t newSp = static_cast<uint32_t>(sp - stack + 1);
                 _this->m_Context.m_Sp = newSp;
                 _this->m_Context.m_Fp = newSp - argCount - 2;
@@ -483,6 +578,21 @@ namespace rage::rdr2
 
                 _this->m_Context.m_Sp += frameSize - argCount;
                 sp = &stack[_this->m_Context.m_Sp - 1];
+
+                if (VMLogger::ShouldLog(VMLogType::FUNCTION_CALLS, _this->m_Context.m_ProgramHash))
+                {
+                    auto funcName = program->GetFuncName(pc - 4, nameLen);
+
+                    std::string argsStr = "";
+                    for (int i = 0; i < argCount; i++)
+                    {
+                        argsStr += std::to_string(stack[_this->m_Context.m_Fp + 2 + i].Int);
+                        if (i != argCount - 1)
+                            argsStr += ", ";
+                    }
+
+                    VMLogger::Logf("[%s+0x%08X] %s(%s)", rawScriptName, callsitePc, funcName.c_str(), argsStr.c_str());
+                }
                 break;
             }
             case scrOpcode::LEAVE:
@@ -563,6 +673,7 @@ namespace rage::rdr2
             {
                 sp -= 2;
                 sp[2].Reference->Int = sp[1].Int;
+                debugger->FinalizeTracking(rawScriptName, opPc, sp[1].Int);
                 break;
             }
             case scrOpcode::STORE_REV:
@@ -587,6 +698,7 @@ namespace rage::rdr2
                 sp -= 2;
                 for (int32_t i = count - 1; i >= 0; i--)
                     addr[i].Any = (sp--)[0].Any;
+                debugger->FinalizeTracking(rawScriptName, opPc, count, true);
                 break;
             }
             case scrOpcode::ARRAY_U8:
@@ -596,7 +708,9 @@ namespace rage::rdr2
                 int32_t index = sp[0].Int;
                 if (index < 0 || index >= addr->Int)
                     return _this->OnException(pc, op, "Array overrun (%d >= %d)", index, addr->Int);
-                sp[0].Reference = addr + 1U + index * GET_U8;
+                uint8_t size = GET_U8;
+                sp[0].Reference = addr + 1U + index * size;
+                debugger->AddArrayIndex(index, size);
                 break;
             }
             case scrOpcode::ARRAY_U8_LOAD:
@@ -616,7 +730,10 @@ namespace rage::rdr2
                 int32_t index = sp[2].Int;
                 if (index < 0 || index >= addr->Int)
                     return _this->OnException(pc, op, "Array overrun (%d >= %d)", index, addr->Int);
-                (addr + 1U + index * GET_U8)->Int = sp[1].Int;
+                uint8_t size = GET_U8;
+                (addr + 1U + index * size)->Int = sp[1].Int;
+                debugger->AddArrayIndex(index, size);
+                debugger->FinalizeTracking(rawScriptName, opPc, sp[1].Int);
                 break;
             }
             case scrOpcode::LOCAL_U8:
@@ -640,7 +757,9 @@ namespace rage::rdr2
             case scrOpcode::STATIC_U8:
             {
                 ++sp;
-                sp[0].Reference = reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(stack) + 4ULL * GET_U8);
+                uint8_t offset = GET_U8;
+                sp[0].Reference = reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(stack) + 4ULL * offset);
+                debugger->BeginTracking(_this->m_Context.m_ProgramHash, offset, false);
                 break;
             }
             case scrOpcode::STATIC_U8_LOAD:
@@ -652,12 +771,17 @@ namespace rage::rdr2
             case scrOpcode::STATIC_U8_STORE:
             {
                 --sp;
-                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(stack) + 4ULL * GET_U8)->Int = sp[1].Int;
+                uint8_t offset = GET_U8;
+                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(stack) + 4ULL * offset)->Int = sp[1].Int;
+                if (VMLogger::ShouldLog(VMLogType::STATIC_WRITES, _this->m_Context.m_ProgramHash))
+                    VMLogger::Logf("[%s+0x%08X] Static_%u = %d", rawScriptName, opPc, offset, sp[1].Int);
                 break;
             }
             case scrOpcode::IADD_U8:
             {
-                sp[0].Any += GET_U8;
+                uint8_t offset = GET_U8;
+                sp[0].Any += offset;
+                debugger->AddFieldOffset(offset);
                 break;
             }
             case scrOpcode::IOFFSET_U8_LOAD:
@@ -668,7 +792,10 @@ namespace rage::rdr2
             case scrOpcode::IOFFSET_U8_STORE:
             {
                 sp -= 2;
-                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(sp[2].Reference) + GET_U8)->Int = sp[1].Int;
+                uint8_t offset = GET_U8;
+                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(sp[2].Reference) + offset)->Int = sp[1].Int;
+                debugger->AddFieldOffset(offset);
+                debugger->FinalizeTracking(rawScriptName, opPc, sp[1].Int);
                 break;
             }
             case scrOpcode::IMUL_U8:
@@ -679,12 +806,16 @@ namespace rage::rdr2
             case scrOpcode::PUSH_CONST_S16:
             {
                 ++sp;
-                sp[0].Int = GET_S16;
+                int16_t offset = GET_S16;
+                sp[0].Int = offset;
+                debugger->AddFieldOffset(offset);
                 break;
             }
             case scrOpcode::IADD_S16:
             {
-                sp[0].Any += GET_S16;
+                int16_t offset = GET_S16;
+                sp[0].Any += offset;
+                debugger->AddFieldOffset(offset);
                 break;
             }
             case scrOpcode::IOFFSET_S16_LOAD:
@@ -695,7 +826,10 @@ namespace rage::rdr2
             case scrOpcode::IOFFSET_S16_STORE:
             {
                 sp -= 2;
-                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(sp[2].Reference) + GET_S16)->Int = sp[1].Int;
+                int16_t offset = GET_S16;
+                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(sp[2].Reference) + offset)->Int = sp[1].Int;
+                debugger->AddFieldOffset(offset);
+                debugger->FinalizeTracking(rawScriptName, opPc, sp[1].Int);
                 break;
             }
             case scrOpcode::IMUL_S16:
@@ -710,7 +844,9 @@ namespace rage::rdr2
                 int32_t index = sp[0].Int;
                 if (index < 0 || index >= addr->Int)
                     return _this->OnException(pc, op, "Array overrun (%d >= %d)", index, addr->Int);
-                sp[0].Reference = addr + 1U + index * GET_U16;
+                uint16_t size = GET_U16;
+                sp[0].Reference = addr + 1U + index * size;
+                debugger->AddArrayIndex(index, size);
                 break;
             }
             case scrOpcode::ARRAY_U16_LOAD:
@@ -730,7 +866,10 @@ namespace rage::rdr2
                 int32_t index = sp[2].Int;
                 if (index < 0 || index >= addr->Int)
                     return _this->OnException(pc, op, "Array overrun (%d >= %d)", index, addr->Int);
-                (addr + 1U + index * GET_U16)->Int = sp[1].Int;
+                uint16_t size = GET_U16;
+                (addr + 1U + index * size)->Int = sp[1].Int;
+                debugger->AddArrayIndex(index, size);
+                debugger->FinalizeTracking(rawScriptName, opPc, sp[1].Int);
                 break;
             }
             case scrOpcode::LOCAL_U16:
@@ -754,7 +893,9 @@ namespace rage::rdr2
             case scrOpcode::STATIC_U16:
             {
                 ++sp;
-                sp[0].Reference = reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(stack) + 4ULL * GET_U16);
+                uint16_t offset = GET_U16;
+                sp[0].Reference = reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(stack) + 4ULL * offset);
+                debugger->BeginTracking(_this->m_Context.m_ProgramHash, offset, false);
                 break;
             }
             case scrOpcode::STATIC_U16_LOAD:
@@ -766,13 +907,18 @@ namespace rage::rdr2
             case scrOpcode::STATIC_U16_STORE:
             {
                 --sp;
-                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(stack) + 4ULL * GET_U16)->Int = sp[1].Int;
+                uint16_t offset = GET_U16;
+                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(stack) + 4ULL * offset)->Int = sp[1].Int;
+                if (VMLogger::ShouldLog(VMLogType::STATIC_WRITES, _this->m_Context.m_ProgramHash))
+                    VMLogger::Logf("[%s+0x%08X] Static_%u = %d", rawScriptName, opPc, offset, sp[1].Int);
                 break;
             }
             case scrOpcode::GLOBAL_U16:
             {
                 ++sp;
-                sp[0].Reference = reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + 4ULL * GET_U16);
+                uint16_t offset = GET_U16;
+                sp[0].Reference = reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + 4ULL * offset);
+                debugger->BeginTracking(_this->m_Context.m_ProgramHash, offset, true);
                 break;
             }
             case scrOpcode::GLOBAL_U16_LOAD:
@@ -784,7 +930,10 @@ namespace rage::rdr2
             case scrOpcode::GLOBAL_U16_STORE:
             {
                 --sp;
-                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + 4ULL * GET_U16)->Int = sp[1].Int;
+                uint16_t offset = GET_U16;
+                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + 4ULL * offset)->Int = sp[1].Int;
+                if (VMLogger::ShouldLog(VMLogType::GLOBAL_WRITES, _this->m_Context.m_ProgramHash))
+                    VMLogger::Logf("[%s+0x%08X] Global_%u = %d", rawScriptName, opPc, offset, sp[1].Int);
                 break;
             }
             case scrOpcode::CALL:
@@ -822,7 +971,7 @@ namespace rage::rdr2
                     pc += ofs;
                 break;
             }
-            case scrOpcode::INE_JZ:
+            case scrOpcode::INE_J:
             {
                 sp -= 2;
                 int16_t ofs = GET_S16;
@@ -830,7 +979,7 @@ namespace rage::rdr2
                     pc += ofs;
                 break;
             }
-            case scrOpcode::IEQ_JZ:
+            case scrOpcode::IEQ_J:
             {
                 sp -= 2;
                 int16_t ofs = GET_S16;
@@ -838,7 +987,7 @@ namespace rage::rdr2
                     pc += ofs;
                 break;
             }
-            case scrOpcode::ILE_JZ:
+            case scrOpcode::ILE_J:
             {
                 sp -= 2;
                 int16_t ofs = GET_S16;
@@ -846,7 +995,7 @@ namespace rage::rdr2
                     pc += ofs;
                 break;
             }
-            case scrOpcode::ILT_JZ:
+            case scrOpcode::ILT_J:
             {
                 sp -= 2;
                 int16_t ofs = GET_S16;
@@ -854,7 +1003,7 @@ namespace rage::rdr2
                     pc += ofs;
                 break;
             }
-            case scrOpcode::IGE_JZ:
+            case scrOpcode::IGE_J:
             {
                 sp -= 2;
                 int16_t ofs = GET_S16;
@@ -862,7 +1011,7 @@ namespace rage::rdr2
                     pc += ofs;
                 break;
             }
-            case scrOpcode::IGT_JZ:
+            case scrOpcode::IGT_J:
             {
                 sp -= 2;
                 int16_t ofs = GET_S16;
@@ -873,7 +1022,9 @@ namespace rage::rdr2
             case scrOpcode::GLOBAL_U24:
             {
                 ++sp;
-                sp[0].Reference = reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + 4ULL * GET_U24);
+                uint32_t offset = GET_U24;
+                sp[0].Reference = reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + 4ULL * offset);
+                debugger->BeginTracking(_this->m_Context.m_ProgramHash, offset, true);
                 break;
             }
             case scrOpcode::GLOBAL_U24_LOAD:
@@ -885,13 +1036,18 @@ namespace rage::rdr2
             case scrOpcode::GLOBAL_U24_STORE:
             {
                 --sp;
-                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + 4ULL * GET_U24)->Int = sp[1].Int;
+                uint32_t offset = GET_U24;
+                reinterpret_cast<scrValue*>(reinterpret_cast<uint8_t*>(globals) + 4ULL * offset)->Int = sp[1].Int;
+                if (VMLogger::ShouldLog(VMLogType::GLOBAL_WRITES, _this->m_Context.m_ProgramHash))
+                    VMLogger::Logf("[%s+0x%08X] Global_%u = %d", rawScriptName, opPc, offset, sp[1].Int);
                 break;
             }
             case scrOpcode::PUSH_CONST_U24:
             {
                 ++sp;
-                sp[0].Int = GET_U24;
+                uint32_t offset = GET_U24;
+                sp[0].Int = offset;
+                debugger->AddFieldOffset(offset);
                 break;
             }
             case scrOpcode::SWITCH:
@@ -1190,6 +1346,7 @@ namespace rage::rdr2
             {
                 sp -= 2;
                 sp[2].Reference->Any = sp[1].Any;
+                debugger->FinalizeTracking(rawScriptName, opPc, sp[1].Any);
                 break;
             }
             case scrOpcode::VECTOR_STORE:

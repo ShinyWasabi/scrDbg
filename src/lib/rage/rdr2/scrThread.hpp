@@ -52,7 +52,7 @@ namespace rage::rdr2
         uint32_t m_InsnCount;
         uint32_t m_ArgsSize;
         uint32_t m_ArgsOffset;
-        uint32_t m_ScriptHash;
+        uint32_t m_Unk1; // apparently this is not the script hash, but has the value 32758 for some scripts?
         const char* m_KillReason;
 
         State OnException(uint32_t pc, scrOpcode op, const char* fmt, ...);

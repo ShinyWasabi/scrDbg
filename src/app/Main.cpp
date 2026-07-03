@@ -3,6 +3,7 @@
 #include "game/gta4/GTA4.hpp"
 #include "game/gta5/GTA5.hpp"
 #include "game/payne/Payne.hpp"
+#include "game/rdr2/RDR2.hpp"
 #include "gui/widgets/GUIWidget.hpp"
 
 int main(int argc, char* argv[])
@@ -27,6 +28,9 @@ int main(int argc, char* argv[])
             {
             case GameType::GTA4:
                 g_Game = std::make_unique<GTA4>();
+                break;
+            case GameType::RDR2:
+                g_Game = std::make_unique<RDR2>();
                 break;
             case GameType::PAYNE:
                 g_Game = std::make_unique<Payne>();

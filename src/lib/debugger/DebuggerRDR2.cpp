@@ -9,11 +9,10 @@ namespace scrDbgLib
     void DebuggerRDR2::PauseGame(bool pause)
     {
         auto& pointers = RDR2::GetPointers();
-        if (!pointers.TimerUserPause || !pointers.TimerScriptPause)
+        if (!pointers.PauseGameFlags)
             return;
 
-        *pointers.TimerUserPause = pause;
-        *pointers.TimerScriptPause = pause;
+        *pointers.PauseGameFlags = pause ? 4 : 3; // TO-DO: use something else, this isn't reliable
     }
 
     bool DebuggerRDR2::ProcessBreakpoints(uint32_t scriptHash, uint32_t pc, uint32_t* state)
@@ -43,7 +42,7 @@ namespace scrDbgLib
             auto thread = *RDR2::GetPointers().CurrentScriptThread;
 
             const char* scriptName = "???";
-            if (!thread->m_Context.m_Tls[0].Any != 0)
+            if (thread->m_Context.m_Tls[0].Any != 0)
                 scriptName = reinterpret_cast<const char*>(thread->m_Context.m_Tls[0].Any + 112);
 
             // Show the message first so scrDbgApp doesn't attempt to resume when MessageBoxA is active
@@ -93,13 +92,27 @@ namespace scrDbgLib
         return true;
     }
 
-    // todo
     bool DebuggerRDR2::IsChainOpcode(uint8_t op) const
     {
-        auto scrOp = static_cast<rage::rdr2::scrOpcode>(op);
-
-        switch (scrOp)
+        switch (static_cast<rage::rdr2::scrOpcode>(op))
         {
+        // continuation opcodes
+        case rage::rdr2::scrOpcode::IADD_U8:
+        case rage::rdr2::scrOpcode::IADD_S16:
+        case rage::rdr2::scrOpcode::ARRAY_U8:
+        case rage::rdr2::scrOpcode::ARRAY_U16:
+        case rage::rdr2::scrOpcode::PUSH_CONST_S16:
+        case rage::rdr2::scrOpcode::PUSH_CONST_U24:
+
+        // finalizer opcodes
+        case rage::rdr2::scrOpcode::STORE:
+        case rage::rdr2::scrOpcode::STORE_N:
+        case rage::rdr2::scrOpcode::IOFFSET_U8_STORE:
+        case rage::rdr2::scrOpcode::IOFFSET_S16_STORE:
+        case rage::rdr2::scrOpcode::ARRAY_U8_STORE:
+        case rage::rdr2::scrOpcode::ARRAY_U16_STORE:
+        case rage::rdr2::scrOpcode::REF_STORE:
+            return true;
         }
 
         // everything else breaks the chain

@@ -30,13 +30,24 @@ namespace scrDbgApp
           m_Disassembler(nullptr),
           m_FunctionFilter(nullptr)
     {
+        bool isRdr2 = g_Game->GetType() == GameType::RDR2;
+        bool isPayne = g_Game->GetType() == GameType::PAYNE;
         bool isGta5 = g_Game->GetType() == GameType::GTA5_GEN8 || g_Game->GetType() == GameType::GTA5_GEN9;
 
         m_ScriptNames = new QComboBox(this);
         m_ScriptNames->setEditable(false);
 
+        m_FullScriptName = new QLabel("Full Name: ");
+        m_FullScriptName->setToolTip("Full name of this script thread.");
+        m_FullScriptName->setVisible(isRdr2);
+
         m_State = new QLabel("State: RUNNING");
-        m_State->setToolTip("Current state of this script thread.\n(RUNNING, IDLE, KILLED, PAUSED)");
+        if (isPayne)
+            m_State->setToolTip("Current state of this script thread.\n(RUNNING, IDLE, KILLED, PAUSED, REFRESH, THROW)");
+        else if (isGta5)
+            m_State->setToolTip("Current state of this script thread.\n(RUNNING, IDLE, KILLED, PAUSED)");
+        else
+            m_State->setToolTip("Current state of this script thread.\n(RUNNING, IDLE, KILLED, PAUSED, REFRESH)");
 
         m_Priority = new QLabel("Priority: HIGHEST");
         m_Priority->setToolTip("Execution priority of this script thread.\n(HIGHEST, NORMAL, LOWEST, MANUAL_UPDATE)");
@@ -61,14 +72,18 @@ namespace scrDbgApp
         m_CreateTime->setToolTip("Time passed since the creation of this script thread.");
         m_CreateTime->setVisible(isGta5);
 
+        m_IsPatched = new QLabel("Is Patched: FALSE");
+        m_IsPatched->setToolTip("Flag indicating whether this script thread is using the patch data.");
+        m_IsPatched->setVisible(isRdr2);
+
         m_StackSize = new QLabel("Stack Size: 0");
         m_StackSize->setToolTip("Total stack size this script thread needs.");
 
         m_TypedFlags = new QLabel("Typed Flags: 0");
         m_TypedFlags->setToolTip("Flags set by START_NEW_SCRIPT_TYPED for this script thread.");
-        m_TypedFlags->setVisible(g_Game->GetType() == GameType::PAYNE);
+        m_TypedFlags->setVisible(isPayne);
 
-        QVector<QLabel*> leftLabels = {m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_CreateTime, m_StackSize, m_TypedFlags};
+        QVector<QLabel*> leftLabels = {m_FullScriptName, m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_CreateTime, m_StackSize, m_IsPatched, m_TypedFlags};
         QVBoxLayout* leftLayout = new QVBoxLayout();
         for (auto* lbl : leftLabels)
             leftLayout->addWidget(lbl);
@@ -76,7 +91,7 @@ namespace scrDbgApp
 
         m_GlobalVersion = new QLabel("Global Version: 0");
         m_GlobalVersion->setToolTip("Unused. Checks whether two script programs have incompatible globals variables.");
-        m_GlobalVersion->setVisible(isGta5);
+        m_GlobalVersion->setVisible(isGta5 || isRdr2);
 
         m_CodeSize = new QLabel("Code Size: 0");
         m_CodeSize->setToolTip("Total size, in bytes, of the bytecode for this script program.");
@@ -97,7 +112,7 @@ namespace scrDbgApp
 
         m_NativeCount = new QLabel("Native Count: 0");
         m_NativeCount->setToolTip("Number of native commands that this script program uses.");
-        m_NativeCount->setVisible(isGta5);
+        m_NativeCount->setVisible(isGta5 || isRdr2);
 
         m_RefCount = new QLabel("Ref Count: 0");
         m_RefCount->setToolTip("Number of references this script program has.");
@@ -106,11 +121,15 @@ namespace scrDbgApp
         m_StringsSize->setToolTip("Total size, in bytes, of all string literals defined in this script program.");
         m_StringsSize->setVisible(isGta5);
 
+        m_IsRsc = new QLabel("Is RSC: FALSE");
+        m_IsRsc->setToolTip("Flag indicating whether a script is a RSC (.wsc) or .sco script.");
+        m_IsRsc->setVisible(isRdr2);
+
         m_IsPTScript = new QLabel("Is PT Script: FALSE");
         m_IsPTScript->setToolTip("Flag indicating whether a script is a Payne Thresolds script.");
-        m_IsPTScript->setVisible(g_Game->GetType() == GameType::PAYNE);
+        m_IsPTScript->setVisible(isPayne);
 
-        QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_RefCount, m_StringsSize, m_IsPTScript};
+        QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_RefCount, m_StringsSize, m_IsRsc, m_IsPTScript};
         QVBoxLayout* rightLayout = new QVBoxLayout();
         for (auto* lbl : rightLabels)
             rightLayout->addWidget(lbl);
@@ -372,8 +391,10 @@ namespace scrDbgApp
             m_TogglePauseScript->setToolTip("Pause the execution of this script thread.");
         }
 
+        m_FullScriptName->setText(QString("Full Name: %1").arg(thread->GetFullScriptName()));
+
         // clang-format off
-        QString stateStr = (state == ScriptThread::RUNNING) ? "RUNNING" : (state == ScriptThread::IDLE) ? "IDLE" : (state == ScriptThread::PAUSED) ? "PAUSED" : "KILLED";
+        QString stateStr = (state == ScriptThread::RUNNING) ? "RUNNING" : (state == ScriptThread::WAITING) ? "WAITING" : (state == ScriptThread::PAUSED) ? "PAUSED" : (state == ScriptThread::REFRESH) ? "REFRESH" : (state == ScriptThread::THROW) ? "THROW" : "KILLED";
         bool showBreakpointActive = isGlobalBreakpointPause || isLocalBreakpoint;
         m_State->setText("State: " + stateStr + (showBreakpointActive ? " (breakpoint active)" : ""));
 
@@ -392,6 +413,7 @@ namespace scrDbgApp
         m_StackSize->setText(QString("Stack Size: %1").arg(thread->GetStackSize()));
         m_TypedFlags->setText(QString("Typed Flags: %1").arg(thread->GetTypedFlags()));
         m_CreateTime->setText(QString("Create Time: %1").arg(thread->GetCreateTime()));
+        m_CreateTime->setText(QString("Is Patched: %1").arg(thread->IsPatched() ? "TRUE" : "FALSE"));
 
         auto program = g_Game->GetProgram(thread->GetProgramHash());
         if (!program)
@@ -406,6 +428,7 @@ namespace scrDbgApp
         m_NativeCount->setText(QString("Native Count: %1").arg(program->GetNativeCount()));
         m_RefCount->setText(QString("Ref Count: %1").arg(program->GetRefCount()));
         m_StringsSize->setText(QString("String Size: %1").arg(program->GetStringsSize()));
+        m_IsRsc->setText(QString("Is RSC: %1").arg(program->IsRsc() ? "TRUE" : "FALSE"));
         m_IsPTScript->setText(QString("Is PT Script: %1").arg(program->IsPTScript() ? "TRUE" : "FALSE"));
 
         if (m_LastThreadId != id)
@@ -589,7 +612,7 @@ namespace scrDbgApp
         if (!index.isValid())
             return;
 
-        DisassemblyContextMenu menu(index, m_Disassembler.get(), GetCurrentScriptHash(), this);
+        DisassemblyContextMenu menu(index, m_Disassembler.get(), m_Disassembler->GetHash(), this); // pass program hash for RDR1
         connect(&menu, &DisassemblyContextMenu::JumpToAddressRequested, this, &ScriptThreadsWidget::OnJumpToAddressFromMenu);
         menu.exec(m_Disassembly->viewport()->mapToGlobal(pos));
     }

@@ -42,12 +42,9 @@ namespace scrDbgLib
             m_Pointers.RunScriptThread = addr.As<decltype(m_Pointers.RunScriptThread)>();
         });
 
-        /*
-        scanner.Add("8A 0D ? ? ? ? 0A C1", [this](Memory addr) {
-            m_Pointers.TimerUserPause = *addr.Add(2).As<decltype(m_Pointers.TimerUserPause)*>();
-            m_Pointers.TimerScriptPause = *addr.Add(8).Add(2).As<decltype(m_Pointers.TimerScriptPause)*>();
+        scanner.Add("83 3D ? ? ? ? ? 48 8B 41 ? ? ? 75", [this](Memory addr) {
+            m_Pointers.PauseGameFlags = addr.Add(2).Rip().As<decltype(m_Pointers.PauseGameFlags)>();
         });
-        */
 
         return scanner.Scan();
     }
