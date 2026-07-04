@@ -44,7 +44,6 @@ namespace scrDbgApp
         uint32_t m_LastThreadId;
         std::unique_ptr<Disassembler> m_Disassembler;
 
-        QLabel* m_FullScriptName;
         QLabel* m_State;
         QLabel* m_Priority;
         QLabel* m_Program;
@@ -56,6 +55,7 @@ namespace scrDbgApp
         QLabel* m_TypedFlags;
         QLabel* m_CreateTime;
         QLabel* m_IsPatched;
+        QLabel* m_FullScriptName;
         QLabel* m_GlobalVersion;
         QLabel* m_CodeSize;
         QLabel* m_ArgCount;

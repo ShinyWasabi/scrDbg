@@ -129,7 +129,7 @@ namespace scrDbgApp
             uintptr_t addr = base.GetArray<uintptr_t>(i);
 
             ScriptThreadRDR2 thread(addr);
-            if (JOAAT(thread.GetScriptName()) == hash) // Intentionally not using GetScriptHash, because program hash includes the full script path
+            if (thread.GetScriptHash() == hash)
                 return std::make_unique<ScriptThreadRDR2>(addr);
         }
 
@@ -170,8 +170,8 @@ namespace scrDbgApp
 
         for (uint32_t i = 0; i < size; i++)
         {
-            uint32_t entryHash = Pointer(entries + i * 8).Get<uint32_t>();
-            uintptr_t entryHandler = Pointer(entries + i * 8 + sizeof(uintptr_t)).Get<uintptr_t>();
+            uint32_t entryHash = Pointer(entries + i * 16).Get<uint32_t>();
+            uintptr_t entryHandler = Pointer(entries + i * 16 + sizeof(uintptr_t)).Get<uintptr_t>();
 
             if (entryHash == 0)
                 continue;

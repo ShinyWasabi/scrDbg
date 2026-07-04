@@ -2,6 +2,11 @@
 
 namespace scrDbgApp
 {
+    std::string ScriptProgramRDR2::GetName() const
+    {
+        return m_Base.Add(NAME).Deref().GetString();
+    }
+
     uint32_t ScriptProgramRDR2::GetNameHash() const
     {
         return m_Base.Add(NAME_HASH).Get<uint32_t>();
@@ -77,7 +82,7 @@ namespace scrDbgApp
         if (index >= GetStaticCount())
             return {};
 
-        return m_Base.Add(DATA).Deref().Add(DATA_STATICS).Deref().Add(index * sizeof(uint64_t));
+        return m_Base.Add(DATA).Deref().Add(DATA_STATICS).Deref().Add(4 * index);
     }
 
     uint64_t ScriptProgramRDR2::GetNative(uint32_t index) const

@@ -10,6 +10,7 @@ namespace scrDbgApp
         {
         }
 
+        std::string GetName() const override;
         uint32_t GetNameHash() const override;
         uint32_t GetGlobalVersion() const override;
         uint32_t GetCodeSize() const override;
@@ -33,6 +34,7 @@ namespace scrDbgApp
         static constexpr size_t DATA_NATIVE_COUNT = 0x34;
         static constexpr size_t DATA_NATIVES = 0x38;
 
+        static constexpr size_t NAME = 0x00;
         static constexpr size_t NAME_HASH = 0x08;
         static constexpr size_t DATA = 0x10;
         static constexpr size_t REF_COUNT = 0x18;

@@ -5,6 +5,11 @@ namespace scrDbgApp
     class ScriptProgram
     {
     public:
+        virtual std::string GetName() const
+        {
+            return {};
+        }
+
         virtual uint32_t GetGlobalVersion() const
         {
             return 0;
@@ -211,11 +216,6 @@ namespace scrDbgApp
         }
 
         virtual std::string GetScriptName() const
-        {
-            return {};
-        }
-
-        virtual std::string GetFullScriptName() const
         {
             return {};
         }

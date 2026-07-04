@@ -73,13 +73,4 @@ namespace scrDbgApp
         std::filesystem::path path(name);
         return path.stem().string();
     }
-
-    std::string ScriptThreadRDR2::GetFullScriptName() const
-    {
-        uint64_t base = m_Base.Add(TLS).GetArray<uint64_t>(0);
-        if (base == 0)
-            return {};
-
-        return Pointer(base).Add(0x70).GetString(64);
-    }
 }

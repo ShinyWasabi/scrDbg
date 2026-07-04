@@ -23,6 +23,8 @@ namespace scrDbgApp
         formLayout->setLabelAlignment(Qt::AlignRight);
 
         m_ScriptName = new QLineEdit(this);
+        if (g_Game->GetType() == GameType::RDR2)
+            m_ScriptName->setPlaceholderText("full name (e.g. content/main)");
         formLayout->addRow("Script Name", m_ScriptName);
 
         m_StaticIndex = new QSpinBox(this);

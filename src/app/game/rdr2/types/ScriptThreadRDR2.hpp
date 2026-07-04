@@ -23,7 +23,6 @@ namespace scrDbgApp
         std::string GetKillReason() const override;
         uint32_t GetScriptHash() const override;
         std::string GetScriptName() const override;
-        std::string GetFullScriptName() const override;
 
     private:
         static constexpr size_t ID = 0x08;

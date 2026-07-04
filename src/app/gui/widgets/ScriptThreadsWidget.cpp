@@ -37,10 +37,6 @@ namespace scrDbgApp
         m_ScriptNames = new QComboBox(this);
         m_ScriptNames->setEditable(false);
 
-        m_FullScriptName = new QLabel("Full Name: ");
-        m_FullScriptName->setToolTip("Full name of this script thread.");
-        m_FullScriptName->setVisible(isRdr2);
-
         m_State = new QLabel("State: RUNNING");
         if (isPayne)
             m_State->setToolTip("Current state of this script thread.\n(RUNNING, IDLE, KILLED, PAUSED, REFRESH, THROW)");
@@ -83,11 +79,15 @@ namespace scrDbgApp
         m_TypedFlags->setToolTip("Flags set by START_NEW_SCRIPT_TYPED for this script thread.");
         m_TypedFlags->setVisible(isPayne);
 
-        QVector<QLabel*> leftLabels = {m_FullScriptName, m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_CreateTime, m_StackSize, m_IsPatched, m_TypedFlags};
+        QVector<QLabel*> leftLabels = {m_State, m_Priority, m_Program, m_ThreadId, m_ProgramCounter, m_FramePointer, m_StackPointer, m_CreateTime, m_StackSize, m_IsPatched, m_TypedFlags};
         QVBoxLayout* leftLayout = new QVBoxLayout();
-        for (auto* lbl : leftLabels)
+        for (auto lbl : leftLabels)
             leftLayout->addWidget(lbl);
         leftLayout->addStretch();
+
+        m_FullScriptName = new QLabel("Full Name: ");
+        m_FullScriptName->setToolTip("Full name of this script program.");
+        m_FullScriptName->setVisible(isRdr2);
 
         m_GlobalVersion = new QLabel("Global Version: 0");
         m_GlobalVersion->setToolTip("Unused. Checks whether two script programs have incompatible globals variables.");
@@ -129,9 +129,9 @@ namespace scrDbgApp
         m_IsPTScript->setToolTip("Flag indicating whether a script is a Payne Thresolds script.");
         m_IsPTScript->setVisible(isPayne);
 
-        QVector<QLabel*> rightLabels = {m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_RefCount, m_StringsSize, m_IsRsc, m_IsPTScript};
+        QVector<QLabel*> rightLabels = {m_FullScriptName, m_GlobalVersion, m_CodeSize, m_ArgCount, m_StaticCount, m_GlobalCount, m_GlobalBlock, m_NativeCount, m_RefCount, m_StringsSize, m_IsRsc, m_IsPTScript};
         QVBoxLayout* rightLayout = new QVBoxLayout();
-        for (auto* lbl : rightLabels)
+        for (auto lbl : rightLabels)
             rightLayout->addWidget(lbl);
         rightLayout->addStretch();
 
@@ -391,8 +391,6 @@ namespace scrDbgApp
             m_TogglePauseScript->setToolTip("Pause the execution of this script thread.");
         }
 
-        m_FullScriptName->setText(QString("Full Name: %1").arg(thread->GetFullScriptName()));
-
         // clang-format off
         QString stateStr = (state == ScriptThread::RUNNING) ? "RUNNING" : (state == ScriptThread::WAITING) ? "WAITING" : (state == ScriptThread::PAUSED) ? "PAUSED" : (state == ScriptThread::REFRESH) ? "REFRESH" : (state == ScriptThread::THROW) ? "THROW" : "KILLED";
         bool showBreakpointActive = isGlobalBreakpointPause || isLocalBreakpoint;
@@ -419,6 +417,7 @@ namespace scrDbgApp
         if (!program)
             return;
 
+        m_FullScriptName->setText(QString("Full Name: %1").arg(program->GetName()));
         m_GlobalVersion->setText(QString("Global Version: %1").arg(program->GetGlobalVersion()));
         m_CodeSize->setText(QString("Code Size: %1").arg(program->GetCodeSize()));
         m_ArgCount->setText(QString("Arg Count: %1").arg(program->GetArgCount()));
@@ -442,7 +441,7 @@ namespace scrDbgApp
     {
         QString currentScript = m_ScriptNames->currentText();
 
-        std::vector<std::string> aliveScripts;
+        std::vector<std::pair<std::string, uint32_t>> aliveScripts;
         for (const auto& t : g_Game->GetThreads())
         {
             if (t->GetState() == ScriptThread::KILLED || t->GetStackSize() == 0)
@@ -450,7 +449,7 @@ namespace scrDbgApp
 
             std::string name = t->GetScriptName();
             if (!name.empty())
-                aliveScripts.push_back(name);
+                aliveScripts.push_back({name, t->GetScriptHash()});
         }
 
         bool changed = (m_ScriptNames->count() != static_cast<int>(aliveScripts.size()));
@@ -458,7 +457,7 @@ namespace scrDbgApp
         {
             for (int i = 0; i < m_ScriptNames->count(); ++i)
             {
-                if (m_ScriptNames->itemText(i).toStdString() != aliveScripts[i])
+                if (m_ScriptNames->itemText(i).toStdString() != aliveScripts[i].first)
                 {
                     changed = true;
                     break;
@@ -470,11 +469,8 @@ namespace scrDbgApp
         {
             m_ScriptNames->blockSignals(true);
             m_ScriptNames->clear();
-            for (auto& name : aliveScripts)
-            {
-                uint32_t hash = JOAAT(name);
-                m_ScriptNames->addItem(QString::fromStdString(name), QVariant::fromValue(hash));
-            }
+            for (auto& script : aliveScripts)
+                m_ScriptNames->addItem(QString::fromStdString(script.first), QVariant::fromValue(script.second));
             m_ScriptNames->blockSignals(false);
 
             int newIndex = m_ScriptNames->findText(currentScript);
@@ -612,7 +608,7 @@ namespace scrDbgApp
         if (!index.isValid())
             return;
 
-        DisassemblyContextMenu menu(index, m_Disassembler.get(), m_Disassembler->GetHash(), this); // pass program hash for RDR1
+        DisassemblyContextMenu menu(index, m_Disassembler.get(), GetCurrentScriptHash(), this);
         connect(&menu, &DisassemblyContextMenu::JumpToAddressRequested, this, &ScriptThreadsWidget::OnJumpToAddressFromMenu);
         menu.exec(m_Disassembly->viewport()->mapToGlobal(pos));
     }
