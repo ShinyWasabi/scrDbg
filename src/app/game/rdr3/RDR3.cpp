@@ -7,6 +7,32 @@
 
 namespace scrDbgApp
 {
+    static std::string SearchTextLabelSlot(Pointer slot, uint32_t hash)
+    {
+        uint32_t bucketCount = slot.Add(0x18).Get<uint32_t>();
+        if (bucketCount == 0)
+            return {};
+
+        Pointer bucketArray = slot.Add(0x10).Get<Pointer>();
+        Pointer node = bucketArray.GetArray<Pointer>(hash % bucketCount);
+
+        while (node && node.Get<uint32_t>() != hash)
+            node = node.Add(0x10).Get<Pointer>();
+
+        if (!node)
+            return {};
+
+        Pointer entry = node.Add(0x08).Get<Pointer>();
+        if (!entry)
+            return {};
+
+        Pointer str = entry.Add(0x10).Get<Pointer>();
+        if (!str)
+            return {};
+
+        return str.GetString();
+    }
+
     bool RDR3::Init()
     {
         Scanner scanner;
@@ -33,11 +59,9 @@ namespace scrDbgApp
             m_Pointers.NativeRegistrationTable = ptr.Add(0x24).Add(3).Rip();
         });
 
-        /*
-        scanner.Add("TextLabels", "48 8D 0D ? ? ? ? 0F 2E 35", [this](Pointer ptr) {
-            m_Pointers.TextLabels = ptr.Add(3).Rip().Add(8);
+        scanner.Add("TextLabels", "48 8D 0D ? ? ? ? 44 0F 45 E8", [this](Pointer ptr) {
+            m_Pointers.TextLabels = ptr.Add(3).Rip();
         });
-        */
 
         return scanner.Scan();
     }
@@ -156,8 +180,6 @@ namespace scrDbgApp
 
     std::unordered_map<uint64_t, uintptr_t> RDR3::GetAllNatives() const
     {
-        return {};
-
         std::unordered_map<uint64_t, uintptr_t> natives;
 
         uint64_t seed = m_Pointers.NativeRegistrationSeed.Get<uint64_t>();
@@ -168,7 +190,7 @@ namespace scrDbgApp
 
             while (node)
             {
-                uint64_t count = node.Add(64).Get<uint64_t>();
+                uint64_t count = node.Add(64).Get<uint32_t>();
 
                 for (uint64_t i = 0; i < count; i++)
                 {
@@ -187,6 +209,71 @@ namespace scrDbgApp
 
     std::string RDR3::GetTextLabel(uint32_t hash) const
     {
+        static std::unordered_map<uint32_t, std::string> labelCache;
+
+        auto it = labelCache.find(hash);
+        if (it != labelCache.end())
+            return it->second;
+
+        Pointer remapMap = m_Pointers.TextLabels.Add(0xD0);
+        int16_t generation = m_Pointers.TextLabels.Add(0xE8).Get<int16_t>();
+        uint32_t lookupHash = hash;
+
+        uint32_t remapBucketCount = remapMap.Add(0x08).Get<uint32_t>();
+        if (remapBucketCount != 0)
+        {
+            Pointer bucketArray = remapMap.Deref();
+            Pointer node = bucketArray.GetArray<Pointer>(hash % remapBucketCount);
+
+            while (node && node.Get<uint32_t>() != hash)
+                node = node.Add(0x18).Get<Pointer>();
+
+            if (node)
+            {
+                Pointer valueArray = node.Add(0x08);
+                Pointer entries = valueArray.Add(0x00).Deref();
+                uint16_t entryCount = valueArray.Add(0x08).Get<uint16_t>();
+
+                for (uint16_t i = 0; i < entryCount; i++)
+                {
+                    Pointer entry = entries.Add(i * 0x08);
+                    if (entry.Add(0x04).Get<int16_t>() == generation)
+                    {
+                        uint32_t remapped = entry.Add(0x00).Get<uint32_t>();
+                        if (remapped != 0)
+                            lookupHash = remapped;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // search every loaded slot
+        Pointer slotArrayBase = m_Pointers.TextLabels.Add(0x40).Get<Pointer>();
+        Pointer validFlagsBase = m_Pointers.TextLabels.Add(0x48).Get<Pointer>();
+        int32_t slotCount = m_Pointers.TextLabels.Add(0x50).Get<int32_t>();
+        int32_t stride = m_Pointers.TextLabels.Add(0x54).Get<int32_t>();
+
+        for (int32_t i = 0; i < slotCount; i++)
+        {
+            uint8_t flag = validFlagsBase.GetArray<uint8_t>(i);
+            if (flag & 0x80) // high bit set = empty slot
+                continue;
+
+            Pointer slot = slotArrayBase.Add(i * stride).Get<Pointer>();
+            if (!slot)
+                continue;
+
+            std::string result = SearchTextLabelSlot(slot, lookupHash);
+            if (!result.empty())
+            {
+                labelCache[hash] = result;
+                return result;
+            }
+        }
+
+        // Cache the failure (empty string) as well so we never search memory for it again
+        labelCache[hash] = "";
         return {};
     }
 }
