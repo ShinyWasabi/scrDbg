@@ -4,6 +4,7 @@
 #include "game/gta5/GTA5.hpp"
 #include "game/payne/Payne.hpp"
 #include "game/rdr2/RDR2.hpp"
+#include "game/rdr3/RDR3.hpp"
 #include "gui/widgets/GUIWidget.hpp"
 
 int main(int argc, char* argv[])
@@ -41,6 +42,9 @@ int main(int argc, char* argv[])
             case GameType::GTA5_GEN9:
                 g_Game = std::make_unique<GTA5_GEN9>();
                 break;
+            case GameType::RDR3:
+                g_Game = std::make_unique<RDR3>();
+                break;
             }
             break;
         }
@@ -69,6 +73,9 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    if (g_Game->GetType() == GameType::RDR3)
+        goto SKIP_UNIMPLEMENTED;
+
     if (!Process::IsModuleLoaded(g_Game->Is64Bit() ? L"scrDbg-x64.dll" : L"scrDbg-x86.dll"))
     {
         if (!Process::InjectModule(g_Game->Is64Bit() ? "scrDbg-x64.dll" : "scrDbg-x86.dll"))
@@ -84,6 +91,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+SKIP_UNIMPLEMENTED:
     if (!scrDbgShared::NativesBin::Load(GetModuleHandle(0), g_Game->GetResourceId()))
         QMessageBox::warning(nullptr, "Resources", "Failed to load natives database.");
 

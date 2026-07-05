@@ -123,7 +123,7 @@ namespace scrDbgApp
             return false;
 
         auto type = g_Game->GetType();
-        if (g_Game->GetType() == GameType::GTA5_GEN8 || type == GameType::GTA5_GEN9)
+        if (g_Game->GetType() == GameType::GTA5_GEN8 || type == GameType::GTA5_GEN9 || type == GameType::RDR3)
         {
             int blockIndex = (address >> 0x12) & 0x3F;
             if (blockIndex >= 64)

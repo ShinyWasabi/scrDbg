@@ -11,7 +11,8 @@ namespace scrDbgApp
         RDR2,
         PAYNE,
         GTA5_GEN8,
-        GTA5_GEN9
+        GTA5_GEN9,
+        RDR3
     };
 
     constexpr const std::pair<GameType, const wchar_t*> g_Games[] = {
@@ -19,7 +20,8 @@ namespace scrDbgApp
         {GameType::RDR2, L"RDR.exe"},
         {GameType::PAYNE, L"MaxPayne3.exe"},
         {GameType::GTA5_GEN8, L"GTA5.exe"},
-        {GameType::GTA5_GEN9, L"GTA5_Enhanced.exe"}};
+        {GameType::GTA5_GEN9, L"GTA5_Enhanced.exe"},
+        {GameType::RDR3, L"RDR2.exe"}};
 
     class Game
     {

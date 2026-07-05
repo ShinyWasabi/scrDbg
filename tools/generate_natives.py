@@ -79,6 +79,7 @@ def main():
     build_bin("natives-rdr2.txt", "../resources/natives-rdr2.bin")
     build_bin("natives-payne.txt", "../resources/natives-payne.bin")
     build_bin("natives-gta5.txt", "../resources/natives-gta5.bin")
+    build_bin("natives-rdr3.txt", "../resources/natives-rdr3.bin")
 
 if __name__ == "__main__":
     main()

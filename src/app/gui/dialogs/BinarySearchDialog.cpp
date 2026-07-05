@@ -108,7 +108,7 @@ namespace scrDbgApp
             return;
         }
 
-        bool isGta5 = g_Game->GetType() == GameType::GTA5_GEN8 || g_Game->GetType() == GameType::GTA5_GEN9;
+        bool isGta5OrRdr3 = g_Game->GetType() == GameType::GTA5_GEN8 || g_Game->GetType() == GameType::GTA5_GEN9 || g_Game->GetType() == GameType::RDR3;
 
         std::vector<ResultsDialog::Entry> results;
         for (int i = 0; i < disassembler->GetInstructionCount(); i++)
@@ -121,8 +121,8 @@ namespace scrDbgApp
                 if (addr < pc || addr >= pc + size)
                     continue;
 
-                // For string searches on GTA5, show the STRING opcode that follows PUSH_CONST
-                int decodeIndex = (isGta5 && isStringSearch && i + 1 < disassembler->GetInstructionCount()) ? i + 1 : i;
+                // For string searches on GTA5 and RDR2, show the STRING opcode that follows PUSH_CONST
+                int decodeIndex = (isGta5OrRdr3 && isStringSearch && i + 1 < disassembler->GetInstructionCount()) ? i + 1 : i;
                 auto func = disassembler->GetFunctionForPc(pc);
                 auto decoded = disassembler->DecodeInstruction(decodeIndex);
 

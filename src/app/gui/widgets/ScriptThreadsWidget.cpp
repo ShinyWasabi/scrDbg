@@ -33,6 +33,7 @@ namespace scrDbgApp
         bool isRdr2 = g_Game->GetType() == GameType::RDR2;
         bool isPayne = g_Game->GetType() == GameType::PAYNE;
         bool isGta5 = g_Game->GetType() == GameType::GTA5_GEN8 || g_Game->GetType() == GameType::GTA5_GEN9;
+        bool isRdr3 = g_Game->GetType() == GameType::RDR3;
 
         m_ScriptNames = new QComboBox(this);
         m_ScriptNames->setEditable(false);
@@ -47,7 +48,7 @@ namespace scrDbgApp
 
         m_Priority = new QLabel("Priority: HIGHEST");
         m_Priority->setToolTip("Execution priority of this script thread.\n(HIGHEST, NORMAL, LOWEST, MANUAL_UPDATE)");
-        m_Priority->setVisible(isGta5);
+        m_Priority->setVisible(isGta5 || isRdr3);
 
         m_Program = new QLabel("Program: 0");
         m_Program->setToolTip("JOAAT hash of the name of this script thread's program.");
@@ -91,7 +92,7 @@ namespace scrDbgApp
 
         m_GlobalVersion = new QLabel("Global Version: 0");
         m_GlobalVersion->setToolTip("Unused. Checks whether two script programs have incompatible globals variables.");
-        m_GlobalVersion->setVisible(isGta5 || isRdr2);
+        m_GlobalVersion->setVisible(isGta5 || isRdr2 || isRdr3);
 
         m_CodeSize = new QLabel("Code Size: 0");
         m_CodeSize->setToolTip("Total size, in bytes, of the bytecode for this script program.");
@@ -104,22 +105,22 @@ namespace scrDbgApp
 
         m_GlobalCount = new QLabel("Global Count: 0");
         m_GlobalCount->setToolTip("Number of global variables defined in this script program.");
-        m_GlobalCount->setVisible(isGta5);
+        m_GlobalCount->setVisible(isGta5 || isRdr3);
 
         m_GlobalBlock = new QLabel("Global Block: 0");
         m_GlobalBlock->setToolTip("The global block index of this script program's global variables.");
-        m_GlobalBlock->setVisible(isGta5);
+        m_GlobalBlock->setVisible(isGta5 || isRdr3);
 
         m_NativeCount = new QLabel("Native Count: 0");
         m_NativeCount->setToolTip("Number of native commands that this script program uses.");
-        m_NativeCount->setVisible(isGta5 || isRdr2);
+        m_NativeCount->setVisible(isGta5 || isRdr2 || isRdr3);
 
         m_RefCount = new QLabel("Ref Count: 0");
         m_RefCount->setToolTip("Number of references this script program has.");
 
         m_StringsSize = new QLabel("Strings Size: 0");
         m_StringsSize->setToolTip("Total size, in bytes, of all string literals defined in this script program.");
-        m_StringsSize->setVisible(isGta5);
+        m_StringsSize->setVisible(isGta5 || isRdr3);
 
         m_IsRsc = new QLabel("Is RSC: FALSE");
         m_IsRsc->setToolTip("Flag indicating whether a script is a RSC (.wsc) or .sco script.");

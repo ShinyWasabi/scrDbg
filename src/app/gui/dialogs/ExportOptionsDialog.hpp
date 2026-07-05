@@ -19,6 +19,9 @@ namespace scrDbgApp
         explicit ExportOptionsDialog(uint32_t scriptHash, QTableView* disassembly, QWidget* parent = nullptr);
 
     private:
+        static bool HasProgramGlobals(GameType type);
+        static bool HasProgramNatives(GameType type);
+
         static void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
         static void ExportDisassembly(QTableView* view);
         static void ExportStatics(uint32_t scriptHash);
@@ -31,8 +34,8 @@ namespace scrDbgApp
         QPushButton* m_ExportGlobals;
         QPushButton* m_ExportNatives;
         QPushButton* m_ExportStrings;
-        QCheckBox* m_ExportAllGlobals;
-        QCheckBox* m_ExportAllNatives;
+        QCheckBox* m_ExportAllGlobals = nullptr;
+        QCheckBox* m_ExportAllNatives = nullptr;
         QCheckBox* m_OnlyTextLabels;
     };
 }

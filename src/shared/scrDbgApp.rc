@@ -7,6 +7,7 @@ NATIVES_GTA4_BIN RCDATA "../../resources/natives-gta4.bin"
 NATIVES_RDR2_BIN RCDATA "../../resources/natives-rdr2.bin"
 NATIVES_PAYNE_BIN RCDATA "../../resources/natives-payne.bin"
 NATIVES_GTA5_BIN RCDATA "../../resources/natives-gta5.bin"
+NATIVES_RDR3_BIN RCDATA "../../resources/natives-rdr3.bin"
 
 VS_VERSION_INFO VERSIONINFO
   FILEVERSION SCRDBG_FILEVERSION

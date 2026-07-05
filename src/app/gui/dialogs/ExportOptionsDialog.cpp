@@ -11,10 +11,41 @@
 
 namespace scrDbgApp
 {
+    bool ExportOptionsDialog::HasProgramGlobals(GameType type)
+    {
+        switch (type)
+        {
+        case GameType::GTA5_GEN8:
+        case GameType::GTA5_GEN9:
+        case GameType::RDR3:
+            return true;
+        }
+
+        return false;
+    }
+
+    bool ExportOptionsDialog::HasProgramNatives(GameType type)
+    {
+        switch (type)
+        {
+        case GameType::RDR2:
+        case GameType::GTA5_GEN8:
+        case GameType::GTA5_GEN9:
+        case GameType::RDR3:
+            return true;
+        }
+
+        return false;
+    }
+
     ExportOptionsDialog::ExportOptionsDialog(uint32_t scriptHash, QTableView* disassembly, QWidget* parent)
         : QDialog(parent)
     {
         setWindowTitle("Export Options");
+
+        GameType gameType = g_Game->GetType();
+        bool hasProgGlobals = HasProgramGlobals(gameType);
+        bool hasProgNatives = HasProgramNatives(gameType);
 
         m_ExportDisassembly = new QPushButton("Export Disassembly");
         m_ExportDisassembly->setToolTip("Export the disassembly of this script program.");
@@ -43,11 +74,25 @@ namespace scrDbgApp
         m_ExportNatives->setMinimumWidth(maxButtonWidth);
         m_ExportStrings->setMinimumWidth(maxButtonWidth);
 
-        m_ExportAllGlobals = new QCheckBox("Export all");
-        m_ExportAllGlobals->setToolTip("Export all the global blocks.");
+        if (hasProgGlobals)
+        {
+            m_ExportAllGlobals = new QCheckBox("Export all");
+            m_ExportAllGlobals->setToolTip("Export all the global blocks.");
+        }
+        else
+        {
+            m_ExportGlobals->setToolTip("Export all the global variables in the game.");
+        }
 
-        m_ExportAllNatives = new QCheckBox("Export all");
-        m_ExportAllNatives->setToolTip("Export all the native commands in the game.");
+        if (hasProgNatives)
+        {
+            m_ExportAllNatives = new QCheckBox("Export all");
+            m_ExportAllNatives->setToolTip("Export all the native commands in the game.");
+        }
+        else
+        {
+            m_ExportNatives->setToolTip("Export all the native commands in the game.");
+        }
 
         m_OnlyTextLabels = new QCheckBox("Only text labels");
         m_OnlyTextLabels->setToolTip("Export only text labels with their translations.");
@@ -58,9 +103,13 @@ namespace scrDbgApp
         grid->addWidget(m_ExportDisassembly, row++, 0);
         grid->addWidget(m_ExportStatics, row++, 0);
         grid->addWidget(m_ExportGlobals, row, 0);
-        grid->addWidget(m_ExportAllGlobals, row++, 1);
+        if (m_ExportAllGlobals)
+            grid->addWidget(m_ExportAllGlobals, row, 1);
+        row++;
         grid->addWidget(m_ExportNatives, row, 0);
-        grid->addWidget(m_ExportAllNatives, row++, 1);
+        if (m_ExportAllNatives)
+            grid->addWidget(m_ExportAllNatives, row, 1);
+        row++;
         grid->addWidget(m_ExportStrings, row, 0);
         grid->addWidget(m_OnlyTextLabels, row++, 1);
 
@@ -73,11 +122,11 @@ namespace scrDbgApp
         });
 
         connect(m_ExportGlobals, &QPushButton::clicked, this, [this, scriptHash]() {
-            ExportGlobals(scriptHash, m_ExportAllGlobals->isChecked());
+            ExportGlobals(scriptHash, m_ExportAllGlobals ? m_ExportAllGlobals->isChecked() : true);
         });
 
         connect(m_ExportNatives, &QPushButton::clicked, this, [this, scriptHash]() {
-            ExportNatives(scriptHash, m_ExportAllNatives->isChecked());
+            ExportNatives(scriptHash, m_ExportAllNatives ? m_ExportAllNatives->isChecked() : true);
         });
 
         connect(m_ExportStrings, &QPushButton::clicked, this, [this, scriptHash]() {
@@ -185,6 +234,37 @@ namespace scrDbgApp
 
     void ExportOptionsDialog::ExportGlobals(uint32_t scriptHash, bool exportAll)
     {
+        if (!HasProgramGlobals(g_Game->GetType()))
+        {
+            uint32_t count = g_Game->GetGlobalCount();
+            if (count == 0)
+            {
+                QMessageBox::warning(nullptr, "No Globals", "No globals found.");
+                return;
+            }
+
+            ExportToFile("Globals", "globals.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+                for (uint32_t i = 0; i < count; i++)
+                {
+                    if (progress.wasCanceled())
+                        return;
+
+                    int32_t value = g_Game->GetGlobal(i).Get<int32_t>();
+                    out << "Global_" << i << " = " << value << "\n";
+
+                    if (i % 50 == 0)
+                    {
+                        progress.setValue(i);
+                        QCoreApplication::processEvents();
+                    }
+                }
+
+                progress.setValue(count);
+                QMessageBox::information(nullptr, "Export Globals", QString("Exported %1 globals.").arg(count));
+            });
+            return;
+        }
+
         if (exportAll)
         {
             int lastValidBlock = -1;
