@@ -130,7 +130,7 @@ namespace scrDbgApp
         case Opcodes::ENTER:
             return 5 + m_Code[pc + 4];
         case Opcodes::SWITCH:
-            return 2 + m_Code[pc + 1] * 6;
+            return 3 + GetU16(pc + 1) * 6;
         }
 
         return 1;
@@ -561,7 +561,8 @@ namespace scrDbgApp
             }
             case 'i': // SWITCH
             {
-                uint8_t cases = GetU8(offset++);
+                uint16_t cases = GetU16(offset);
+                offset += 2;
                 instr << " [" << std::dec << static_cast<int>(cases) << "]";
                 for (int j = 0; j < cases; j++)
                 {
