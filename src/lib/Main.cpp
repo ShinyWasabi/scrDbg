@@ -7,6 +7,7 @@
 #elif defined(_M_X64)
 #include "game/GTA5.hpp"
 #include "game/RDR2.hpp"
+#include "game/RDR3.hpp"
 #endif
 
 namespace scrDbgLib
@@ -54,6 +55,11 @@ namespace scrDbgLib
         case "GTA5_Enhanced.exe"_J:
         {
             g_Game = std::make_unique<GTA5_GEN9>();
+            break;
+        }
+        case "RDR2.exe"_J:
+        {
+            g_Game = std::make_unique<RDR3>();
             break;
         }
 #endif

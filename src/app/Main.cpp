@@ -73,9 +73,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (g_Game->GetType() == GameType::RDR3)
-        goto SKIP_UNIMPLEMENTED;
-
     if (!Process::IsModuleLoaded(g_Game->Is64Bit() ? L"scrDbg-x64.dll" : L"scrDbg-x86.dll"))
     {
         if (!Process::InjectModule(g_Game->Is64Bit() ? "scrDbg-x64.dll" : "scrDbg-x86.dll"))
@@ -91,7 +88,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-SKIP_UNIMPLEMENTED:
     if (!scrDbgShared::NativesBin::Load(GetModuleHandle(0), g_Game->GetResourceId()))
         QMessageBox::warning(nullptr, "Resources", "Failed to load natives database.");
 

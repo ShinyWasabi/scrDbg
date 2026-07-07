@@ -10,6 +10,7 @@ namespace scrDbgLib
         PAYNE,
         GTA5_GEN8,
         GTA5_GEN9,
+        RDR3
     };
 
     class Game
