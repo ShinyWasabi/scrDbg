@@ -412,7 +412,7 @@ namespace scrDbgApp
         m_StackSize->setText(QString("Stack Size: %1").arg(thread->GetStackSize()));
         m_TypedFlags->setText(QString("Typed Flags: %1").arg(thread->GetTypedFlags()));
         m_CreateTime->setText(QString("Create Time: %1").arg(thread->GetCreateTime()));
-        m_CreateTime->setText(QString("Is Patched: %1").arg(thread->IsPatched() ? "TRUE" : "FALSE"));
+        m_IsPatched->setText(QString("Is Patched: %1").arg(thread->IsPatched() ? "TRUE" : "FALSE"));
 
         auto program = g_Game->GetProgram(thread->GetProgramHash());
         if (!program)

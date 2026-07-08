@@ -4,18 +4,15 @@
 
 # scrDbg
 
-scrDbg is a script debugger for RAGE engine games.
+scrDbg is a script debugger for RAGE games.
 It allows you to inspect, manipulate, and debug game scripts in real-time.
 
 ## Supported Games
 
 - Grand Theft Auto IV: The Complete Edition
-- Grand Theft Auto V (Legacy & Enhanced)
-
-## Planned Support
-
-- Max Payne 3
 - Red Dead Redemption
+- Max Payne 3
+- Grand Theft Auto V (Legacy & Enhanced)
 - Red Dead Redemption 2
 
 ## Features
@@ -140,5 +137,9 @@ To build scrDbg, you need:
 Once you have these installed, you can simply clone the repository, open it in Visual Studio, and build it.
 
 ## Credits
-- [maybegreat48](https://github.com/maybegreat48) for [External](https://github.com/maybegreat48/External).
+- [maybegreat48](https://github.com/maybegreat48) for [External](https://github.com/maybegreat48/External) and [GTA-V-Script-Decompiler](https://github.com/maybegreat48/GTA-V-Script-Decompiler).
+- [alloc8or](https://github.com/alloc8or) for [GTA 5](https://alloc8or.re/gta5/nativedb/), [Max Payne 3](https://alloc8or.re/mp3/nativedb/), and [RDR2](https://alloc8or.re/rdr3/nativedb/) Native DB.
+- [GTAIV.EFLC.FusionFix](https://github.com/ThirteenAG/GTAIV.EFLC.FusionFix) for [GTA 4 Natives](https://github.com/ThirteenAG/GTAIV.EFLC.FusionFix/blob/master/source/natives.ixx).
+- [therouletteboi](https://github.com/TheRouletteBoi) for [RDR1 Native DB](https://therouletteboi.github.io/rdr/nativedb/).
+- [Foxxyyy](https://github.com/Foxxyyy) for the script decompiler in [Magic-RDR](https://github.com/Foxxyyy/Magic-RDR).
 - [OldAgario](https://github.com/OldAgario) for logo design.
