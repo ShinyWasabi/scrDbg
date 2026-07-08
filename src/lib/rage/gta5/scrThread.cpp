@@ -129,14 +129,14 @@ namespace rage::gta5
         JUMP(context->m_Pc);
 
     NEXT:
-        // Update these per opcode start
-        context->m_Pc = static_cast<uint32_t>(code - base);
-        context->m_Sp = static_cast<int32_t>(sp - stack + 1);
-        context->m_Fp = static_cast<int32_t>(fp - stack);
-
         uint32_t pc = static_cast<uint32_t>(code - base);
         if (debugger->ProcessBreakpoints(scriptHash, pc, (uint32_t*)&context->m_State))
+        {
+            context->m_Pc = static_cast<uint32_t>(code - base);
+            context->m_Sp = static_cast<int32_t>(sp - stack + 1);
+            context->m_Fp = static_cast<int32_t>(fp - stack);
             return context->m_State; // If we do not return here, the VM will end up executing opcodes until the next NATIVE call.
+        }
 
         scrOpcode op = static_cast<scrOpcode>(GET_U8);
         if (debugger->ShouldBreakTracking(static_cast<uint8_t>(op)))

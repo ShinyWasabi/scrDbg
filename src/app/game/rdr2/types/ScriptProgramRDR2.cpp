@@ -1,4 +1,5 @@
 #include "ScriptProgramRDR2.hpp"
+#include "disasm/opcodes/OpcodesRDR2.hpp"
 
 namespace scrDbgApp
 {
@@ -91,5 +92,34 @@ namespace scrDbgApp
             return {};
 
         return m_Base.Add(DATA).Deref().Add(DATA_NATIVES).Deref().GetArray<uint64_t>(index);
+    }
+
+    std::vector<std::string> ScriptProgramRDR2::GetStrings() const
+    {
+        std::vector<std::string> strings;
+        std::unordered_set<std::string> seen;
+
+        std::vector<uint8_t> code = GetCode();
+
+        for (uint32_t pc = 0; pc + 1 < code.size();)
+        {
+            if (static_cast<OpcodesRDR2>(code[pc]) == OpcodesRDR2::STRING)
+            {
+                uint8_t len = code[pc + 1];
+                if (pc + 2 + len > code.size())
+                    break;
+
+                std::string str(reinterpret_cast<const char*>(&code[pc + 2]), len);
+                if (!str.empty() && str.back() == '\0')
+                    str.pop_back();
+
+                if (seen.insert(str).second)
+                    strings.push_back(std::move(str));
+            }
+
+            pc += GetInsnSizeRDR2(code.data(), pc);
+        }
+
+        return strings;
     }
 }

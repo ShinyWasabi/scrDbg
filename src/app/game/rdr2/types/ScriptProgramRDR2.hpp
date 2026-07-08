@@ -23,6 +23,7 @@ namespace scrDbgApp
         void SetCode(uint32_t index, const std::vector<uint8_t>& bytes) const override;
         Pointer GetStatic(uint32_t index) const override;
         uint64_t GetNative(uint32_t index) const override;
+        std::vector<std::string> GetStrings() const override;
 
     private:
         static constexpr size_t DATA_CODE_PAGES = 0x10;

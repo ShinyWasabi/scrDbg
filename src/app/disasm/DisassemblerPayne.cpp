@@ -1,4 +1,5 @@
 #include "DisassemblerPayne.hpp"
+#include "opcodes/OpcodesPayne.hpp"
 
 namespace scrDbgApp
 {
@@ -34,32 +35,32 @@ namespace scrDbgApp
 
     int DisassemblerPayne::GetInstructionSize(uint32_t pc) const
     {
-        Opcodes op = static_cast<Opcodes>(GetU8(pc));
+        OpcodesPayne op = static_cast<OpcodesPayne>(GetU8(pc));
 
         switch (op)
         {
-        case Opcodes::J:
-        case Opcodes::JNZ:
-        case Opcodes::JZ:
-        case Opcodes::PUSH_CONST_U32:
-        case Opcodes::PUSH_CONST_F:
-        case Opcodes::CALL:
+        case OpcodesPayne::J:
+        case OpcodesPayne::JNZ:
+        case OpcodesPayne::JZ:
+        case OpcodesPayne::PUSH_CONST_U32:
+        case OpcodesPayne::PUSH_CONST_F:
+        case OpcodesPayne::CALL:
             return 5;
-        case Opcodes::PUSH_CONST_S16:
-        case Opcodes::LEAVE:
+        case OpcodesPayne::PUSH_CONST_S16:
+        case OpcodesPayne::LEAVE:
             return 3;
-        case Opcodes::NATIVE:
+        case OpcodesPayne::NATIVE:
             return 7;
-        case Opcodes::ENTER:
+        case OpcodesPayne::ENTER:
             return GetU8(pc + 4) + 5;
-        case Opcodes::SWITCH:
+        case OpcodesPayne::SWITCH:
             return 8 * GetU8(pc + 1) + 2;
-        case Opcodes::STRING:
+        case OpcodesPayne::STRING:
             return GetU8(pc + 1) + 2;
-        case Opcodes::TEXT_LABEL_ASSIGN_STRING:
-        case Opcodes::TEXT_LABEL_ASSIGN_INT:
-        case Opcodes::TEXT_LABEL_APPEND_STRING:
-        case Opcodes::TEXT_LABEL_APPEND_INT:
+        case OpcodesPayne::TEXT_LABEL_ASSIGN_STRING:
+        case OpcodesPayne::TEXT_LABEL_ASSIGN_INT:
+        case OpcodesPayne::TEXT_LABEL_APPEND_STRING:
+        case OpcodesPayne::TEXT_LABEL_APPEND_INT:
             return 2;
         }
 
@@ -68,12 +69,12 @@ namespace scrDbgApp
 
     bool DisassemblerPayne::IsJumpOrCall(uint8_t op) const
     {
-        switch (static_cast<Opcodes>(op))
+        switch (static_cast<OpcodesPayne>(op))
         {
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::JNZ:
-        case Opcodes::CALL:
+        case OpcodesPayne::J:
+        case OpcodesPayne::JZ:
+        case OpcodesPayne::JNZ:
+        case OpcodesPayne::CALL:
             return true;
         default:
             return false;
@@ -88,13 +89,13 @@ namespace scrDbgApp
     // Might as well just return false since MP3 scripts aren't likely to be updated anymore
     bool DisassemblerPayne::IsWildcard(uint8_t op) const
     {
-        switch (static_cast<Opcodes>(op))
+        switch (static_cast<OpcodesPayne>(op))
         {
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::JNZ:
-        case Opcodes::CALL:
-        case Opcodes::NATIVE:
+        case OpcodesPayne::J:
+        case OpcodesPayne::JZ:
+        case OpcodesPayne::JNZ:
+        case OpcodesPayne::CALL:
+        case OpcodesPayne::NATIVE:
             return true;
         }
 
@@ -134,7 +135,7 @@ namespace scrDbgApp
             int instrSize = GetInstructionSize(start + i);
             int operandSize = instrSize - 1;
 
-            if (static_cast<Opcodes>(opcode) == Opcodes::NATIVE)
+            if (static_cast<OpcodesPayne>(opcode) == OpcodesPayne::NATIVE)
             {
                 for (int j = 0; j < operandSize; j++)
                 {
@@ -178,7 +179,7 @@ namespace scrDbgApp
 
                 for (int k = 0; k < instrSize && (j + k) < patternLength && (pc + j + k) < m_Code.size() && (i + j + k) < m_Code.size(); ++k)
                 {
-                    if (static_cast<Opcodes>(a) == Opcodes::NATIVE && k > 2)
+                    if (static_cast<OpcodesPayne>(a) == OpcodesPayne::NATIVE && k > 2)
                         continue;
 
                     else if (IsWildcard(a) && k > 0)
@@ -211,10 +212,10 @@ namespace scrDbgApp
         uint32_t pc = 0;
         while (pc < m_Code.size())
         {
-            Opcodes op = static_cast<Opcodes>(GetU8(pc));
+            OpcodesPayne op = static_cast<OpcodesPayne>(GetU8(pc));
             int insnSize = GetInstructionSize(pc);
 
-            if (op == Opcodes::STRING)
+            if (op == OpcodesPayne::STRING)
             {
                 uint8_t lenByte = GetU8(pc + 1);
                 uint32_t len = lenByte;
@@ -233,7 +234,7 @@ namespace scrDbgApp
                     if (str.find(value) != std::string::npos)
                     {
                         std::vector<std::optional<uint8_t>> pattern;
-                        pattern.push_back(static_cast<uint8_t>(Opcodes::STRING));
+                        pattern.push_back(static_cast<uint8_t>(OpcodesPayne::STRING));
                         pattern.push_back(lenByte);
                         if (lenByte == 0)
                         {
@@ -263,7 +264,7 @@ namespace scrDbgApp
 
     void DisassemblerPayne::BuildFunction(uint32_t pc)
     {
-        if (pc >= m_Code.size() || static_cast<Opcodes>(GetU8(pc)) != Opcodes::ENTER)
+        if (pc >= m_Code.size() || static_cast<OpcodesPayne>(GetU8(pc)) != OpcodesPayne::ENTER)
             return;
 
         const uint32_t entryPc = pc;
@@ -291,11 +292,11 @@ namespace scrDbgApp
             int insnSize = GetInstructionSize(cur);
             visited[cur] = insnSize;
 
-            Opcodes op = static_cast<Opcodes>(GetU8(cur));
+            OpcodesPayne op = static_cast<OpcodesPayne>(GetU8(cur));
 
             switch (op)
             {
-            case Opcodes::LEAVE:
+            case OpcodesPayne::LEAVE:
             {
                 if (cur >= lastLeavePc)
                 {
@@ -304,19 +305,19 @@ namespace scrDbgApp
                 }
                 break;
             }
-            case Opcodes::J:
+            case OpcodesPayne::J:
             {
                 worklist.push_back(GetU32(cur + 1));
                 break;
             }
-            case Opcodes::JZ:
-            case Opcodes::JNZ:
+            case OpcodesPayne::JZ:
+            case OpcodesPayne::JNZ:
             {
                 worklist.push_back(GetU32(cur + 1));
                 worklist.push_back(cur + insnSize);
                 break;
             }
-            case Opcodes::SWITCH:
+            case OpcodesPayne::SWITCH:
             {
                 uint8_t count = GetU8(cur + 1);
                 for (int i = 0; i < count; i++)
@@ -391,11 +392,11 @@ namespace scrDbgApp
             case 'e': // U32
             {
                 uint32_t val = GetU32(offset);
-                if (IsJumpOrCall(op) || op == Opcodes::NATIVE)
+                if (IsJumpOrCall(op) || op == static_cast<uint8_t>(OpcodesPayne::NATIVE))
                 {
                     instr << "0x" << std::uppercase << std::hex << val;
 
-                    if (op == Opcodes::CALL)
+                    if (op == static_cast<uint8_t>(OpcodesPayne::CALL))
                     {
                         if (auto func = GetFunctionForPc(val))
                         {

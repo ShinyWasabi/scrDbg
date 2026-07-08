@@ -131,12 +131,14 @@ namespace rage::gta4
 
         while (insnCount-- > 0)
         {
-            // Update these per opcode start
-            _this->m_Context.m_Pc = pc;
-            _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
+            _this->m_InsnCount++;
 
             if (debugger->ProcessBreakpoints(_this->m_Context.m_ProgramHash, pc, (uint32_t*)&_this->m_Context.m_State))
+            {
+                _this->m_Context.m_Pc = pc;
+                _this->m_Context.m_Sp = static_cast<uint32_t>(sp - stack + 1);
                 return _this->m_Context.m_State; // If we do not return here, the VM will end up executing opcodes until the next NATIVE call.
+            }
 
             scrOpcode op = static_cast<scrOpcode>(code[pc++]);
             if (debugger->ShouldBreakTracking(static_cast<uint8_t>(op)))

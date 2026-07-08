@@ -1,4 +1,5 @@
 #include "DisassemblerGTA4.hpp"
+#include "opcodes/OpcodesGTA4.hpp"
 
 namespace scrDbgApp
 {
@@ -20,47 +21,17 @@ namespace scrDbgApp
 
     int DisassemblerGTA4::GetInstructionSize(uint32_t pc) const
     {
-        Opcodes op = static_cast<Opcodes>(GetU8(pc));
-
-        switch (op)
-        {
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::JNZ:
-        case Opcodes::PUSH_CONST_U32:
-        case Opcodes::PUSH_CONST_F:
-        case Opcodes::CALL:
-            return 5;
-        case Opcodes::PUSH_CONST_S16:
-            return 3;
-        case Opcodes::NATIVE:
-            return 7;
-        case Opcodes::ENTER:
-            return 4;
-        case Opcodes::LEAVE:
-            return 3;
-        case Opcodes::TEXT_LABEL_ASSIGN_STRING:
-        case Opcodes::TEXT_LABEL_ASSIGN_INT:
-        case Opcodes::TEXT_LABEL_APPEND_STRING:
-        case Opcodes::TEXT_LABEL_APPEND_INT:
-            return 2;
-        case Opcodes::STRING:
-            return 2 + GetU8(pc + 1);
-        case Opcodes::SWITCH:
-            return 2 + GetU8(pc + 1) * 8;
-        }
-
-        return 1;
+        return GetInsnSizeGTA4(m_Code.data(), pc);
     }
 
     bool DisassemblerGTA4::IsJumpOrCall(uint8_t op) const
     {
-        switch (static_cast<Opcodes>(op))
+        switch (static_cast<OpcodesGTA4>(op))
         {
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::JNZ:
-        case Opcodes::CALL:
+        case OpcodesGTA4::J:
+        case OpcodesGTA4::JZ:
+        case OpcodesGTA4::JNZ:
+        case OpcodesGTA4::CALL:
             return true;
         default:
             return false;
@@ -75,13 +46,13 @@ namespace scrDbgApp
     // Might as well just return false since GTA IV scripts aren't likely to be updated anymore
     bool DisassemblerGTA4::IsWildcard(uint8_t op) const
     {
-        switch (static_cast<Opcodes>(op))
+        switch (static_cast<OpcodesGTA4>(op))
         {
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::JNZ:
-        case Opcodes::CALL:
-        case Opcodes::NATIVE:
+        case OpcodesGTA4::J:
+        case OpcodesGTA4::JZ:
+        case OpcodesGTA4::JNZ:
+        case OpcodesGTA4::CALL:
+        case OpcodesGTA4::NATIVE:
             return true;
         }
 
@@ -121,7 +92,7 @@ namespace scrDbgApp
             int instrSize = GetInstructionSize(start + i);
             int operandSize = instrSize - 1;
 
-            if (static_cast<Opcodes>(opcode) == Opcodes::NATIVE)
+            if (static_cast<OpcodesGTA4>(opcode) == OpcodesGTA4::NATIVE)
             {
                 for (int j = 0; j < operandSize; j++)
                 {
@@ -165,7 +136,7 @@ namespace scrDbgApp
 
                 for (int k = 0; k < instrSize && (j + k) < patternLength && (pc + j + k) < m_Code.size() && (i + j + k) < m_Code.size(); ++k)
                 {
-                    if (static_cast<Opcodes>(a) == Opcodes::NATIVE && k > 2)
+                    if (static_cast<OpcodesGTA4>(a) == OpcodesGTA4::NATIVE && k > 2)
                         continue;
 
                     else if (IsWildcard(a) && k > 0)
@@ -198,10 +169,10 @@ namespace scrDbgApp
         uint32_t pc = 0;
         while (pc < m_Code.size())
         {
-            Opcodes op = static_cast<Opcodes>(GetU8(pc));
+            OpcodesGTA4 op = static_cast<OpcodesGTA4>(GetU8(pc));
             int insnSize = GetInstructionSize(pc);
 
-            if (op == Opcodes::STRING)
+            if (op == OpcodesGTA4::STRING)
             {
                 uint8_t len = GetU8(pc + 1);
                 if (len > 0 && pc + 2 + len <= m_Code.size())
@@ -212,7 +183,7 @@ namespace scrDbgApp
                     if (str.find(value) != std::string::npos)
                     {
                         std::vector<std::optional<uint8_t>> pattern;
-                        pattern.push_back(static_cast<uint8_t>(Opcodes::STRING));
+                        pattern.push_back(static_cast<uint8_t>(OpcodesGTA4::STRING));
                         pattern.push_back(len);
                         for (int i = 0; i < len; i++)
                             pattern.push_back(m_Code[pc + 2 + i]);
@@ -237,7 +208,7 @@ namespace scrDbgApp
 
     void DisassemblerGTA4::BuildFunction(uint32_t pc)
     {
-        if (pc >= m_Code.size() || static_cast<Opcodes>(GetU8(pc)) != Opcodes::ENTER)
+        if (pc >= m_Code.size() || static_cast<OpcodesGTA4>(GetU8(pc)) != OpcodesGTA4::ENTER)
             return;
 
         const uint32_t entryPc = pc;
@@ -264,11 +235,11 @@ namespace scrDbgApp
             int insnSize = GetInstructionSize(cur);
             visited[cur] = insnSize;
 
-            Opcodes op = static_cast<Opcodes>(GetU8(cur));
+            OpcodesGTA4 op = static_cast<OpcodesGTA4>(GetU8(cur));
 
             switch (op)
             {
-            case Opcodes::LEAVE:
+            case OpcodesGTA4::LEAVE:
             {
                 if (cur >= lastLeavePc)
                 {
@@ -277,19 +248,19 @@ namespace scrDbgApp
                 }
                 break;
             }
-            case Opcodes::J:
+            case OpcodesGTA4::J:
             {
                 worklist.push_back(GetU32(cur + 1));
                 break;
             }
-            case Opcodes::JZ:
-            case Opcodes::JNZ:
+            case OpcodesGTA4::JZ:
+            case OpcodesGTA4::JNZ:
             {
                 worklist.push_back(GetU32(cur + 1));
                 worklist.push_back(cur + insnSize);
                 break;
             }
-            case Opcodes::SWITCH:
+            case OpcodesGTA4::SWITCH:
             {
                 uint8_t count = GetU8(cur + 1);
                 for (int i = 0; i < count; i++)
@@ -367,11 +338,11 @@ namespace scrDbgApp
             case 'e': // U32
             {
                 uint32_t val = GetU32(offset);
-                if (IsJumpOrCall(op) || op == Opcodes::NATIVE)
+                if (IsJumpOrCall(op) || op == static_cast<uint8_t>(OpcodesGTA4::NATIVE))
                 {
                     instr << "0x" << std::uppercase << std::hex << val;
 
-                    if (op == Opcodes::CALL)
+                    if (op == static_cast<uint8_t>(OpcodesGTA4::CALL))
                     {
                         if (auto func = GetFunctionForPc(val))
                         {

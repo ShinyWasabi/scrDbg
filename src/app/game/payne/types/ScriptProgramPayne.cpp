@@ -1,4 +1,5 @@
 #include "ScriptProgramPayne.hpp"
+#include "disasm/opcodes/OpcodesPayne.hpp"
 
 namespace scrDbgApp
 {
@@ -57,5 +58,42 @@ namespace scrDbgApp
             return {};
 
         return m_Base.Add(STATICS).Deref().Add(index * sizeof(uint32_t));
+    }
+
+    std::vector<std::string> ScriptProgramPayne::GetStrings() const
+    {
+        std::vector<std::string> strings;
+        std::unordered_set<std::string> seen;
+
+        std::vector<uint8_t> code = GetCode();
+
+        for (uint32_t pc = 0; pc + 1 < code.size();)
+        {
+            if (static_cast<OpcodesPayne>(code[pc]) == OpcodesPayne::STRING)
+            {
+                uint32_t offset = pc + 1;
+                uint32_t len = code[offset++];
+
+                if (len == 0 && offset + 1 < code.size())
+                {
+                    len = code[offset] | (code[offset + 1] << 8);
+                    offset += 2;
+                }
+
+                if (offset + len <= code.size())
+                {
+                    std::string str(reinterpret_cast<const char*>(&code[offset]), len);
+                    if (!str.empty() && str.back() == '\0')
+                        str.pop_back();
+
+                    if (seen.insert(str).second)
+                        strings.push_back(std::move(str));
+                }
+            }
+
+            pc += GetInsnSizePayne(code.data(), pc);
+        }
+
+        return strings;
     }
 }

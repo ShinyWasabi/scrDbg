@@ -1,4 +1,5 @@
 #include "DisassemblerRDR2.hpp"
+#include "opcodes/OpcodesRDR2.hpp"
 
 namespace scrDbgApp
 {
@@ -18,92 +19,92 @@ namespace scrDbgApp
 
     int DisassemblerRDR2::GetInstructionSize(uint32_t pc) const
     {
-        Opcodes op = static_cast<Opcodes>(GetU8(pc));
+        OpcodesRDR2 op = static_cast<OpcodesRDR2>(GetU8(pc));
 
         switch (op)
         {
-        case Opcodes::PUSH_CONST_U8:
-        case Opcodes::ARRAY_U8:
-        case Opcodes::ARRAY_U8_LOAD:
-        case Opcodes::ARRAY_U8_STORE:
-        case Opcodes::LOCAL_U8:
-        case Opcodes::LOCAL_U8_LOAD:
-        case Opcodes::LOCAL_U8_STORE:
-        case Opcodes::STATIC_U8:
-        case Opcodes::STATIC_U8_LOAD:
-        case Opcodes::STATIC_U8_STORE:
-        case Opcodes::IADD_U8:
-        case Opcodes::IOFFSET_U8_LOAD:
-        case Opcodes::IOFFSET_U8_STORE:
-        case Opcodes::IMUL_U8:
-        case Opcodes::TEXT_LABEL_ASSIGN_STRING:
-        case Opcodes::TEXT_LABEL_ASSIGN_INT:
-        case Opcodes::TEXT_LABEL_APPEND_STRING:
-        case Opcodes::TEXT_LABEL_APPEND_INT:
+        case OpcodesRDR2::PUSH_CONST_U8:
+        case OpcodesRDR2::ARRAY_U8:
+        case OpcodesRDR2::ARRAY_U8_LOAD:
+        case OpcodesRDR2::ARRAY_U8_STORE:
+        case OpcodesRDR2::LOCAL_U8:
+        case OpcodesRDR2::LOCAL_U8_LOAD:
+        case OpcodesRDR2::LOCAL_U8_STORE:
+        case OpcodesRDR2::STATIC_U8:
+        case OpcodesRDR2::STATIC_U8_LOAD:
+        case OpcodesRDR2::STATIC_U8_STORE:
+        case OpcodesRDR2::IADD_U8:
+        case OpcodesRDR2::IOFFSET_U8_LOAD:
+        case OpcodesRDR2::IOFFSET_U8_STORE:
+        case OpcodesRDR2::IMUL_U8:
+        case OpcodesRDR2::TEXT_LABEL_ASSIGN_STRING:
+        case OpcodesRDR2::TEXT_LABEL_ASSIGN_INT:
+        case OpcodesRDR2::TEXT_LABEL_APPEND_STRING:
+        case OpcodesRDR2::TEXT_LABEL_APPEND_INT:
             return 2;
-        case Opcodes::PUSH_CONST_U8_U8:
-        case Opcodes::NATIVE:
-        case Opcodes::LEAVE:
-        case Opcodes::PUSH_CONST_S16:
-        case Opcodes::IADD_S16:
-        case Opcodes::IOFFSET_S16_LOAD:
-        case Opcodes::IOFFSET_S16_STORE:
-        case Opcodes::IMUL_S16:
-        case Opcodes::ARRAY_U16:
-        case Opcodes::ARRAY_U16_LOAD:
-        case Opcodes::ARRAY_U16_STORE:
-        case Opcodes::LOCAL_U16:
-        case Opcodes::LOCAL_U16_LOAD:
-        case Opcodes::LOCAL_U16_STORE:
-        case Opcodes::STATIC_U16:
-        case Opcodes::STATIC_U16_LOAD:
-        case Opcodes::STATIC_U16_STORE:
-        case Opcodes::GLOBAL_U16:
-        case Opcodes::GLOBAL_U16_LOAD:
-        case Opcodes::GLOBAL_U16_STORE:
-        case Opcodes::CALL:
-        case Opcodes::CALL_U8H_1:
-        case Opcodes::CALL_U8H_2:
-        case Opcodes::CALL_U8H_3:
-        case Opcodes::CALL_U8H_4:
-        case Opcodes::CALL_U8H_5:
-        case Opcodes::CALL_U8H_6:
-        case Opcodes::CALL_U8H_7:
-        case Opcodes::CALL_U8H_8:
-        case Opcodes::CALL_U8H_9:
-        case Opcodes::CALL_U8H_A:
-        case Opcodes::CALL_U8H_B:
-        case Opcodes::CALL_U8H_C:
-        case Opcodes::CALL_U8H_D:
-        case Opcodes::CALL_U8H_E:
-        case Opcodes::CALL_U8H_F:
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::INE_J:
-        case Opcodes::IEQ_J:
-        case Opcodes::ILE_J:
-        case Opcodes::ILT_J:
-        case Opcodes::IGE_J:
-        case Opcodes::IGT_J:
+        case OpcodesRDR2::PUSH_CONST_U8_U8:
+        case OpcodesRDR2::NATIVE:
+        case OpcodesRDR2::LEAVE:
+        case OpcodesRDR2::PUSH_CONST_S16:
+        case OpcodesRDR2::IADD_S16:
+        case OpcodesRDR2::IOFFSET_S16_LOAD:
+        case OpcodesRDR2::IOFFSET_S16_STORE:
+        case OpcodesRDR2::IMUL_S16:
+        case OpcodesRDR2::ARRAY_U16:
+        case OpcodesRDR2::ARRAY_U16_LOAD:
+        case OpcodesRDR2::ARRAY_U16_STORE:
+        case OpcodesRDR2::LOCAL_U16:
+        case OpcodesRDR2::LOCAL_U16_LOAD:
+        case OpcodesRDR2::LOCAL_U16_STORE:
+        case OpcodesRDR2::STATIC_U16:
+        case OpcodesRDR2::STATIC_U16_LOAD:
+        case OpcodesRDR2::STATIC_U16_STORE:
+        case OpcodesRDR2::GLOBAL_U16:
+        case OpcodesRDR2::GLOBAL_U16_LOAD:
+        case OpcodesRDR2::GLOBAL_U16_STORE:
+        case OpcodesRDR2::CALL:
+        case OpcodesRDR2::CALL_U8H_1:
+        case OpcodesRDR2::CALL_U8H_2:
+        case OpcodesRDR2::CALL_U8H_3:
+        case OpcodesRDR2::CALL_U8H_4:
+        case OpcodesRDR2::CALL_U8H_5:
+        case OpcodesRDR2::CALL_U8H_6:
+        case OpcodesRDR2::CALL_U8H_7:
+        case OpcodesRDR2::CALL_U8H_8:
+        case OpcodesRDR2::CALL_U8H_9:
+        case OpcodesRDR2::CALL_U8H_A:
+        case OpcodesRDR2::CALL_U8H_B:
+        case OpcodesRDR2::CALL_U8H_C:
+        case OpcodesRDR2::CALL_U8H_D:
+        case OpcodesRDR2::CALL_U8H_E:
+        case OpcodesRDR2::CALL_U8H_F:
+        case OpcodesRDR2::J:
+        case OpcodesRDR2::JZ:
+        case OpcodesRDR2::INE_J:
+        case OpcodesRDR2::IEQ_J:
+        case OpcodesRDR2::ILE_J:
+        case OpcodesRDR2::ILT_J:
+        case OpcodesRDR2::IGE_J:
+        case OpcodesRDR2::IGT_J:
             return 3;
-        case Opcodes::PUSH_CONST_U8_U8_U8:
-        case Opcodes::GLOBAL_U24:
-        case Opcodes::GLOBAL_U24_LOAD:
-        case Opcodes::GLOBAL_U24_STORE:
-        case Opcodes::PUSH_CONST_U24:
-        case Opcodes::CALL_PATCH:
-        case Opcodes::CALL_OUT_OF_PATCH:
+        case OpcodesRDR2::PUSH_CONST_U8_U8_U8:
+        case OpcodesRDR2::GLOBAL_U24:
+        case OpcodesRDR2::GLOBAL_U24_LOAD:
+        case OpcodesRDR2::GLOBAL_U24_STORE:
+        case OpcodesRDR2::PUSH_CONST_U24:
+        case OpcodesRDR2::CALL_PATCH:
+        case OpcodesRDR2::CALL_OUT_OF_PATCH:
             return 4;
-        case Opcodes::PUSH_CONST_U32:
-        case Opcodes::PUSH_CONST_F:
+        case OpcodesRDR2::PUSH_CONST_U32:
+        case OpcodesRDR2::PUSH_CONST_F:
             return 5;
-        case Opcodes::ENTER:
+        case OpcodesRDR2::ENTER:
             return 5 + m_Code[pc + 4];
-        case Opcodes::SWITCH:
+        case OpcodesRDR2::SWITCH:
             return 2 + m_Code[pc + 1] * 6;
-        case Opcodes::STRING:
+        case OpcodesRDR2::STRING:
             return 2 + m_Code[pc + 1];
-        case Opcodes::ARRAY:
+        case OpcodesRDR2::ARRAY:
             return 5 + *(uint32_t*)&m_Code[pc + 1];
         }
 
@@ -112,32 +113,32 @@ namespace scrDbgApp
 
     bool DisassemblerRDR2::IsJumpOrCall(uint8_t op) const
     {
-        switch (op)
+        switch (static_cast<OpcodesRDR2>(op))
         {
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::IEQ_J:
-        case Opcodes::INE_J:
-        case Opcodes::IGT_J:
-        case Opcodes::IGE_J:
-        case Opcodes::ILT_J:
-        case Opcodes::ILE_J:
-        case Opcodes::CALL:
-        case Opcodes::CALL_U8H_1:
-        case Opcodes::CALL_U8H_2:
-        case Opcodes::CALL_U8H_3:
-        case Opcodes::CALL_U8H_4:
-        case Opcodes::CALL_U8H_5:
-        case Opcodes::CALL_U8H_6:
-        case Opcodes::CALL_U8H_7:
-        case Opcodes::CALL_U8H_8:
-        case Opcodes::CALL_U8H_9:
-        case Opcodes::CALL_U8H_A:
-        case Opcodes::CALL_U8H_B:
-        case Opcodes::CALL_U8H_C:
-        case Opcodes::CALL_U8H_D:
-        case Opcodes::CALL_U8H_E:
-        case Opcodes::CALL_U8H_F:
+        case OpcodesRDR2::J:
+        case OpcodesRDR2::JZ:
+        case OpcodesRDR2::IEQ_J:
+        case OpcodesRDR2::INE_J:
+        case OpcodesRDR2::IGT_J:
+        case OpcodesRDR2::IGE_J:
+        case OpcodesRDR2::ILT_J:
+        case OpcodesRDR2::ILE_J:
+        case OpcodesRDR2::CALL:
+        case OpcodesRDR2::CALL_U8H_1:
+        case OpcodesRDR2::CALL_U8H_2:
+        case OpcodesRDR2::CALL_U8H_3:
+        case OpcodesRDR2::CALL_U8H_4:
+        case OpcodesRDR2::CALL_U8H_5:
+        case OpcodesRDR2::CALL_U8H_6:
+        case OpcodesRDR2::CALL_U8H_7:
+        case OpcodesRDR2::CALL_U8H_8:
+        case OpcodesRDR2::CALL_U8H_9:
+        case OpcodesRDR2::CALL_U8H_A:
+        case OpcodesRDR2::CALL_U8H_B:
+        case OpcodesRDR2::CALL_U8H_C:
+        case OpcodesRDR2::CALL_U8H_D:
+        case OpcodesRDR2::CALL_U8H_E:
+        case OpcodesRDR2::CALL_U8H_F:
             return true;
         }
 
@@ -148,14 +149,14 @@ namespace scrDbgApp
     {
         uint8_t op = GetU8(pc);
 
-        if (op == Opcodes::CALL)
+        if (op == static_cast<uint8_t>(OpcodesRDR2::CALL))
             return GetU24(pc + 1);
 
         // CALL_U8H_1..F encode the high byte of the 24-bit target in the opcode
         // itself, with the low 16 bits stored as the U16 operand.
-        if (op >= Opcodes::CALL_U8H_1 && op <= Opcodes::CALL_U8H_F)
+        if (op >= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_1) && op <= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_F))
         {
-            uint32_t highByte = op - Opcodes::CALL_U8H_1 + 1;
+            uint32_t highByte = op - static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_1) + 1;
             return (highByte << 16) | GetU16(pc + 1);
         }
 
@@ -164,44 +165,44 @@ namespace scrDbgApp
 
     bool DisassemblerRDR2::IsWildcard(uint8_t op) const
     {
-        switch (op)
+        switch (static_cast<OpcodesRDR2>(op))
         {
-        case Opcodes::CALL:
-        case Opcodes::CALL_U8H_1:
-        case Opcodes::CALL_U8H_2:
-        case Opcodes::CALL_U8H_3:
-        case Opcodes::CALL_U8H_4:
-        case Opcodes::CALL_U8H_5:
-        case Opcodes::CALL_U8H_6:
-        case Opcodes::CALL_U8H_7:
-        case Opcodes::CALL_U8H_8:
-        case Opcodes::CALL_U8H_9:
-        case Opcodes::CALL_U8H_A:
-        case Opcodes::CALL_U8H_B:
-        case Opcodes::CALL_U8H_C:
-        case Opcodes::CALL_U8H_D:
-        case Opcodes::CALL_U8H_E:
-        case Opcodes::CALL_U8H_F:
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::IEQ_J:
-        case Opcodes::INE_J:
-        case Opcodes::IGT_J:
-        case Opcodes::IGE_J:
-        case Opcodes::ILT_J:
-        case Opcodes::ILE_J:
-        case Opcodes::STATIC_U8:
-        case Opcodes::STATIC_U8_LOAD:
-        case Opcodes::STATIC_U8_STORE:
-        case Opcodes::STATIC_U16:
-        case Opcodes::STATIC_U16_LOAD:
-        case Opcodes::STATIC_U16_STORE:
-        case Opcodes::GLOBAL_U16:
-        case Opcodes::GLOBAL_U16_LOAD:
-        case Opcodes::GLOBAL_U16_STORE:
-        case Opcodes::GLOBAL_U24:
-        case Opcodes::GLOBAL_U24_LOAD:
-        case Opcodes::GLOBAL_U24_STORE:
+        case OpcodesRDR2::CALL:
+        case OpcodesRDR2::CALL_U8H_1:
+        case OpcodesRDR2::CALL_U8H_2:
+        case OpcodesRDR2::CALL_U8H_3:
+        case OpcodesRDR2::CALL_U8H_4:
+        case OpcodesRDR2::CALL_U8H_5:
+        case OpcodesRDR2::CALL_U8H_6:
+        case OpcodesRDR2::CALL_U8H_7:
+        case OpcodesRDR2::CALL_U8H_8:
+        case OpcodesRDR2::CALL_U8H_9:
+        case OpcodesRDR2::CALL_U8H_A:
+        case OpcodesRDR2::CALL_U8H_B:
+        case OpcodesRDR2::CALL_U8H_C:
+        case OpcodesRDR2::CALL_U8H_D:
+        case OpcodesRDR2::CALL_U8H_E:
+        case OpcodesRDR2::CALL_U8H_F:
+        case OpcodesRDR2::J:
+        case OpcodesRDR2::JZ:
+        case OpcodesRDR2::IEQ_J:
+        case OpcodesRDR2::INE_J:
+        case OpcodesRDR2::IGT_J:
+        case OpcodesRDR2::IGE_J:
+        case OpcodesRDR2::ILT_J:
+        case OpcodesRDR2::ILE_J:
+        case OpcodesRDR2::STATIC_U8:
+        case OpcodesRDR2::STATIC_U8_LOAD:
+        case OpcodesRDR2::STATIC_U8_STORE:
+        case OpcodesRDR2::STATIC_U16:
+        case OpcodesRDR2::STATIC_U16_LOAD:
+        case OpcodesRDR2::STATIC_U16_STORE:
+        case OpcodesRDR2::GLOBAL_U16:
+        case OpcodesRDR2::GLOBAL_U16_LOAD:
+        case OpcodesRDR2::GLOBAL_U16_STORE:
+        case OpcodesRDR2::GLOBAL_U24:
+        case OpcodesRDR2::GLOBAL_U24_LOAD:
+        case OpcodesRDR2::GLOBAL_U24_STORE:
             return true;
         }
 
@@ -212,12 +213,12 @@ namespace scrDbgApp
     {
         uint8_t op = m_Code[pc];
 
-        if (op == Opcodes::CALL || op == Opcodes::PUSH_CONST_U24) // check for function pointers
+        if (op == static_cast<uint8_t>(OpcodesRDR2::CALL) || op == static_cast<uint8_t>(OpcodesRDR2::PUSH_CONST_U24)) // check for function pointers
         {
             if (GetU24(pc + 1) == targetPc)
                 return true;
         }
-        else if (op >= Opcodes::CALL_U8H_1 && op <= Opcodes::CALL_U8H_F)
+        else if (op >= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_1) && op <= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_F))
         {
             if (GetJumpTarget(pc) == targetPc)
                 return true;
@@ -252,7 +253,7 @@ namespace scrDbgApp
             int operandSize = instrSize - 1;
 
             /*
-            if (opcode == Opcodes::NATIVE)
+            if (opcode == OpcodesRDR2::NATIVE)
             {
                 // Wildcard native index
                 for (int j = 0; j < operandSize; j++)
@@ -301,7 +302,7 @@ namespace scrDbgApp
                 for (int k = 0; k < instrSize && j + k < patternLength && (pc + j + k) < m_Code.size() && (i + j + k) < m_Code.size(); ++k)
                 {
                     /*
-                    if (a == Opcodes::NATIVE && k > 1)
+                    if (a == OpcodesRDR2::NATIVE && k > 1)
                         continue;
                     */
                     if (IsWildcard(a) && k > 0)
@@ -334,10 +335,10 @@ namespace scrDbgApp
         uint32_t pc = 0;
         while (pc < m_Code.size())
         {
-            Opcodes op = static_cast<Opcodes>(GetU8(pc));
+            OpcodesRDR2 op = static_cast<OpcodesRDR2>(GetU8(pc));
             int insnSize = GetInstructionSize(pc);
 
-            if (op == Opcodes::STRING)
+            if (op == OpcodesRDR2::STRING)
             {
                 uint8_t len = GetU8(pc + 1);
                 if (len > 0 && pc + 2 + len <= m_Code.size())
@@ -348,7 +349,7 @@ namespace scrDbgApp
                     if (str.find(value) != std::string::npos)
                     {
                         std::vector<std::optional<uint8_t>> pattern;
-                        pattern.push_back(static_cast<uint8_t>(Opcodes::STRING));
+                        pattern.push_back(static_cast<uint8_t>(OpcodesRDR2::STRING));
                         pattern.push_back(len);
                         for (int i = 0; i < len; i++)
                             pattern.push_back(m_Code[pc + 2 + i]);
@@ -373,7 +374,7 @@ namespace scrDbgApp
 
     void DisassemblerRDR2::BuildFunction(uint32_t pc)
     {
-        if (pc >= m_Code.size() || GetU8(pc) != Opcodes::ENTER)
+        if (pc >= m_Code.size() || GetU8(pc) != static_cast<uint8_t>(OpcodesRDR2::ENTER))
             return;
 
         uint32_t start = pc;
@@ -392,22 +393,22 @@ namespace scrDbgApp
             uint8_t op = GetU8(pos);
             int size = GetInstructionSize(pos);
 
-            bool isLeaveImm = op >= Opcodes::LEAVE_0_0 && op <= Opcodes::LEAVE_3_3;
+            bool isLeaveImm = op >= static_cast<uint8_t>(OpcodesRDR2::LEAVE_0_0) && op <= static_cast<uint8_t>(OpcodesRDR2::LEAVE_3_3);
 
-            if (op == Opcodes::LEAVE || isLeaveImm)
+            if (op == static_cast<uint8_t>(OpcodesRDR2::LEAVE) || isLeaveImm)
             {
                 uint32_t next = pos + size;
                 uint8_t nextOp = (next < m_Code.size()) ? GetU8(next) : 0xFF;
 
                 // If next op is ENTER, this is the last LEAVE of the function
-                if (nextOp == Opcodes::ENTER || next >= m_Code.size())
+                if (nextOp == static_cast<uint8_t>(OpcodesRDR2::ENTER) || next >= m_Code.size())
                 {
                     lastLeave = pos;
 
                     // LEAVE_X_Y bakes the arg/return counts into the opcode
                     // itself (no operand bytes); generic LEAVE stores them
                     // as operands (argCount, retCount).
-                    retCount = isLeaveImm ? ((op - Opcodes::LEAVE_0_0) % 4) : GetU8(pos + 2);
+                    retCount = isLeaveImm ? ((op - static_cast<uint8_t>(OpcodesRDR2::LEAVE_0_0)) % 4) : GetU8(pos + 2);
                     break;
                 }
             }
@@ -458,9 +459,9 @@ namespace scrDbgApp
                 // CALL / CALL_U8H_1..F: the low 16 bits of the call target are
                 // stored here; the high byte is implied by the opcode itself
                 // (plain CALL == high byte 0).
-                if (op == Opcodes::CALL || (op >= Opcodes::CALL_U8H_1 && op <= Opcodes::CALL_U8H_F))
+                if (op == static_cast<uint8_t>(OpcodesRDR2::CALL) || (op >= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_1) && op <= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_F)))
                 {
-                    uint32_t highByte = (op == Opcodes::CALL) ? 0 : (op - Opcodes::CALL_U8H_1 + 1);
+                    uint32_t highByte = (op == static_cast<uint8_t>(OpcodesRDR2::CALL)) ? 0 : (op - static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_1) + 1);
                     uint32_t target = (highByte << 16) | val;
 
                     instr << "0x" << std::uppercase << std::hex << target;
@@ -489,8 +490,8 @@ namespace scrDbgApp
 
                 // CALL_PATCH / CALL_OUT_OF_PATCH address the PatchData code
                 // space, not m_Code, so jump to xref won't work for these.
-                // But since these opcodes are unused (?), this is fine.
-                if (op == Opcodes::CALL_PATCH || op == Opcodes::CALL_OUT_OF_PATCH)
+                // But since these OpcodesRDR2 are unused (?), this is fine.
+                if (op == static_cast<uint8_t>(OpcodesRDR2::CALL_PATCH) || op == static_cast<uint8_t>(OpcodesRDR2::CALL_OUT_OF_PATCH))
                     instr << "0x" << std::uppercase << std::hex << val;
                 else
                     instr << std::dec << val;

@@ -1,4 +1,5 @@
 #include "DisassemblerGTA5.hpp"
+#include "opcodes/OpcodesGTA5.hpp"
 
 namespace scrDbgApp
 {
@@ -18,40 +19,40 @@ namespace scrDbgApp
 
     std::optional<uint32_t> DisassemblerGTA5::GetStringIndex(uint32_t pc) const
     {
-        Opcodes op = static_cast<Opcodes>(GetU8(pc));
+        OpcodesGTA5 op = static_cast<OpcodesGTA5>(GetU8(pc));
 
         switch (op)
         {
-        case Opcodes::PUSH_CONST_0:
+        case OpcodesGTA5::PUSH_CONST_0:
             return 0;
-        case Opcodes::PUSH_CONST_1:
+        case OpcodesGTA5::PUSH_CONST_1:
             return 1;
-        case Opcodes::PUSH_CONST_2:
+        case OpcodesGTA5::PUSH_CONST_2:
             return 2;
-        case Opcodes::PUSH_CONST_3:
+        case OpcodesGTA5::PUSH_CONST_3:
             return 3;
-        case Opcodes::PUSH_CONST_4:
+        case OpcodesGTA5::PUSH_CONST_4:
             return 4;
-        case Opcodes::PUSH_CONST_5:
+        case OpcodesGTA5::PUSH_CONST_5:
             return 5;
-        case Opcodes::PUSH_CONST_6:
+        case OpcodesGTA5::PUSH_CONST_6:
             return 6;
-        case Opcodes::PUSH_CONST_7:
+        case OpcodesGTA5::PUSH_CONST_7:
             return 7;
-        case Opcodes::PUSH_CONST_U8:
+        case OpcodesGTA5::PUSH_CONST_U8:
             return GetU8(pc + 1);
 
         // Handle peephole optimizations
-        case Opcodes::PUSH_CONST_U8_U8:
+        case OpcodesGTA5::PUSH_CONST_U8_U8:
             return GetU8(pc + 2);
-        case Opcodes::PUSH_CONST_U8_U8_U8:
+        case OpcodesGTA5::PUSH_CONST_U8_U8_U8:
             return GetU8(pc + 3);
 
-        case Opcodes::PUSH_CONST_S16:
+        case OpcodesGTA5::PUSH_CONST_S16:
             return GetS16(pc + 1);
-        case Opcodes::PUSH_CONST_U24:
+        case OpcodesGTA5::PUSH_CONST_U24:
             return GetU24(pc + 1);
-        case Opcodes::PUSH_CONST_U32:
+        case OpcodesGTA5::PUSH_CONST_U32:
             return GetU32(pc + 1);
         }
 
@@ -60,76 +61,76 @@ namespace scrDbgApp
 
     int DisassemblerGTA5::GetInstructionSize(uint32_t pc) const
     {
-        Opcodes op = static_cast<Opcodes>(GetU8(pc));
+        OpcodesGTA5 op = static_cast<OpcodesGTA5>(GetU8(pc));
 
         switch (op)
         {
-        case Opcodes::PUSH_CONST_U8:
-        case Opcodes::ARRAY_U8:
-        case Opcodes::ARRAY_U8_LOAD:
-        case Opcodes::ARRAY_U8_STORE:
-        case Opcodes::LOCAL_U8:
-        case Opcodes::LOCAL_U8_LOAD:
-        case Opcodes::LOCAL_U8_STORE:
-        case Opcodes::STATIC_U8:
-        case Opcodes::STATIC_U8_LOAD:
-        case Opcodes::STATIC_U8_STORE:
-        case Opcodes::IADD_U8:
-        case Opcodes::IMUL_U8:
-        case Opcodes::IOFFSET_U8:
-        case Opcodes::IOFFSET_U8_LOAD:
-        case Opcodes::IOFFSET_U8_STORE:
-        case Opcodes::TEXT_LABEL_ASSIGN_STRING:
-        case Opcodes::TEXT_LABEL_ASSIGN_INT:
-        case Opcodes::TEXT_LABEL_APPEND_STRING:
-        case Opcodes::TEXT_LABEL_APPEND_INT:
+        case OpcodesGTA5::PUSH_CONST_U8:
+        case OpcodesGTA5::ARRAY_U8:
+        case OpcodesGTA5::ARRAY_U8_LOAD:
+        case OpcodesGTA5::ARRAY_U8_STORE:
+        case OpcodesGTA5::LOCAL_U8:
+        case OpcodesGTA5::LOCAL_U8_LOAD:
+        case OpcodesGTA5::LOCAL_U8_STORE:
+        case OpcodesGTA5::STATIC_U8:
+        case OpcodesGTA5::STATIC_U8_LOAD:
+        case OpcodesGTA5::STATIC_U8_STORE:
+        case OpcodesGTA5::IADD_U8:
+        case OpcodesGTA5::IMUL_U8:
+        case OpcodesGTA5::IOFFSET_U8:
+        case OpcodesGTA5::IOFFSET_U8_LOAD:
+        case OpcodesGTA5::IOFFSET_U8_STORE:
+        case OpcodesGTA5::TEXT_LABEL_ASSIGN_STRING:
+        case OpcodesGTA5::TEXT_LABEL_ASSIGN_INT:
+        case OpcodesGTA5::TEXT_LABEL_APPEND_STRING:
+        case OpcodesGTA5::TEXT_LABEL_APPEND_INT:
             return 2;
-        case Opcodes::PUSH_CONST_U8_U8:
-        case Opcodes::LEAVE:
-        case Opcodes::PUSH_CONST_S16:
-        case Opcodes::IADD_S16:
-        case Opcodes::IMUL_S16:
-        case Opcodes::IOFFSET_S16:
-        case Opcodes::IOFFSET_S16_LOAD:
-        case Opcodes::IOFFSET_S16_STORE:
-        case Opcodes::ARRAY_U16:
-        case Opcodes::ARRAY_U16_LOAD:
-        case Opcodes::ARRAY_U16_STORE:
-        case Opcodes::LOCAL_U16:
-        case Opcodes::LOCAL_U16_LOAD:
-        case Opcodes::LOCAL_U16_STORE:
-        case Opcodes::STATIC_U16:
-        case Opcodes::STATIC_U16_LOAD:
-        case Opcodes::STATIC_U16_STORE:
-        case Opcodes::GLOBAL_U16:
-        case Opcodes::GLOBAL_U16_LOAD:
-        case Opcodes::GLOBAL_U16_STORE:
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::IEQ_JZ:
-        case Opcodes::INE_JZ:
-        case Opcodes::IGT_JZ:
-        case Opcodes::IGE_JZ:
-        case Opcodes::ILT_JZ:
-        case Opcodes::ILE_JZ:
+        case OpcodesGTA5::PUSH_CONST_U8_U8:
+        case OpcodesGTA5::LEAVE:
+        case OpcodesGTA5::PUSH_CONST_S16:
+        case OpcodesGTA5::IADD_S16:
+        case OpcodesGTA5::IMUL_S16:
+        case OpcodesGTA5::IOFFSET_S16:
+        case OpcodesGTA5::IOFFSET_S16_LOAD:
+        case OpcodesGTA5::IOFFSET_S16_STORE:
+        case OpcodesGTA5::ARRAY_U16:
+        case OpcodesGTA5::ARRAY_U16_LOAD:
+        case OpcodesGTA5::ARRAY_U16_STORE:
+        case OpcodesGTA5::LOCAL_U16:
+        case OpcodesGTA5::LOCAL_U16_LOAD:
+        case OpcodesGTA5::LOCAL_U16_STORE:
+        case OpcodesGTA5::STATIC_U16:
+        case OpcodesGTA5::STATIC_U16_LOAD:
+        case OpcodesGTA5::STATIC_U16_STORE:
+        case OpcodesGTA5::GLOBAL_U16:
+        case OpcodesGTA5::GLOBAL_U16_LOAD:
+        case OpcodesGTA5::GLOBAL_U16_STORE:
+        case OpcodesGTA5::J:
+        case OpcodesGTA5::JZ:
+        case OpcodesGTA5::IEQ_JZ:
+        case OpcodesGTA5::INE_JZ:
+        case OpcodesGTA5::IGT_JZ:
+        case OpcodesGTA5::IGE_JZ:
+        case OpcodesGTA5::ILT_JZ:
+        case OpcodesGTA5::ILE_JZ:
             return 3;
-        case Opcodes::PUSH_CONST_U8_U8_U8:
-        case Opcodes::NATIVE:
-        case Opcodes::CALL:
-        case Opcodes::STATIC_U24:
-        case Opcodes::STATIC_U24_LOAD:
-        case Opcodes::STATIC_U24_STORE:
-        case Opcodes::GLOBAL_U24:
-        case Opcodes::GLOBAL_U24_LOAD:
-        case Opcodes::GLOBAL_U24_STORE:
-        case Opcodes::PUSH_CONST_U24:
+        case OpcodesGTA5::PUSH_CONST_U8_U8_U8:
+        case OpcodesGTA5::NATIVE:
+        case OpcodesGTA5::CALL:
+        case OpcodesGTA5::STATIC_U24:
+        case OpcodesGTA5::STATIC_U24_LOAD:
+        case OpcodesGTA5::STATIC_U24_STORE:
+        case OpcodesGTA5::GLOBAL_U24:
+        case OpcodesGTA5::GLOBAL_U24_LOAD:
+        case OpcodesGTA5::GLOBAL_U24_STORE:
+        case OpcodesGTA5::PUSH_CONST_U24:
             return 4;
-        case Opcodes::PUSH_CONST_U32:
-        case Opcodes::PUSH_CONST_F:
+        case OpcodesGTA5::PUSH_CONST_U32:
+        case OpcodesGTA5::PUSH_CONST_F:
             return 5;
-        case Opcodes::ENTER:
+        case OpcodesGTA5::ENTER:
             return 5 + m_Code[pc + 4];
-        case Opcodes::SWITCH:
+        case OpcodesGTA5::SWITCH:
             return 2 + m_Code[pc + 1] * 6;
         }
 
@@ -138,17 +139,17 @@ namespace scrDbgApp
 
     bool DisassemblerGTA5::IsJumpOrCall(uint8_t op) const
     {
-        switch (op)
+        switch (static_cast<OpcodesGTA5>(op))
         {
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::IEQ_JZ:
-        case Opcodes::INE_JZ:
-        case Opcodes::IGT_JZ:
-        case Opcodes::IGE_JZ:
-        case Opcodes::ILT_JZ:
-        case Opcodes::ILE_JZ:
-        case Opcodes::CALL:
+        case OpcodesGTA5::J:
+        case OpcodesGTA5::JZ:
+        case OpcodesGTA5::IEQ_JZ:
+        case OpcodesGTA5::INE_JZ:
+        case OpcodesGTA5::IGT_JZ:
+        case OpcodesGTA5::IGE_JZ:
+        case OpcodesGTA5::ILT_JZ:
+        case OpcodesGTA5::ILE_JZ:
+        case OpcodesGTA5::CALL:
             return true;
         }
 
@@ -157,9 +158,9 @@ namespace scrDbgApp
 
     uint32_t DisassemblerGTA5::GetJumpTarget(uint32_t pc) const
     {
-        uint8_t op = GetU8(pc);
+        OpcodesGTA5 op = static_cast<OpcodesGTA5>(GetU8(pc));
 
-        if (op == Opcodes::CALL)
+        if (op == OpcodesGTA5::CALL)
             return GetU24(pc + 1);
 
         return pc + 2 + GetS16(pc + 1) + 1;
@@ -167,32 +168,32 @@ namespace scrDbgApp
 
     bool DisassemblerGTA5::IsWildcard(uint8_t op) const
     {
-        switch (op)
+        switch (static_cast<OpcodesGTA5>(op))
         {
-        case Opcodes::CALL:
-        case Opcodes::J:
-        case Opcodes::JZ:
-        case Opcodes::IEQ_JZ:
-        case Opcodes::INE_JZ:
-        case Opcodes::IGT_JZ:
-        case Opcodes::IGE_JZ:
-        case Opcodes::ILT_JZ:
-        case Opcodes::ILE_JZ:
-        case Opcodes::STATIC_U8:
-        case Opcodes::STATIC_U8_LOAD:
-        case Opcodes::STATIC_U8_STORE:
-        case Opcodes::STATIC_U16:
-        case Opcodes::STATIC_U16_LOAD:
-        case Opcodes::STATIC_U16_STORE:
-        case Opcodes::GLOBAL_U16:
-        case Opcodes::GLOBAL_U16_LOAD:
-        case Opcodes::GLOBAL_U16_STORE:
-        case Opcodes::STATIC_U24:
-        case Opcodes::STATIC_U24_LOAD:
-        case Opcodes::STATIC_U24_STORE:
-        case Opcodes::GLOBAL_U24:
-        case Opcodes::GLOBAL_U24_LOAD:
-        case Opcodes::GLOBAL_U24_STORE:
+        case OpcodesGTA5::CALL:
+        case OpcodesGTA5::J:
+        case OpcodesGTA5::JZ:
+        case OpcodesGTA5::IEQ_JZ:
+        case OpcodesGTA5::INE_JZ:
+        case OpcodesGTA5::IGT_JZ:
+        case OpcodesGTA5::IGE_JZ:
+        case OpcodesGTA5::ILT_JZ:
+        case OpcodesGTA5::ILE_JZ:
+        case OpcodesGTA5::STATIC_U8:
+        case OpcodesGTA5::STATIC_U8_LOAD:
+        case OpcodesGTA5::STATIC_U8_STORE:
+        case OpcodesGTA5::STATIC_U16:
+        case OpcodesGTA5::STATIC_U16_LOAD:
+        case OpcodesGTA5::STATIC_U16_STORE:
+        case OpcodesGTA5::GLOBAL_U16:
+        case OpcodesGTA5::GLOBAL_U16_LOAD:
+        case OpcodesGTA5::GLOBAL_U16_STORE:
+        case OpcodesGTA5::STATIC_U24:
+        case OpcodesGTA5::STATIC_U24_LOAD:
+        case OpcodesGTA5::STATIC_U24_STORE:
+        case OpcodesGTA5::GLOBAL_U24:
+        case OpcodesGTA5::GLOBAL_U24_LOAD:
+        case OpcodesGTA5::GLOBAL_U24_STORE:
             return true;
         }
 
@@ -201,7 +202,7 @@ namespace scrDbgApp
 
     bool DisassemblerGTA5::IsXrefToPc(uint32_t pc, uint32_t targetPc) const
     {
-        if (m_Code[pc] == Opcodes::CALL || m_Code[pc] == Opcodes::PUSH_CONST_U24) // check for function pointers
+        if (m_Code[pc] == static_cast<uint8_t>(OpcodesGTA5::CALL) || m_Code[pc] == static_cast<uint8_t>(OpcodesGTA5::PUSH_CONST_U24)) // check for function pointers
         {
             if (GetU24(pc + 1) == targetPc)
                 return true;
@@ -235,7 +236,7 @@ namespace scrDbgApp
             int instrSize = GetInstructionSize(start + i);
             int operandSize = instrSize - 1;
 
-            if (opcode == Opcodes::NATIVE)
+            if (opcode == static_cast<uint8_t>(OpcodesGTA5::NATIVE))
             {
                 // Wildcard native index
                 for (int j = 0; j < operandSize; j++)
@@ -282,7 +283,7 @@ namespace scrDbgApp
 
                 for (int k = 0; k < instrSize && j + k < patternLength && (pc + j + k) < m_Code.size() && (i + j + k) < m_Code.size(); ++k)
                 {
-                    if (a == Opcodes::NATIVE && k > 1)
+                    if (a == static_cast<uint8_t>(OpcodesGTA5::NATIVE) && k > 1)
                         continue;
                     else if (IsWildcard(a) && k > 0)
                         continue;
@@ -328,30 +329,30 @@ namespace scrDbgApp
 
             if (index < 0x08)
             {
-                p.push_back(Opcodes::PUSH_CONST_0 + index);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::PUSH_CONST_0) + index);
             }
             else if (index < 0x100)
             {
-                p.push_back(Opcodes::PUSH_CONST_U8);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::PUSH_CONST_U8));
                 pushLE(index, 1);
             }
             else if (index < 0x8000)
             {
-                p.push_back(Opcodes::PUSH_CONST_S16);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::PUSH_CONST_S16));
                 pushLE(index, 2);
             }
             else if (index < 0x1000000)
             {
-                p.push_back(Opcodes::PUSH_CONST_U24);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::PUSH_CONST_U24));
                 pushLE(index, 3);
             }
             else
             {
-                p.push_back(Opcodes::PUSH_CONST_U32);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::PUSH_CONST_U32));
                 pushLE(index, 4);
             }
 
-            p.push_back(Opcodes::STRING);
+            p.push_back(static_cast<uint8_t>(OpcodesGTA5::STRING));
             return p;
         };
 
@@ -366,21 +367,21 @@ namespace scrDbgApp
             // PUSH_CONST_U8_U8 <wild> <index> STRING
             {
                 std::vector<std::optional<uint8_t>> p;
-                p.push_back(Opcodes::PUSH_CONST_U8_U8);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::PUSH_CONST_U8_U8));
                 p.push_back(std::nullopt); // first U8 (unknown)
                 p.push_back(idx);          // second U8 = string index
-                p.push_back(Opcodes::STRING);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::STRING));
                 out.push_back(std::move(p));
             }
 
             // PUSH_CONST_U8_U8_U8 <wild> <wild> <index> STRING
             {
                 std::vector<std::optional<uint8_t>> p;
-                p.push_back(Opcodes::PUSH_CONST_U8_U8_U8);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::PUSH_CONST_U8_U8_U8));
                 p.push_back(std::nullopt); // first U8 (unknown)
                 p.push_back(std::nullopt); // second U8 (unknown)
                 p.push_back(idx);          // third U8 = string index
-                p.push_back(Opcodes::STRING);
+                p.push_back(static_cast<uint8_t>(OpcodesGTA5::STRING));
                 out.push_back(std::move(p));
             }
 
@@ -410,7 +411,7 @@ namespace scrDbgApp
 
     void DisassemblerGTA5::BuildFunction(uint32_t pc)
     {
-        if (pc >= m_Code.size() || GetU8(pc) != Opcodes::ENTER)
+        if (pc >= m_Code.size() || GetU8(pc) != static_cast<uint8_t>(OpcodesGTA5::ENTER))
             return;
 
         uint32_t start = pc;
@@ -429,13 +430,13 @@ namespace scrDbgApp
             uint8_t op = GetU8(pos);
             int size = GetInstructionSize(pos);
 
-            if (op == Opcodes::LEAVE)
+            if (op == static_cast<uint8_t>(OpcodesGTA5::LEAVE))
             {
                 uint32_t next = pos + size;
                 uint8_t nextOp = (next < m_Code.size()) ? GetU8(next) : 0xFF;
 
                 // If next op is ENTER, this is the last LEAVE of the function
-                if (nextOp == Opcodes::ENTER || next >= m_Code.size())
+                if (nextOp == static_cast<uint8_t>(OpcodesGTA5::ENTER) || next >= m_Code.size())
                 {
                     lastLeave = pos;
                     retCount = GetU8(pos + 2);
@@ -493,7 +494,7 @@ namespace scrDbgApp
             case 'd': // U24
             {
                 uint32_t val = GetU24(offset);
-                if (op == Opcodes::CALL) // Print CALL as hex
+                if (op == static_cast<uint8_t>(OpcodesGTA5::CALL)) // Print CALL as hex
                 {
                     instr << "0x" << std::uppercase << std::hex << val;
 

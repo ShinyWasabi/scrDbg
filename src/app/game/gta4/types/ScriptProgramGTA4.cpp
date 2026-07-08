@@ -1,4 +1,5 @@
 #include "ScriptProgramGTA4.hpp"
+#include "disasm/opcodes/OpcodesGTA4.hpp"
 
 namespace scrDbgApp
 {
@@ -52,5 +53,34 @@ namespace scrDbgApp
             return {};
 
         return m_Base.Add(STATICS).Deref().Add(index * sizeof(uint32_t));
+    }
+
+    std::vector<std::string> ScriptProgramGTA4::GetStrings() const
+    {
+        std::vector<std::string> strings;
+        std::unordered_set<std::string> seen;
+
+        std::vector<uint8_t> code = GetCode();
+
+        for (uint32_t pc = 0; pc + 1 < code.size();)
+        {
+            if (static_cast<OpcodesGTA4>(code[pc]) == OpcodesGTA4::STRING)
+            {
+                uint8_t len = code[pc + 1];
+                if (pc + 2 + len > code.size())
+                    break;
+
+                std::string str(reinterpret_cast<const char*>(&code[pc + 2]), len);
+                if (!str.empty() && str.back() == '\0')
+                    str.pop_back();
+
+                if (seen.insert(str).second)
+                    strings.push_back(std::move(str));
+            }
+
+            pc += GetInsnSizeGTA4(code.data(), pc);
+        }
+
+        return strings;
     }
 }
