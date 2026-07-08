@@ -1,5 +1,6 @@
 #include "DebuggerRDR3.hpp"
 #include "game/RDR3.hpp"
+#include "rage/rdr3/scrProgram.hpp"
 #include "rage/rdr3/scrThread.hpp"
 
 #if defined(_M_X64)
@@ -13,7 +14,7 @@ namespace scrDbgLib
             return;
 
         *pointers.TimerUserPause = pause;
-        *pointers.TimerScriptPause = pause;
+        //*pointers.TimerScriptPause = pause;
     }
 
     bool DebuggerRDR3::ProcessBreakpoints(uint32_t scriptHash, uint32_t pc, uint32_t* state)
@@ -40,7 +41,8 @@ namespace scrDbgLib
                 return false;
             }
 
-            const char* scriptName = "???";
+            auto progHash = (*RDR3::GetPointers().CurrentScriptThread)->m_Context.m_ProgramHash;
+            auto scriptName = rage::rdr3::scrProgram::GetByHash(progHash)->m_Name;
 
             // Show the message first so scrDbgApp doesn't attempt to resume when MessageBoxA is active
             char message[128];
@@ -93,6 +95,31 @@ namespace scrDbgLib
     {
         switch (static_cast<rage::rdr3::scrOpcode>(op))
         {
+        // continuation opcodes
+        case rage::rdr3::scrOpcode::IOFFSET:
+        case rage::rdr3::scrOpcode::IOFFSET_U8:
+        case rage::rdr3::scrOpcode::IOFFSET_S16:
+        case rage::rdr3::scrOpcode::ARRAY_U8:
+        case rage::rdr3::scrOpcode::ARRAY_U16:
+        case rage::rdr3::scrOpcode::PUSH_CONST_S16:
+        case rage::rdr3::scrOpcode::PUSH_CONST_U24:
+
+        // finalizer opcodes
+        case rage::rdr3::scrOpcode::STORE:
+        case rage::rdr3::scrOpcode::STORE_N:
+        case rage::rdr3::scrOpcode::IOFFSET_U8_STORE:
+        case rage::rdr3::scrOpcode::IOFFSET_S16_STORE:
+        case rage::rdr3::scrOpcode::ARRAY_U8_STORE:
+        case rage::rdr3::scrOpcode::ARRAY_U16_STORE:
+        case rage::rdr3::scrOpcode::LOCAL_STORE_S:
+        case rage::rdr3::scrOpcode::LOCAL_STORE_SR:
+        case rage::rdr3::scrOpcode::STATIC_STORE_S:
+        case rage::rdr3::scrOpcode::STATIC_STORE_SR:
+        case rage::rdr3::scrOpcode::GLOBAL_STORE_S:
+        case rage::rdr3::scrOpcode::GLOBAL_STORE_SR:
+        case rage::rdr3::scrOpcode::STORE_N_S:
+        case rage::rdr3::scrOpcode::STORE_N_SR:
+            return true;
         }
 
         // everything else breaks the chain

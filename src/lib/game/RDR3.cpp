@@ -25,6 +25,10 @@ namespace scrDbgLib
             m_Pointers.ScriptProgramRegistry = addr.Add(3).Rip().As<decltype(m_Pointers.ScriptProgramRegistry)>();
         });
 
+        scanner.Add("48 8B 35 ? ? ? ? 48 8D 15", [this](Memory addr) {
+            m_Pointers.CurrentScriptThread = addr.Add(3).Rip().As<decltype(m_Pointers.CurrentScriptThread)>();
+        });
+
         scanner.Add("48 8B 05 ? ? ? ? FF C2", [this](Memory addr) {
             m_Pointers.ScriptThreads = addr.Add(3).Rip().As<decltype(m_Pointers.ScriptThreads)>();
         });
@@ -57,9 +61,9 @@ namespace scrDbgLib
             m_Pointers.ResetSecureScriptFrame = addr.Add(1).Rip().As<decltype(m_Pointers.ResetSecureScriptFrame)>();
         });
 
-        scanner.Add("40 88 3D ? ? ? ? 40 38 3D ? ? ? ? 74 ? 40 88 3D", [this](Memory addr) {
-            m_Pointers.TimerUserPause = addr.Add(3).Rip().As<decltype(m_Pointers.TimerUserPause)>();
-            m_Pointers.TimerScriptPause = addr.Add(3).Rip().Add(1).As<decltype(m_Pointers.TimerScriptPause)>();
+        scanner.Add("C6 05 ? ? ? ? ? 40 88 3D ? ? ? ? 40 38 3D ? ? ? ? 74", [this](Memory addr) {
+            m_Pointers.TimerUserPause = addr.Add(2).Rip().As<decltype(m_Pointers.TimerUserPause)>();
+            m_Pointers.TimerScriptPause = addr.Add(2).Rip().Sub(1).As<decltype(m_Pointers.TimerScriptPause)>();
         });
 
         return scanner.Scan();

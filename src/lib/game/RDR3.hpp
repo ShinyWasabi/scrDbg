@@ -49,12 +49,13 @@ namespace scrDbgLib
             uint64_t* NativeRegistrationSeed;
             rage::rdr3::scrNativeRegistration** NativeRegistrationTable;
             rage::rdr3::scrProgramRegistry* ScriptProgramRegistry;
+            rage::rdr3::scrThread** CurrentScriptThread;
             rage::atArray<rage::rdr3::scrThread*>* ScriptThreads;
             void* RunScriptThread;
             void (*ResolveSecureScriptGlobal)(rage::scrValue*, rage::scrValue*);
             void (*ResolveSecureScriptFrame)(rage::scrValue*, rage::scrValue*, rage::rdr3::scrThread::Context*);
             void (*ResolveSecureScriptStatic)(rage::scrValue*, rage::scrValue*, rage::rdr3::scrThread::Context*);
-            uint32_t (*DecryptSecureScriptValue)(void*);
+            void (*DecryptSecureScriptValue)(void*, uint32_t*);
             void (*SetSecureScriptValue)(void*, uint32_t*);
             void (*ResetSecureScriptFrame)(void*);
             bool* TimerUserPause;

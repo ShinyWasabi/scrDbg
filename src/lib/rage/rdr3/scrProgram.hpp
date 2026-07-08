@@ -210,9 +210,9 @@ namespace rage::rdr3
     {
         uint8_t m_NextFreeSlot;
         uint8_t m_BucketHeads[32];
-        uint8_t m_NextInChain[176];
+        uint8_t m_NextInChain[160];
         char m_Pad1[0x07];
-        scrProgram* m_Programs[176];
+        scrProgram* m_Programs[160];
 
         scrProgram* Find(uint32_t hash)
         {

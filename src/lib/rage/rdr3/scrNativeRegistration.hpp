@@ -32,31 +32,23 @@ namespace rage::rdr3
         uint64_t GetHashByHandler(scrNativeContext::Handler handler, uint64_t seed) const
         {
             static std::unordered_map<scrNativeContext::Handler, uint64_t> cache;
-
             if (auto it = cache.find(handler); it != cache.end())
                 return it->second;
 
-            uint64_t hash = 0;
-
             for (auto node = this; node; node = node->m_Next)
             {
-                bool found = false;
                 for (uint32_t i = 0; i < node->m_Count; i++)
                 {
                     if (node->m_Handlers[i] == handler)
                     {
-                        hash = UnscrambleKey(node->m_Keys[i], seed);
-                        found = true;
-                        break;
+                        uint64_t hash = UnscrambleKey(node->m_Keys[i], seed);
+                        cache[handler] = hash;
+                        return hash;
                     }
                 }
-
-                if (found)
-                    break;
             }
 
-            cache[handler] = hash;
-            return hash;
+            return 0;
         }
 
     private:

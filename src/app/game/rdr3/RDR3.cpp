@@ -96,7 +96,7 @@ namespace scrDbgApp
         if (hash == 0)
             return nullptr;
 
-        for (uint32_t i = 0; i < 176; i++)
+        for (uint32_t i = 0; i < 160; i++)
         {
             Pointer addr = m_Pointers.ScriptPrograms.GetArray<uintptr_t>(i);
 
