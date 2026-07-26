@@ -1,5 +1,6 @@
 #include "Debugger.hpp"
 #include "VMLogger.hpp"
+#include "core/ScriptFiber.hpp"
 
 namespace scrDbgLib
 {
@@ -50,6 +51,101 @@ namespace scrDbgLib
         m_Breakpoints.clear();
     }
 
+    std::string Debugger::NativeLogFormat(rage::scrValue value, NativeDB::Types type, void* thread, void* program, rage::scrValue* globals) const
+    {
+        switch (type)
+        {
+        case NativeDB::Types::INT:
+            return std::to_string(value.Int);
+        case NativeDB::Types::BOOL:
+            return value.Int ? "TRUE" : "FALSE";
+        case NativeDB::Types::FLOAT:
+            return std::to_string(value.Float);
+        case NativeDB::Types::STRING:
+            return value.String ? "\"" + std::string(value.String) + "\"" : "NULL";
+        case NativeDB::Types::REFERENCE:
+            return "0x" + std::to_string(reinterpret_cast<uintptr_t>(value.Reference));
+        }
+
+        return std::to_string(value.Any);
+    }
+
+    void Debugger::NativeLogBegin(uint32_t scriptHash, void* handler, rage::scrValue* args, uint32_t argCount, void* thread, void* program, rage::scrValue* globals)
+    {
+        NativeLogClear();
+
+        m_ShouldLogNative = VMLogger::ShouldLog(VMLogType::NATIVE_CALLS, scriptHash);
+        if (!m_ShouldLogNative)
+            return;
+
+        m_NativeLogHash = g_Game->GetNativeHash(handler);
+        m_NativeLogName = NativeDB::GetNameByHash(m_NativeLogHash);
+
+        auto argTypes = NativeDB::GetArgsByHash(m_NativeLogHash);
+        if (argCount > 0 && args && argTypes && !argTypes->empty())
+        {
+            for (int32_t i = 0; i < argCount; i++)
+            {
+                auto type = (i < argTypes->size()) ? (*argTypes)[i] : NativeDB::Types::NONE;
+                m_NativeLogArgs += NativeLogFormat(args[i], type, thread, program, globals);
+
+                if (i < argCount - 1)
+                    m_NativeLogArgs += ", ";
+            }
+        }
+    }
+
+    void Debugger::NativeLogEnd(const char* name, uint32_t pc, rage::scrValue* rets, uint32_t retCount, void* thread, void* program, rage::scrValue* globals)
+    {
+        if (!m_ShouldLogNative)
+            return;
+
+        auto retTypes = NativeDB::GetRetsByHash(m_NativeLogHash);
+        if (retCount > 0 && rets && retTypes && !retTypes->empty())
+        {
+            m_NativeLogRets += " -> (";
+            for (int32_t i = 0; i < retCount; i++)
+            {
+                auto type = (i < retTypes->size()) ? (*retTypes)[i] : NativeDB::Types::NONE;
+                m_NativeLogRets += NativeLogFormat(rets[i], type, thread, program, globals);
+
+                if (i < retCount - 1)
+                    m_NativeLogRets += ", ";
+            }
+            m_NativeLogRets += ")";
+        }
+
+        if (!m_NativeLogName.empty())
+            VMLogger::Logf("[%s+0x%08X] %s(%s)%s", name, pc, m_NativeLogName.data(), m_NativeLogArgs.c_str(), m_NativeLogRets.c_str());
+        else
+            VMLogger::Logf("[%s+0x%08X] unk_0x%08X(%s)%s", name, pc, m_NativeLogHash, m_NativeLogArgs.c_str(), m_NativeLogRets.c_str());
+
+        NativeLogClear();
+    }
+
+    void Debugger::NativeLogClear()
+    {
+        m_NativeLogHash = 0;
+        m_NativeLogName = {};
+        m_NativeLogArgs.clear();
+        m_NativeLogRets.clear();
+        m_ShouldLogNative = false;
+    }
+
+    std::unique_ptr<NativeContext> Debugger::CreateNativeContext() const
+    {
+        return std::make_unique<NativeContextDefault>();
+    }
+
+    void Debugger::PushNativeInvoke(uint32_t scriptHash, void* handler, NativeContext* ctx, std::shared_ptr<std::promise<void>> donePromise)
+    {
+        ScriptFiber::PushJob([ctx, handler, donePromise]() {
+            ctx->Invoke(handler);
+            donePromise->set_value();
+        },
+            scriptHash);
+    }
+
     void Debugger::BeginTracking(uint32_t hash, uint32_t index, bool isGlobal)
     {
         if (!VMLogger::ShouldLog(isGlobal ? VMLogType::GLOBAL_WRITES : VMLogType::STATIC_WRITES, hash))
@@ -92,8 +188,6 @@ namespace scrDbgLib
             std::snprintf(valueBuf, sizeof(valueBuf), "struct<%d>", value);
         else
             std::snprintf(valueBuf, sizeof(valueBuf), "%d", value);
-
-        std::snprintf(m_TrackerPathBuf + m_TrackerPathLen, sizeof(m_TrackerPathBuf) - m_TrackerPathLen, "%s", "");
 
         if (m_TrackingGlobal)
             VMLogger::Logf("[%s+0x%08X] Global_%u%s = %s", name, pc, m_TrackerVariableIndex, m_TrackerPathBuf, valueBuf);

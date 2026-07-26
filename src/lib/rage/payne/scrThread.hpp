@@ -1,8 +1,9 @@
 #pragma once
-#include "scrCommand.hpp"
-#include "scrOpcode.hpp"
 
 #if defined(_M_IX86)
+
+#include "scrCommand.hpp"
+#include "scrOpcode.hpp"
 
 namespace rage::payne
 {

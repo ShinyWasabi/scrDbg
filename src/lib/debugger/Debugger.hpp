@@ -1,4 +1,5 @@
 #pragma once
+#include "NativeContext.hpp"
 
 namespace scrDbgLib
 {
@@ -24,6 +25,15 @@ namespace scrDbgLib
         std::vector<Breakpoint> GetAllBreakpoints() const;
         void RemoveAllBreakpoints();
 
+        // thread/program/globals required for MP3
+        virtual std::string NativeLogFormat(rage::scrValue value, scrDbg::NativeDB::Types type, void* thread = nullptr, void* program = nullptr, rage::scrValue* globals = nullptr) const;
+        void NativeLogBegin(uint32_t scriptHash, void* handler, rage::scrValue* args, uint32_t argCount, void* thread = nullptr, void* program = nullptr, rage::scrValue* globals = nullptr);
+        void NativeLogEnd(const char* name, uint32_t pc, rage::scrValue* rets, uint32_t retCount, void* thread = nullptr, void* program = nullptr, rage::scrValue* globals = nullptr);
+        void NativeLogClear();
+
+        virtual std::unique_ptr<NativeContext> CreateNativeContext() const;
+        virtual void PushNativeInvoke(uint32_t scriptHash, void* handler, NativeContext* ctx, std::shared_ptr<std::promise<void>> donePromise);
+
         void BeginTracking(uint32_t hash, uint32_t index, bool isGlobal);
         void AddFieldOffset(uint32_t offset);
         void AddArrayIndex(uint32_t index, uint32_t size);
@@ -39,6 +49,12 @@ namespace scrDbgLib
         bool m_StepOverBreakpoint = false;
         bool m_PauseGameOnBreakpoint = false;
         bool m_GamePausedByBreakpoint = false;
+
+        bool m_ShouldLogNative = false;
+        uint64_t m_NativeLogHash = 0;
+        std::string_view m_NativeLogName = {};
+        std::string m_NativeLogArgs = {};
+        std::string m_NativeLogRets = {};
 
         bool m_TrackerActive = false;
         bool m_TrackingGlobal = false;

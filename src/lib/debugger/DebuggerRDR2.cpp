@@ -1,8 +1,8 @@
+#if defined(_M_X64)
+
 #include "DebuggerRDR2.hpp"
 #include "game/RDR2.hpp"
 #include "rage/rdr2/scrThread.hpp"
-
-#if defined(_M_X64)
 
 namespace scrDbgLib
 {
@@ -90,6 +90,11 @@ namespace scrDbgLib
         m_StepOverBreakpoint = true;
         m_ActiveBreakpoint.reset();
         return true;
+    }
+
+    std::unique_ptr<NativeContext> DebuggerRDR2::CreateNativeContext() const
+    {
+        return std::make_unique<NativeContextRDR2>();
     }
 
     bool DebuggerRDR2::IsChainOpcode(uint8_t op) const

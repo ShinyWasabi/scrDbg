@@ -1,7 +1,8 @@
 #pragma once
-#include "rage/rdr3/scrThread.hpp"
 
 #if defined(_M_X64)
+
+#include "rage/rdr3/scrThread.hpp"
 
 namespace rage
 {
@@ -27,6 +28,8 @@ namespace scrDbgLib
 
         bool InitPointers() const override;
         bool InitHooks() const override;
+        void* GetNativeHandler(uint64_t hash) const override;
+        uint64_t GetNativeHash(void* handler) const override;
 
         GameType GetType() const override
         {

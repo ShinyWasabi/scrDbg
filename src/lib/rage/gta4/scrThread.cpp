@@ -1,5 +1,7 @@
+#if defined(_M_IX86)
+
 #include "scrThread.hpp"
-#include "ResourceLoader.hpp"
+#include "core/ScriptFiber.hpp"
 #include "debugger/VMLogger.hpp"
 #include "game/GTA4.hpp"
 #include "rage/shared/atArray.hpp"
@@ -7,33 +9,11 @@
 #include "rage/shared/scrString.hpp"
 #include "scrProgram.hpp"
 
-#if defined(_M_IX86)
-
 namespace rage::gta4
 {
     using namespace scrDbgLib;
-    using namespace scrDbgShared;
 
     static int32_t g_NullContainer = 0;
-
-    static std::string FormatNativeTypes(scrValue value, NativesBin::NativeTypes type)
-    {
-        switch (type)
-        {
-        case NativesBin::NativeTypes::INT:
-            return std::to_string(value.Int);
-        case NativesBin::NativeTypes::BOOL:
-            return value.Int ? "TRUE" : "FALSE";
-        case NativesBin::NativeTypes::FLOAT:
-            return std::to_string(value.Float);
-        case NativesBin::NativeTypes::STRING:
-            return value.String ? "\"" + std::string(value.String) + "\"" : "NULL";
-        case NativesBin::NativeTypes::REFERENCE:
-            return "0x" + std::to_string(reinterpret_cast<uintptr_t>(value.Reference));
-        }
-
-        return std::to_string(value.Int);
-    }
 
     scrThread* scrThread::GetByHash(uint32_t hash)
     {
@@ -128,6 +108,8 @@ namespace rage::gta4
 
         uint32_t pc = _this->m_Context.m_Pc;
         scrValue* sp = &_this->m_Stack[_this->m_Context.m_Sp - 1];
+
+        ScriptFiber::Tick(_this->m_Context.m_ProgramHash);
 
         while (insnCount-- > 0)
         {
@@ -451,57 +433,11 @@ namespace rage::gta4
                 ctx.m_Rets = retCount ? &stack[_this->m_Context.m_Sp - argCount] : nullptr;
                 ctx.m_VectorRefCount = 0;
 
-                uint32_t hash{};
-                std::string_view name{};
-                std::string argsStr{};
-                std::string retsStr{};
-                bool shouldLog = VMLogger::ShouldLog(VMLogType::NATIVE_CALLS, _this->m_Context.m_ProgramHash);
-
-                // log args before calling the native because rets will be written to the same stack slot
-                if (shouldLog)
-                {
-                    hash = GetCommandHash(handler);
-                    name = NativesBin::GetNameByHash(hash);
-
-                    auto args = NativesBin::GetArgsByHash(hash);
-                    if (argCount > 0 && ctx.m_Args && args && !args->empty())
-                    {
-                        for (int32_t i = 0; i < argCount; i++)
-                        {
-                            auto type = (i < args->size()) ? (*args)[i] : NativesBin::NativeTypes::NONE;
-                            argsStr += FormatNativeTypes(ctx.m_Args[i], type);
-
-                            if (i < argCount - 1)
-                                argsStr += ", ";
-                        }
-                    }
-                }
+                debugger->NativeLogBegin(_this->m_Context.m_ProgramHash, handler, ctx.m_Args, argCount);
 
                 (*handler)(&ctx);
 
-                if (shouldLog)
-                {
-                    auto rets = NativesBin::GetRetsByHash(hash);
-                    if (retCount > 0 && ctx.m_Rets && rets && !rets->empty())
-                    {
-                        retsStr += " -> (";
-                        for (int32_t i = 0; i < retCount; i++)
-                        {
-                            auto type = (i < rets->size()) ? (*rets)[i] : NativesBin::NativeTypes::NONE;
-                            retsStr += FormatNativeTypes(ctx.m_Rets[i], type);
-
-                            if (i < retCount - 1)
-                                retsStr += ", ";
-                        }
-                        retsStr += ")";
-                    }
-
-                    // now log the entire thing
-                    if (!name.empty())
-                        VMLogger::Logf("[%s+0x%08X] %s(%s)%s", _this->m_ScriptName, pc - 7, name.data(), argsStr.c_str(), retsStr.c_str());
-                    else
-                        VMLogger::Logf("[%s+0x%08X] unk_0x%08X(%s)%s", _this->m_ScriptName, pc - 7, hash, argsStr.c_str(), retsStr.c_str());
-                }
+                debugger->NativeLogEnd(_this->m_ScriptName, pc - 7, ctx.m_Rets, retCount);
 
                 if (_this->m_Context.m_State == State::REFRESH)
                 {

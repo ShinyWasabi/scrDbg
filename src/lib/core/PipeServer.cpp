@@ -1,6 +1,5 @@
 #include "PipeServer.hpp"
-#include "PipeCommands.hpp"
-#include "debugger/VMLogger.hpp"
+#include "pipe/PipeCommands.hpp"
 
 namespace scrDbgLib
 {
@@ -38,96 +37,65 @@ namespace scrDbgLib
                 break;
             }
 
-            auto cmd = static_cast<ePipeCommands>(cmdByte);
+            auto cmd = static_cast<PipeCommands::ePipeCommands>(cmdByte);
+
             switch (cmd)
             {
-            case ePipeCommands::BREAKPOINT_SET:
+            case PipeCommands::ePipeCommands::BREAKPOINT_SET:
             {
-                PipeBreakpointSet args{};
-                Receive(&args, sizeof(args));
-
-                g_Game->GetDebugger()->SetBreakpoint(args.Script, args.Pc, args.Set);
+                PipeCommands::SetBreakpoint();
                 break;
             }
-            case ePipeCommands::BREAKPOINT_EXISTS:
+            case PipeCommands::ePipeCommands::BREAKPOINT_EXISTS:
             {
-                PipeBreakpoint args{};
-                Receive(&args, sizeof(args));
-
-                bool result = g_Game->GetDebugger()->BreakpointExists(args.Script, args.Pc);
-                Send(&result, sizeof(result));
+                PipeCommands::BreakpointExists();
                 break;
             }
-            case ePipeCommands::BREAKPOINT_RESUME:
+            case PipeCommands::ePipeCommands::BREAKPOINT_RESUME:
             {
-                g_Game->GetDebugger()->ResumeBreakpoint();
+                PipeCommands::ResumeBreakpoint();
                 break;
             }
-            case ePipeCommands::BREAKPOINT_PAUSE_GAME:
+            case PipeCommands::ePipeCommands::BREAKPOINT_PAUSE_GAME:
             {
-                bool pause = false;
-                Receive(&pause, sizeof(pause));
-
-                g_Game->GetDebugger()->SetPauseGameOnBreakpoint(pause);
+                PipeCommands::SetBreakpointPauseGame();
                 break;
             }
-            case ePipeCommands::BREAKPOINT_GET_ACTIVE:
+            case PipeCommands::ePipeCommands::BREAKPOINT_GET_ACTIVE:
             {
-                auto active = g_Game->GetDebugger()->GetActiveBreakpoint();
-
-                bool hasActive = active.has_value();
-                Send(&hasActive, sizeof(hasActive));
-
-                if (active)
-                {
-                    PipeBreakpoint entry{active->ScriptHash, active->Pc};
-                    Send(&entry, sizeof(entry));
-                }
+                PipeCommands::GetActiveBreakpoint();
                 break;
             }
-            case ePipeCommands::BREAKPOINT_GET_ALL:
+            case PipeCommands::ePipeCommands::BREAKPOINT_GET_ALL:
             {
-                auto bps = g_Game->GetDebugger()->GetAllBreakpoints();
-
-                uint32_t count = static_cast<uint32_t>(bps.size());
-                Send(&count, sizeof(count));
-
-                for (const auto& bp : bps)
-                {
-                    PipeBreakpoint entry{bp.ScriptHash, bp.Pc};
-                    Send(&entry, sizeof(entry));
-                }
+                PipeCommands::GetAllBreakpoints();
                 break;
             }
-            case ePipeCommands::BREAKPOINT_REMOVE_ALL:
+            case PipeCommands::ePipeCommands::BREAKPOINT_REMOVE_ALL:
             {
-                g_Game->GetDebugger()->RemoveAllBreakpoints();
+                PipeCommands::RemoveAllBreakpoints();
                 break;
             }
-            case ePipeCommands::LOGGER_SET_TYPE:
+            case PipeCommands::ePipeCommands::NATIVE_INVOKE:
             {
-                int type = 0;
-                Receive(&type, sizeof(type));
-
-                VMLogger::SetLogType(static_cast<VMLogType>(type));
+                PipeCommands::InvokeNative();
                 break;
             }
-            case ePipeCommands::LOGGER_SET_SCRIPT:
+            case PipeCommands::ePipeCommands::LOGGER_SET_TYPE:
             {
-                uint32_t hash = 0;
-                Receive(&hash, sizeof(hash));
-
-                VMLogger::SetScriptHash(hash);
+                PipeCommands::SetLoggerType();
                 break;
             }
-            case ePipeCommands::LOGGER_CLEAR_FILE:
+            case PipeCommands::ePipeCommands::LOGGER_SET_SCRIPT:
             {
-                VMLogger::Clear();
+                PipeCommands::SetLoggerScript();
                 break;
             }
-            default:
-                // Do nothing?
+            case PipeCommands::ePipeCommands::LOGGER_CLEAR_FILE:
+            {
+                PipeCommands::ClearLoggerFile();
                 break;
+            }
             }
         }
     }
@@ -143,7 +111,7 @@ namespace scrDbgLib
         return GetLastError() == ERROR_PIPE_CONNECTED;
     }
 
-    bool PipeServer::Send(const void* data, size_t size)
+    bool PipeServer::SendImpl(const void* data, size_t size)
     {
         if (m_PipeHandle == INVALID_HANDLE_VALUE)
             return false;
@@ -152,7 +120,7 @@ namespace scrDbgLib
         return WriteFile(m_PipeHandle, data, static_cast<DWORD>(size), &written, nullptr) && written == size;
     }
 
-    bool PipeServer::Receive(void* data, size_t size)
+    bool PipeServer::ReceiveImpl(void* data, size_t size)
     {
         if (m_PipeHandle == INVALID_HANDLE_VALUE)
             return false;

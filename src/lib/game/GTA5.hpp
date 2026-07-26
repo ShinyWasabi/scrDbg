@@ -29,6 +29,9 @@ namespace scrDbgLib
             return NATIVES_GTA5_BIN;
         }
 
+        void* GetNativeHandler(uint64_t hash) const override;
+        uint64_t GetNativeHash(void* handler) const override;
+
         static const Pointers& GetPointers()
         {
             return m_Pointers;

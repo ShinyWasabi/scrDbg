@@ -35,36 +35,7 @@ namespace scrDbgApp
 
     int DisassemblerPayne::GetInstructionSize(uint32_t pc) const
     {
-        OpcodesPayne op = static_cast<OpcodesPayne>(GetU8(pc));
-
-        switch (op)
-        {
-        case OpcodesPayne::J:
-        case OpcodesPayne::JNZ:
-        case OpcodesPayne::JZ:
-        case OpcodesPayne::PUSH_CONST_U32:
-        case OpcodesPayne::PUSH_CONST_F:
-        case OpcodesPayne::CALL:
-            return 5;
-        case OpcodesPayne::PUSH_CONST_S16:
-        case OpcodesPayne::LEAVE:
-            return 3;
-        case OpcodesPayne::NATIVE:
-            return 7;
-        case OpcodesPayne::ENTER:
-            return GetU8(pc + 4) + 5;
-        case OpcodesPayne::SWITCH:
-            return 8 * GetU8(pc + 1) + 2;
-        case OpcodesPayne::STRING:
-            return GetU8(pc + 1) + 2;
-        case OpcodesPayne::TEXT_LABEL_ASSIGN_STRING:
-        case OpcodesPayne::TEXT_LABEL_ASSIGN_INT:
-        case OpcodesPayne::TEXT_LABEL_APPEND_STRING:
-        case OpcodesPayne::TEXT_LABEL_APPEND_INT:
-            return 2;
-        }
-
-        return 1;
+        return GetInsnSizePayne(m_Code.data(), pc);
     }
 
     bool DisassemblerPayne::IsJumpOrCall(uint8_t op) const
@@ -430,7 +401,7 @@ namespace scrDbgApp
                 {
                     std::ostringstream nativeStr;
 
-                    auto name = g_Game->GetNativeNameByHash(hash);
+                    auto name = NativeDB::GetNameByHash(hash);
                     nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
 
                     nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << hash;

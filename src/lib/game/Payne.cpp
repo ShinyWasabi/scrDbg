@@ -1,10 +1,11 @@
+#if defined(_M_IX86)
+
 #include "Payne.hpp"
 #include "core/Hooking.hpp"
 #include "core/Scanner.hpp"
 #include "debugger/DebuggerPayne.hpp"
 #include "rage/payne/scrThread.hpp"
-
-#if defined(_M_IX86)
+#include "rage/shared/scrHash.hpp"
 
 namespace scrDbgLib
 {
@@ -57,6 +58,28 @@ namespace scrDbgLib
         Hooking::AddHook(m_Pointers.RunScriptThread, rage::payne::scrThread::RunThread);
 
         return Hooking::Init();
+    }
+
+    void* Payne::GetNativeHandler(uint64_t hash) const
+    {
+        auto commands = Payne::GetPointers().Commands;
+        if (!commands)
+            return nullptr;
+
+        auto command = commands->Lookup(static_cast<uint32_t>(hash));
+        if (!command)
+            return nullptr;
+
+        return command->m_Handler;
+    }
+
+    uint64_t Payne::GetNativeHash(void* command) const
+    {
+        auto commands = Payne::GetPointers().Commands;
+        if (!commands)
+            return 0;
+
+        return commands->LookupHash(reinterpret_cast<rage::payne::scrCommand*>(command));
     }
 }
 

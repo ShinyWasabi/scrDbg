@@ -1,8 +1,8 @@
+#if defined(_M_IX86)
+
 #include "DebuggerPayne.hpp"
 #include "game/Payne.hpp"
 #include "rage/payne/scrThread.hpp"
-
-#if defined(_M_IX86)
 
 namespace scrDbgLib
 {
@@ -84,6 +84,39 @@ namespace scrDbgLib
         m_StepOverBreakpoint = true;
         m_ActiveBreakpoint.reset();
         return true;
+    }
+
+    std::string DebuggerPayne::NativeLogFormat(rage::scrValue value, NativeDB::Types type, void* thread, void* program, rage::scrValue* globals) const
+    {
+        auto _thread = reinterpret_cast<rage::payne::scrThread*>(thread);
+        auto _program = reinterpret_cast<rage::payne::scrProgram*>(program);
+
+        switch (type)
+        {
+        case NativeDB::Types::INT:
+            return std::to_string(value.Int);
+        case NativeDB::Types::BOOL:
+            return value.Int ? "TRUE" : "FALSE";
+        case NativeDB::Types::FLOAT:
+            return std::to_string(value.Float);
+        case NativeDB::Types::STRING:
+        {
+            auto str = reinterpret_cast<const char*>(_thread->ResolveAddress(&value, _program, globals));
+            return str ? "\"" + std::string(str) + "\"" : "NULL";
+        }
+        case NativeDB::Types::REFERENCE:
+        {
+            auto ref = _thread->ResolveAddress(&value, _program, globals)->Reference;
+            return "0x" + std::to_string(reinterpret_cast<uintptr_t>(ref));
+        }
+        }
+
+        return std::to_string(value.Any);
+    }
+
+    std::unique_ptr<NativeContext> DebuggerPayne::CreateNativeContext() const
+    {
+        return std::make_unique<NativeContextPayne>();
     }
 
     bool DebuggerPayne::IsChainOpcode(uint8_t op) const

@@ -1,5 +1,4 @@
 #include "Payne.hpp"
-#include "ResourceLoader.hpp"
 #include "core/Scanner.hpp"
 #include "disasm/DisassemblerPayne.hpp"
 #include "types/ScriptProgramPayne.hpp"
@@ -162,11 +161,6 @@ namespace scrDbgApp
         }
 
         return nullptr;
-    }
-
-    std::string_view Payne::GetNativeNameByHash(uint64_t hash) const
-    {
-        return scrDbgShared::NativesBin::GetNameByHash(hash);
     }
 
     uint64_t Payne::GetNativeHashByHandler(uintptr_t handler) const

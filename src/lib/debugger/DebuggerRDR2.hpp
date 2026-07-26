@@ -11,6 +11,8 @@ namespace scrDbgLib
         bool ResumeBreakpoint() override;
         bool IsChainOpcode(uint8_t op) const override;
 
+        std::unique_ptr<NativeContext> CreateNativeContext() const override;
+
     protected:
         void PauseGame(bool pause) override;
     };

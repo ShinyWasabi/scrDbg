@@ -16,7 +16,6 @@ namespace scrDbgApp
         Pointer GetGlobal(uint32_t index) const override;
         uint32_t GetGlobalBlockCount(uint32_t block) const override;
         std::unique_ptr<ScriptProgram> GetProgram(uint32_t hash) const override;
-        std::string_view GetNativeNameByHash(uint64_t hash) const override;
         uint64_t GetNativeHashByHandler(uintptr_t handler) const override;
         std::unordered_map<uint64_t, uintptr_t> GetAllNatives() const override;
         std::string GetTextLabel(uint32_t hash) const override;

@@ -1,9 +1,10 @@
+#if defined(_M_X64)
+
 #include "RDR3.hpp"
 #include "core/Hooking.hpp"
 #include "core/Scanner.hpp"
 #include "debugger/DebuggerRDR3.hpp"
-
-#if defined(_M_X64)
+#include "rage/rdr3/scrNativeRegistration.hpp"
 
 namespace scrDbgLib
 {
@@ -74,6 +75,44 @@ namespace scrDbgLib
         Hooking::AddHook(m_Pointers.RunScriptThread, rage::rdr3::scrThread::RunThread);
 
         return Hooking::Init();
+    }
+
+    void* RDR3::GetNativeHandler(uint64_t hash) const
+    {
+        auto table = RDR3::GetPointers().NativeRegistrationTable;
+        auto seed = RDR3::GetPointers().NativeRegistrationSeed;
+        if (!table || !seed)
+            return nullptr;
+
+        for (uint32_t bucket = 0; bucket < 256; bucket++)
+        {
+            if (auto reg = table[bucket])
+            {
+                if (auto handler = reg->GetHandlerByHash(hash, *seed))
+                    return handler;
+            }
+        }
+
+        return nullptr;
+    }
+
+    uint64_t RDR3::GetNativeHash(void* handler) const
+    {
+        auto table = RDR3::GetPointers().NativeRegistrationTable;
+        auto seed = RDR3::GetPointers().NativeRegistrationSeed;
+        if (!table || !seed)
+            return 0;
+
+        for (uint32_t bucket = 0; bucket < 256; bucket++)
+        {
+            if (auto reg = table[bucket])
+            {
+                if (auto hash = reg->GetHashByHandler(reinterpret_cast<rage::scrNativeContext::Handler>(handler), *seed))
+                    return hash;
+            }
+        }
+
+        return 0;
     }
 }
 

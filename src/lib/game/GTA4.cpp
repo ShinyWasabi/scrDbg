@@ -1,10 +1,11 @@
+#if defined(_M_IX86)
+
 #include "GTA4.hpp"
 #include "core/Hooking.hpp"
 #include "core/Scanner.hpp"
 #include "debugger/DebuggerGTA4.hpp"
 #include "rage/gta4/scrThread.hpp"
-
-#if defined(_M_IX86)
+#include "rage/shared/scrHash.hpp"
 
 namespace scrDbgLib
 {
@@ -66,6 +67,24 @@ namespace scrDbgLib
         Hooking::AddHook(m_Pointers.RunScriptThread, rage::gta4::scrThread::RunThread);
 
         return Hooking::Init();
+    }
+
+    void* GTA4::GetNativeHandler(uint64_t hash) const
+    {
+        auto handlers = GTA4::GetPointers().CommandHandlers;
+        if (!handlers)
+            return nullptr;
+
+        return handlers->Lookup(static_cast<uint32_t>(hash));
+    }
+
+    uint64_t GTA4::GetNativeHash(void* handler) const
+    {
+        auto handlers = GTA4::GetPointers().CommandHandlers;
+        if (!handlers)
+            return 0;
+
+        return handlers->LookupHash(reinterpret_cast<rage::scrNativeContext::Handler>(handler));
     }
 }
 

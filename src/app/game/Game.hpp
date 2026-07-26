@@ -70,11 +70,6 @@ namespace scrDbgApp
             return nullptr;
         }
 
-        virtual std::string_view GetNativeNameByHash(uint64_t hash) const
-        {
-            return {};
-        }
-
         virtual uint64_t GetNativeHashByHandler(uintptr_t handler) const
         {
             return 0;

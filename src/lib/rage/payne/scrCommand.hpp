@@ -1,8 +1,9 @@
 #pragma once
-#include "rage/shared/Vector3.hpp"
-#include "rage/shared/scrValue.hpp"
 
 #if defined(_M_IX86)
+
+#include "rage/shared/Vector3.hpp"
+#include "rage/shared/scrValue.hpp"
 
 namespace rage::payne
 {

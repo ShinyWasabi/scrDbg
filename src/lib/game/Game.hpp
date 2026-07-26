@@ -22,13 +22,15 @@ namespace scrDbgLib
         virtual bool InitHooks() const = 0;
         virtual GameType GetType() const = 0;
         virtual int GetResourceId() const = 0;
+        virtual void* GetNativeHandler(uint64_t hash) const = 0;
+        virtual uint64_t GetNativeHash(void* handler) const = 0;
 
         Debugger* GetDebugger() const
         {
             return m_Debugger.get();
         }
 
-        static void Cleanup(const std::string& message = {});
+        static void Shutdown(const std::string& message = {});
 
     protected:
         std::unique_ptr<Debugger> m_Debugger;

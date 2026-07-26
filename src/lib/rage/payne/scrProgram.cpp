@@ -1,8 +1,8 @@
+#if defined(_M_IX86)
+
 #include "scrProgram.hpp"
 #include "game/Payne.hpp"
 #include "rage/shared/scrHash.hpp"
-
-#if defined(_M_IX86)
 
 namespace rage::payne
 {

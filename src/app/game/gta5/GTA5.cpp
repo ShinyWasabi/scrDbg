@@ -1,5 +1,4 @@
 #include "GTA5.hpp"
-#include "ResourceLoader.hpp"
 #include "core/Scanner.hpp"
 #include "disasm/DisassemblerGTA5.hpp"
 #include "types/ScriptProgramGTA5.hpp"
@@ -227,11 +226,6 @@ namespace scrDbgApp
         }
 
         return nullptr;
-    }
-
-    std::string_view GTA5::GetNativeNameByHash(uint64_t hash) const
-    {
-        return scrDbgShared::NativesBin::GetNameByHash(hash);
     }
 
     // TO-DO: Some natives (especially nullsubs) share the same handler.

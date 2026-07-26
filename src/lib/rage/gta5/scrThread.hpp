@@ -1,8 +1,9 @@
 #pragma once
-#include "rage/shared/scrValue.hpp"
-#include "scrOpcode.hpp"
 
 #if defined(_M_X64)
+
+#include "rage/shared/scrValue.hpp"
+#include "scrOpcode.hpp"
 
 namespace rage::gta5
 {

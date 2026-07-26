@@ -1,8 +1,8 @@
+#if defined(_M_IX86)
+
 #include "DebuggerGTA4.hpp"
 #include "game/GTA4.hpp"
 #include "rage/gta4/scrThread.hpp"
-
-#if defined(_M_IX86)
 
 namespace scrDbgLib
 {

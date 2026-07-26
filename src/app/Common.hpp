@@ -24,7 +24,13 @@
 #include <unordered_set>
 #include <vector>
 
-#include "Joaat.hpp"
+// clang-format off
+#include "scrDbg.h"
+#include "util/Joaat.hpp"
+#include "resources/NativeDB.hpp"
+#include "resources/x86Injector.hpp"
 #include "core/Pointer.hpp"
 #include "game/Game.hpp"
-#include "scrDbg.h"
+// clang-format on
+
+using namespace scrDbg;

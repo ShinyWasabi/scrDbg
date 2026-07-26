@@ -1,8 +1,8 @@
+#if defined(_M_X64)
+
 #include "scrProgram.hpp"
 #include "core/Hooking.hpp"
 #include "game/GTA5.hpp"
-
-#if defined(_M_X64)
 
 namespace rage::gta5
 {

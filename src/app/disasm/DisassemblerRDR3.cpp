@@ -61,80 +61,7 @@ namespace scrDbgApp
 
     int DisassemblerRDR3::GetInstructionSize(uint32_t pc) const
     {
-        OpcodesRDR3 op = static_cast<OpcodesRDR3>(GetU8(pc));
-
-        switch (op)
-        {
-        case OpcodesRDR3::PUSH_CONST_U8:
-        case OpcodesRDR3::ARRAY_U8:
-        case OpcodesRDR3::ARRAY_U8_LOAD:
-        case OpcodesRDR3::ARRAY_U8_STORE:
-        case OpcodesRDR3::LOCAL_U8:
-        case OpcodesRDR3::LOCAL_U8_LOAD:
-        case OpcodesRDR3::LOCAL_U8_STORE:
-        case OpcodesRDR3::STATIC_U8:
-        case OpcodesRDR3::STATIC_U8_LOAD:
-        case OpcodesRDR3::STATIC_U8_STORE:
-        case OpcodesRDR3::IADD_U8:
-        case OpcodesRDR3::IMUL_U8:
-        case OpcodesRDR3::IOFFSET_U8:
-        case OpcodesRDR3::IOFFSET_U8_LOAD:
-        case OpcodesRDR3::IOFFSET_U8_STORE:
-        case OpcodesRDR3::TEXT_LABEL_ASSIGN_STRING:
-        case OpcodesRDR3::TEXT_LABEL_ASSIGN_INT:
-        case OpcodesRDR3::TEXT_LABEL_APPEND_STRING:
-        case OpcodesRDR3::TEXT_LABEL_APPEND_INT:
-            return 2;
-        case OpcodesRDR3::PUSH_CONST_U8_U8:
-        case OpcodesRDR3::LEAVE:
-        case OpcodesRDR3::PUSH_CONST_S16:
-        case OpcodesRDR3::IADD_S16:
-        case OpcodesRDR3::IMUL_S16:
-        case OpcodesRDR3::IOFFSET_S16:
-        case OpcodesRDR3::IOFFSET_S16_LOAD:
-        case OpcodesRDR3::IOFFSET_S16_STORE:
-        case OpcodesRDR3::ARRAY_U16:
-        case OpcodesRDR3::ARRAY_U16_LOAD:
-        case OpcodesRDR3::ARRAY_U16_STORE:
-        case OpcodesRDR3::LOCAL_U16:
-        case OpcodesRDR3::LOCAL_U16_LOAD:
-        case OpcodesRDR3::LOCAL_U16_STORE:
-        case OpcodesRDR3::STATIC_U16:
-        case OpcodesRDR3::STATIC_U16_LOAD:
-        case OpcodesRDR3::STATIC_U16_STORE:
-        case OpcodesRDR3::GLOBAL_U16:
-        case OpcodesRDR3::GLOBAL_U16_LOAD:
-        case OpcodesRDR3::GLOBAL_U16_STORE:
-        case OpcodesRDR3::J:
-        case OpcodesRDR3::JZ:
-        case OpcodesRDR3::IEQ_JZ:
-        case OpcodesRDR3::INE_JZ:
-        case OpcodesRDR3::IGT_JZ:
-        case OpcodesRDR3::IGE_JZ:
-        case OpcodesRDR3::ILT_JZ:
-        case OpcodesRDR3::ILE_JZ:
-            return 3;
-        case OpcodesRDR3::PUSH_CONST_U8_U8_U8:
-        case OpcodesRDR3::NATIVE:
-        case OpcodesRDR3::CALL:
-        case OpcodesRDR3::STATIC_U24:
-        case OpcodesRDR3::STATIC_U24_LOAD:
-        case OpcodesRDR3::STATIC_U24_STORE:
-        case OpcodesRDR3::GLOBAL_U24:
-        case OpcodesRDR3::GLOBAL_U24_LOAD:
-        case OpcodesRDR3::GLOBAL_U24_STORE:
-        case OpcodesRDR3::PUSH_CONST_U24:
-            return 4;
-        case OpcodesRDR3::PUSH_CONST_U32:
-        case OpcodesRDR3::PUSH_CONST_F:
-            return 5;
-        case OpcodesRDR3::ENTER:
-            return 5 + m_Code[pc + 4];
-        case OpcodesRDR3::SWITCH:
-            return 3 + GetU16(pc + 1) * 6;
-        }
-
-        return 1;
+        return GetInsnSizeRDR3(m_Code.data(), pc);
     }
 
     bool DisassemblerRDR3::IsJumpOrCall(uint8_t op) const
@@ -549,7 +476,7 @@ namespace scrDbgApp
                 {
                     std::ostringstream nativeStr;
 
-                    auto name = g_Game->GetNativeNameByHash(hash);
+                    auto name = NativeDB::GetNameByHash(hash);
                     nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
 
                     nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << hash;

@@ -1,5 +1,5 @@
-#include "ResourceLoader.hpp"
 #include "core/PipeServer.hpp"
+#include "core/ScriptFiber.hpp"
 #include "debugger/VMLogger.hpp"
 #if defined(_M_IX86)
 #include "game/GTA4.hpp"
@@ -66,27 +66,29 @@ namespace scrDbgLib
         }
 
         if (!g_Game)
-            Game::Cleanup("Failed to attach to a game.");
+            Game::Shutdown("Failed to attach to a game.");
 
         if (!g_Game->InitPointers())
-            Game::Cleanup("Failed to initialize pointers.");
+            Game::Shutdown("Failed to initialize pointers.");
 
         if (!g_Game->InitHooks())
-            Game::Cleanup("Failed to initialize hooking.");
+            Game::Shutdown("Failed to initialize hooking.");
 
         if (!VMLogger::Init("VM.log"))
-            Game::Cleanup("Failed to initialize VM logger.");
+            Game::Shutdown("Failed to initialize VM logger.");
 
         if (!PipeServer::Init("scrDbg"))
-            Game::Cleanup("Failed to initialize scrDbg pipe server.");
+            Game::Shutdown("Failed to initialize scrDbg pipe server.");
 
         auto module = static_cast<HMODULE>(g_DllInstance);
-        if (!scrDbgShared::NativesBin::Load(module, g_Game->GetResourceId()))
-            MessageBoxA(0, "Failed to load natives database.", "Warning", MB_ICONWARNING);
+        if (!NativeDB::Load(module, g_Game->GetResourceId()))
+            Game::Shutdown("Failed to load natives database.");
+
+        ScriptFiber::Init();
 
         PipeServer::Run();
 
-        Game::Cleanup();
+        Game::Shutdown();
         return EXIT_SUCCESS;
     }
 }

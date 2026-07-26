@@ -1,8 +1,8 @@
+#if defined(_M_IX86)
+
 #include "scrProgram.hpp"
 #include "game/GTA4.hpp"
 #include "rage/shared/scrHash.hpp"
-
-#if defined(_M_IX86)
 
 namespace rage::gta4
 {

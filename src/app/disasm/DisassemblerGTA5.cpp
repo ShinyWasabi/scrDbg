@@ -61,80 +61,7 @@ namespace scrDbgApp
 
     int DisassemblerGTA5::GetInstructionSize(uint32_t pc) const
     {
-        OpcodesGTA5 op = static_cast<OpcodesGTA5>(GetU8(pc));
-
-        switch (op)
-        {
-        case OpcodesGTA5::PUSH_CONST_U8:
-        case OpcodesGTA5::ARRAY_U8:
-        case OpcodesGTA5::ARRAY_U8_LOAD:
-        case OpcodesGTA5::ARRAY_U8_STORE:
-        case OpcodesGTA5::LOCAL_U8:
-        case OpcodesGTA5::LOCAL_U8_LOAD:
-        case OpcodesGTA5::LOCAL_U8_STORE:
-        case OpcodesGTA5::STATIC_U8:
-        case OpcodesGTA5::STATIC_U8_LOAD:
-        case OpcodesGTA5::STATIC_U8_STORE:
-        case OpcodesGTA5::IADD_U8:
-        case OpcodesGTA5::IMUL_U8:
-        case OpcodesGTA5::IOFFSET_U8:
-        case OpcodesGTA5::IOFFSET_U8_LOAD:
-        case OpcodesGTA5::IOFFSET_U8_STORE:
-        case OpcodesGTA5::TEXT_LABEL_ASSIGN_STRING:
-        case OpcodesGTA5::TEXT_LABEL_ASSIGN_INT:
-        case OpcodesGTA5::TEXT_LABEL_APPEND_STRING:
-        case OpcodesGTA5::TEXT_LABEL_APPEND_INT:
-            return 2;
-        case OpcodesGTA5::PUSH_CONST_U8_U8:
-        case OpcodesGTA5::LEAVE:
-        case OpcodesGTA5::PUSH_CONST_S16:
-        case OpcodesGTA5::IADD_S16:
-        case OpcodesGTA5::IMUL_S16:
-        case OpcodesGTA5::IOFFSET_S16:
-        case OpcodesGTA5::IOFFSET_S16_LOAD:
-        case OpcodesGTA5::IOFFSET_S16_STORE:
-        case OpcodesGTA5::ARRAY_U16:
-        case OpcodesGTA5::ARRAY_U16_LOAD:
-        case OpcodesGTA5::ARRAY_U16_STORE:
-        case OpcodesGTA5::LOCAL_U16:
-        case OpcodesGTA5::LOCAL_U16_LOAD:
-        case OpcodesGTA5::LOCAL_U16_STORE:
-        case OpcodesGTA5::STATIC_U16:
-        case OpcodesGTA5::STATIC_U16_LOAD:
-        case OpcodesGTA5::STATIC_U16_STORE:
-        case OpcodesGTA5::GLOBAL_U16:
-        case OpcodesGTA5::GLOBAL_U16_LOAD:
-        case OpcodesGTA5::GLOBAL_U16_STORE:
-        case OpcodesGTA5::J:
-        case OpcodesGTA5::JZ:
-        case OpcodesGTA5::IEQ_JZ:
-        case OpcodesGTA5::INE_JZ:
-        case OpcodesGTA5::IGT_JZ:
-        case OpcodesGTA5::IGE_JZ:
-        case OpcodesGTA5::ILT_JZ:
-        case OpcodesGTA5::ILE_JZ:
-            return 3;
-        case OpcodesGTA5::PUSH_CONST_U8_U8_U8:
-        case OpcodesGTA5::NATIVE:
-        case OpcodesGTA5::CALL:
-        case OpcodesGTA5::STATIC_U24:
-        case OpcodesGTA5::STATIC_U24_LOAD:
-        case OpcodesGTA5::STATIC_U24_STORE:
-        case OpcodesGTA5::GLOBAL_U24:
-        case OpcodesGTA5::GLOBAL_U24_LOAD:
-        case OpcodesGTA5::GLOBAL_U24_STORE:
-        case OpcodesGTA5::PUSH_CONST_U24:
-            return 4;
-        case OpcodesGTA5::PUSH_CONST_U32:
-        case OpcodesGTA5::PUSH_CONST_F:
-            return 5;
-        case OpcodesGTA5::ENTER:
-            return 5 + m_Code[pc + 4];
-        case OpcodesGTA5::SWITCH:
-            return 2 + m_Code[pc + 1] * 6;
-        }
-
-        return 1;
+        return GetInsnSizeGTA5(m_Code.data(), pc);
     }
 
     bool DisassemblerGTA5::IsJumpOrCall(uint8_t op) const
@@ -549,7 +476,7 @@ namespace scrDbgApp
                 {
                     std::ostringstream nativeStr;
 
-                    auto name = g_Game->GetNativeNameByHash(hash);
+                    auto name = NativeDB::GetNameByHash(hash);
                     nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
 
                     nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << hash;

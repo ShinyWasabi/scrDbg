@@ -1,9 +1,9 @@
+#if defined(_M_X64)
+
 #include "DebuggerRDR3.hpp"
 #include "game/RDR3.hpp"
 #include "rage/rdr3/scrProgram.hpp"
 #include "rage/rdr3/scrThread.hpp"
-
-#if defined(_M_X64)
 
 namespace scrDbgLib
 {

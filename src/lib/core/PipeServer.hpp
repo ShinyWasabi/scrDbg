@@ -20,6 +20,16 @@ namespace scrDbgLib
             GetInstance().RunImpl();
         }
 
+        static bool Send(const void* data, size_t size)
+        {
+            return GetInstance().SendImpl(data, size);
+        }
+
+        static bool Receive(void* data, size_t size)
+        {
+            return GetInstance().ReceiveImpl(data, size);
+        }
+
     private:
         static PipeServer& GetInstance()
         {
@@ -30,10 +40,9 @@ namespace scrDbgLib
         bool InitImpl(const std::string& name);
         void DestroyImpl();
         void RunImpl();
-
+        bool SendImpl(const void* data, size_t size);
+        bool ReceiveImpl(void* data, size_t size);
         bool Wait();
-        bool Send(const void* data, size_t size);
-        bool Receive(void* data, size_t size);
 
         HANDLE m_PipeHandle = INVALID_HANDLE_VALUE;
     };

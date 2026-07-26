@@ -1,7 +1,8 @@
 #pragma once
-#include "rage/shared/scrNativeContext.hpp"
 
 #if defined(_M_X64)
+
+#include "rage/shared/scrNativeContext.hpp"
 
 namespace rage::rdr3
 {

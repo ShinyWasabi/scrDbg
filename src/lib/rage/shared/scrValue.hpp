@@ -8,7 +8,9 @@ namespace rage
         float Float;
         const char* String;
         scrValue* Reference;
-#if defined(_M_X64)
+#if defined(_M_IX86)
+        uint32_t Any;
+#else
         uint64_t Any;
 #endif
     };

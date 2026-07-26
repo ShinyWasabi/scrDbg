@@ -29,6 +29,8 @@ namespace scrDbgLib
 
         bool InitPointers() const override;
         bool InitHooks() const override;
+        void* GetNativeHandler(uint64_t hash) const override;
+        uint64_t GetNativeHash(void* handler) const override;
 
         GameType GetType() const override
         {

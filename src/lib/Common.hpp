@@ -5,19 +5,27 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <stack>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <vector>
 
-#include "Joaat.hpp"
-#include "game/Game.hpp"
+// clang-format off
 #include "scrDbg.h"
+#include "util/Joaat.hpp"
+#include "resources/NativeDB.hpp"
+#include "resources/x86Injector.hpp"
+#include "game/Game.hpp"
+// clang-format on
+
+using namespace scrDbg;
 
 namespace scrDbgLib
 {

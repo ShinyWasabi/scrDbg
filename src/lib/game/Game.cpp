@@ -1,11 +1,12 @@
 #include "Game.hpp"
 #include "core/Hooking.hpp"
 #include "core/PipeServer.hpp"
+#include "core/ScriptFiber.hpp"
 #include "debugger/VMLogger.hpp"
 
 namespace scrDbgLib
 {
-    void Game::Cleanup(const std::string& message)
+    void Game::Shutdown(const std::string& message)
     {
         if (!message.empty())
             MessageBoxA(0, message.c_str(), "Error", MB_ICONERROR);
@@ -18,6 +19,7 @@ namespace scrDbgLib
 
         PipeServer::Destroy();
         VMLogger::Destroy();
+        ScriptFiber::Destroy();
         Hooking::Destroy();
 
         CloseHandle(g_MainThread);

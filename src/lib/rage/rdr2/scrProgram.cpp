@@ -1,8 +1,8 @@
+#if defined(_M_X64)
+
 #include "scrProgram.hpp"
 #include "game/RDR2.hpp"
 #include "rage/shared/scrHash.hpp"
-
-#if defined(_M_X64)
 
 namespace rage::rdr2
 {

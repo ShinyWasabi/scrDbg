@@ -1,11 +1,11 @@
 #pragma once
 
-namespace scrDbgShared
+namespace scrDbg
 {
-    struct NativesBin
+    struct NativeDB
     {
     public:
-        enum NativeTypes : uint8_t
+        enum class Types : uint8_t
         {
             NONE = 0,
             INT,
@@ -23,30 +23,26 @@ namespace scrDbgShared
             return it != Names.end() ? std::string_view(it->second) : std::string_view{};
         }
 
-        static const std::vector<NativeTypes>* GetArgsByHash(uint64_t hash)
+        static const std::vector<Types>* GetArgsByHash(uint64_t hash)
         {
             auto it = Args.find(hash);
             return it != Args.end() ? &it->second : nullptr;
         }
 
-        static const std::vector<NativeTypes>* GetRetsByHash(uint64_t hash)
+        static const std::vector<Types>* GetRetsByHash(uint64_t hash)
         {
             auto it = Rets.find(hash);
             return it != Rets.end() ? &it->second : nullptr;
         }
 
+        static const std::unordered_map<uint64_t, std::string>& GetNames()
+        {
+            return Names;
+        }
+
     private:
         static inline std::unordered_map<uint64_t, std::string> Names;
-        static inline std::unordered_map<uint64_t, std::vector<NativeTypes>> Args;
-        static inline std::unordered_map<uint64_t, std::vector<NativeTypes>> Rets;
-    };
-
-    class x86Injector
-    {
-    public:
-        static bool Run(HMODULE module, int resourceId, DWORD pid, const char* dllPath);
-
-    private:
-        static std::string GetTempPathForInjector();
+        static inline std::unordered_map<uint64_t, std::vector<Types>> Args;
+        static inline std::unordered_map<uint64_t, std::vector<Types>> Rets;
     };
 }

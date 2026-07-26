@@ -376,7 +376,7 @@ namespace scrDbgApp
                     out << "0x" << QString::number(hash, 16).toUpper();
                     out << ":" << QString::fromStdString(Process::GetName()) << "+0x" << QString::number(handler - Process::GetBaseAddress(), 16).toUpper();
 
-                    auto name = std::string(g_Game->GetNativeNameByHash(hash));
+                    auto name = std::string(NativeDB::GetNameByHash(hash));
                     out << " // " << (name.empty() ? "UNKNOWN_NATIVE" : QString::fromStdString(name)) << "\n";
 
                     if (index % 50 == 0)
@@ -415,7 +415,7 @@ namespace scrDbgApp
                     out << "0x" << QString::number(hash, 16).toUpper();
                     out << ":" << QString::fromStdString(Process::GetName()) << "+0x" << QString::number(handler - Process::GetBaseAddress(), 16).toUpper();
 
-                    auto name = std::string(g_Game->GetNativeNameByHash(hash));
+                    auto name = std::string(NativeDB::GetNameByHash(hash));
                     out << " // " << (name.empty() ? "UNKNOWN_NATIVE" : QString::fromStdString(name)) << "\n";
 
                     if (i % 50 == 0)

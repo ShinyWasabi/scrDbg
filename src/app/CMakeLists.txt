@@ -6,7 +6,7 @@ endif()
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(SHARED_DIR "${CMAKE_SOURCE_DIR}/src/shared")
 
-set(RESOURCES "${SHARED_DIR}/scrDbgApp.rc")
+set(RESOURCES "${SRC_DIR}/scrDbgApp.rc")
 
 file(GLOB_RECURSE SRC_FILES
     "${SRC_DIR}/**.hpp"

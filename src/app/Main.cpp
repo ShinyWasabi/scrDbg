@@ -1,4 +1,3 @@
-#include "ResourceLoader.hpp"
 #include "core/PipeClient.hpp"
 #include "game/gta4/GTA4.hpp"
 #include "game/gta5/GTA5.hpp"
@@ -77,7 +76,7 @@ int main(int argc, char* argv[])
     {
         if (!Process::InjectModule(g_Game->Is64Bit() ? "scrDbg-x64.dll" : "scrDbg-x86.dll"))
         {
-            QMessageBox::critical(nullptr, "Injection Failed", "Failed to inject scrDbg.dll.");
+            QMessageBox::critical(nullptr, "Injection Failed", "Failed to inject scrDbgLib.");
             return 1;
         }
     }
@@ -88,8 +87,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (!scrDbgShared::NativesBin::Load(GetModuleHandle(0), g_Game->GetResourceId()))
-        QMessageBox::warning(nullptr, "Resources", "Failed to load natives database.");
+    if (!NativeDB::Load(GetModuleHandle(0), g_Game->GetResourceId()))
+    {
+        QMessageBox::critical(nullptr, "Resources", "Failed to load natives database.");
+        return 1;
+    }
 
     GUIWidget gui;
     gui.show();

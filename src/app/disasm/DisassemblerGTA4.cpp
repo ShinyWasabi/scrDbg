@@ -376,7 +376,7 @@ namespace scrDbgApp
                 {
                     std::ostringstream nativeStr;
 
-                    auto name = g_Game->GetNativeNameByHash(hash);
+                    auto name = NativeDB::GetNameByHash(hash);
                     nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
 
                     nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << hash;

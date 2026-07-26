@@ -11,6 +11,10 @@ namespace scrDbgLib
         bool ResumeBreakpoint() override;
         bool IsChainOpcode(uint8_t op) const override;
 
+        std::string NativeLogFormat(rage::scrValue value, scrDbg::NativeDB::Types type, void* thread = nullptr, void* program = nullptr, rage::scrValue* globals = nullptr) const override;
+
+        std::unique_ptr<NativeContext> CreateNativeContext() const override;
+
     protected:
         void PauseGame(bool pause) override;
     };

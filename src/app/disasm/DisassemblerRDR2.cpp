@@ -19,96 +19,7 @@ namespace scrDbgApp
 
     int DisassemblerRDR2::GetInstructionSize(uint32_t pc) const
     {
-        OpcodesRDR2 op = static_cast<OpcodesRDR2>(GetU8(pc));
-
-        switch (op)
-        {
-        case OpcodesRDR2::PUSH_CONST_U8:
-        case OpcodesRDR2::ARRAY_U8:
-        case OpcodesRDR2::ARRAY_U8_LOAD:
-        case OpcodesRDR2::ARRAY_U8_STORE:
-        case OpcodesRDR2::LOCAL_U8:
-        case OpcodesRDR2::LOCAL_U8_LOAD:
-        case OpcodesRDR2::LOCAL_U8_STORE:
-        case OpcodesRDR2::STATIC_U8:
-        case OpcodesRDR2::STATIC_U8_LOAD:
-        case OpcodesRDR2::STATIC_U8_STORE:
-        case OpcodesRDR2::IADD_U8:
-        case OpcodesRDR2::IOFFSET_U8_LOAD:
-        case OpcodesRDR2::IOFFSET_U8_STORE:
-        case OpcodesRDR2::IMUL_U8:
-        case OpcodesRDR2::TEXT_LABEL_ASSIGN_STRING:
-        case OpcodesRDR2::TEXT_LABEL_ASSIGN_INT:
-        case OpcodesRDR2::TEXT_LABEL_APPEND_STRING:
-        case OpcodesRDR2::TEXT_LABEL_APPEND_INT:
-            return 2;
-        case OpcodesRDR2::PUSH_CONST_U8_U8:
-        case OpcodesRDR2::NATIVE:
-        case OpcodesRDR2::LEAVE:
-        case OpcodesRDR2::PUSH_CONST_S16:
-        case OpcodesRDR2::IADD_S16:
-        case OpcodesRDR2::IOFFSET_S16_LOAD:
-        case OpcodesRDR2::IOFFSET_S16_STORE:
-        case OpcodesRDR2::IMUL_S16:
-        case OpcodesRDR2::ARRAY_U16:
-        case OpcodesRDR2::ARRAY_U16_LOAD:
-        case OpcodesRDR2::ARRAY_U16_STORE:
-        case OpcodesRDR2::LOCAL_U16:
-        case OpcodesRDR2::LOCAL_U16_LOAD:
-        case OpcodesRDR2::LOCAL_U16_STORE:
-        case OpcodesRDR2::STATIC_U16:
-        case OpcodesRDR2::STATIC_U16_LOAD:
-        case OpcodesRDR2::STATIC_U16_STORE:
-        case OpcodesRDR2::GLOBAL_U16:
-        case OpcodesRDR2::GLOBAL_U16_LOAD:
-        case OpcodesRDR2::GLOBAL_U16_STORE:
-        case OpcodesRDR2::CALL:
-        case OpcodesRDR2::CALL_U8H_1:
-        case OpcodesRDR2::CALL_U8H_2:
-        case OpcodesRDR2::CALL_U8H_3:
-        case OpcodesRDR2::CALL_U8H_4:
-        case OpcodesRDR2::CALL_U8H_5:
-        case OpcodesRDR2::CALL_U8H_6:
-        case OpcodesRDR2::CALL_U8H_7:
-        case OpcodesRDR2::CALL_U8H_8:
-        case OpcodesRDR2::CALL_U8H_9:
-        case OpcodesRDR2::CALL_U8H_A:
-        case OpcodesRDR2::CALL_U8H_B:
-        case OpcodesRDR2::CALL_U8H_C:
-        case OpcodesRDR2::CALL_U8H_D:
-        case OpcodesRDR2::CALL_U8H_E:
-        case OpcodesRDR2::CALL_U8H_F:
-        case OpcodesRDR2::J:
-        case OpcodesRDR2::JZ:
-        case OpcodesRDR2::INE_J:
-        case OpcodesRDR2::IEQ_J:
-        case OpcodesRDR2::ILE_J:
-        case OpcodesRDR2::ILT_J:
-        case OpcodesRDR2::IGE_J:
-        case OpcodesRDR2::IGT_J:
-            return 3;
-        case OpcodesRDR2::PUSH_CONST_U8_U8_U8:
-        case OpcodesRDR2::GLOBAL_U24:
-        case OpcodesRDR2::GLOBAL_U24_LOAD:
-        case OpcodesRDR2::GLOBAL_U24_STORE:
-        case OpcodesRDR2::PUSH_CONST_U24:
-        case OpcodesRDR2::CALL_PATCH:
-        case OpcodesRDR2::CALL_OUT_OF_PATCH:
-            return 4;
-        case OpcodesRDR2::PUSH_CONST_U32:
-        case OpcodesRDR2::PUSH_CONST_F:
-            return 5;
-        case OpcodesRDR2::ENTER:
-            return 5 + m_Code[pc + 4];
-        case OpcodesRDR2::SWITCH:
-            return 2 + m_Code[pc + 1] * 6;
-        case OpcodesRDR2::STRING:
-            return 2 + m_Code[pc + 1];
-        case OpcodesRDR2::ARRAY:
-            return 5 + *(uint32_t*)&m_Code[pc + 1];
-        }
-
-        return 1;
+        return GetInsnSizeRDR2(m_Code.data(), pc);
     }
 
     bool DisassemblerRDR2::IsJumpOrCall(uint8_t op) const
@@ -539,7 +450,7 @@ namespace scrDbgApp
                 {
                     std::ostringstream nativeStr;
 
-                    auto name = g_Game->GetNativeNameByHash(hash);
+                    auto name = NativeDB::GetNameByHash(hash);
                     nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
 
                     nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << hash;

@@ -1,10 +1,11 @@
+#if defined(_M_X64)
+
 #include "RDR2.hpp"
 #include "core/Hooking.hpp"
 #include "core/Scanner.hpp"
 #include "debugger/DebuggerRDR2.hpp"
 #include "rage/rdr2/scrThread.hpp"
-
-#if defined(_M_X64)
+#include "rage/shared/scrHash.hpp"
 
 namespace scrDbgLib
 {
@@ -54,6 +55,24 @@ namespace scrDbgLib
         Hooking::AddHook(m_Pointers.RunScriptThread, rage::rdr2::scrThread::RunThread);
 
         return Hooking::Init();
+    }
+
+    void* RDR2::GetNativeHandler(uint64_t hash) const
+    {
+        auto handlers = RDR2::GetPointers().CommandHandlers;
+        if (!handlers)
+            return nullptr;
+
+        return handlers->Lookup(static_cast<uint32_t>(hash));
+    }
+
+    uint64_t RDR2::GetNativeHash(void* handler) const
+    {
+        auto handlers = RDR2::GetPointers().CommandHandlers;
+        if (!handlers)
+            return 0;
+
+        return handlers->LookupHash(reinterpret_cast<rage::scrNativeContext::Handler>(handler));
     }
 }
 

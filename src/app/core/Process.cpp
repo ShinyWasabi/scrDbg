@@ -1,5 +1,4 @@
 #include "Process.hpp"
-#include "ResourceLoader.hpp"
 
 namespace scrDbgApp
 {
@@ -110,7 +109,7 @@ namespace scrDbgApp
         GetFullPathNameA(modulePath, MAX_PATH, fullPath, nullptr);
 
         if (!g_Game->Is64Bit())
-            return scrDbgShared::x86Injector::Run(GetModuleHandle(0), X86_INJECTOR_EXE, m_Pid, fullPath);
+            return x86Injector::Run(GetModuleHandle(0), X86_INJECTOR_EXE, m_Pid, fullPath);
 
         size_t pathLen = strlen(fullPath) + 1;
 

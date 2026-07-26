@@ -1,10 +1,11 @@
+#if defined(_M_X64)
+
 #include "GTA5.hpp"
 #include "core/Hooking.hpp"
 #include "core/Scanner.hpp"
 #include "debugger/DebuggerGTA5.hpp"
+#include "rage/gta5/scrNativeRegistration.hpp"
 #include "rage/gta5/scrThread.hpp"
-
-#if defined(_M_X64)
 
 namespace scrDbgLib
 {
@@ -86,6 +87,24 @@ namespace scrDbgLib
         Hooking::AddHook(m_Pointers.RunScriptThread, rage::gta5::scrThreadGEN9::RunThread);
 
         return Hooking::Init();
+    }
+
+    void* GTA5::GetNativeHandler(uint64_t hash) const
+    {
+        auto table = GTA5::GetPointers().NativeRegistrationTable;
+        if (!table)
+            return nullptr;
+
+        return table->GetHandlerByHash(hash);
+    }
+
+    uint64_t GTA5::GetNativeHash(void* handler) const
+    {
+        auto table = GTA5::GetPointers().NativeRegistrationTable;
+        if (!table)
+            return 0;
+
+        return table->GetHashByHandler(reinterpret_cast<rage::scrNativeContext::Handler>(handler));
     }
 }
 

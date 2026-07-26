@@ -1,6 +1,6 @@
 #pragma once
 
-namespace scrDbgShared
+namespace scrDbg
 {
     constexpr uint32_t Joaat(const std::string_view str)
     {
@@ -39,4 +39,4 @@ inline consteval uint32_t operator""_J(const char* s, size_t n)
     return hash;
 }
 
-#define JOAAT(x) scrDbgShared::Joaat(x)
+#define JOAAT(x) scrDbg::Joaat(x)

@@ -12,6 +12,8 @@ namespace scrDbgApp::PipeCommands
         BREAKPOINT_GET_ALL,
         BREAKPOINT_REMOVE_ALL,
 
+        NATIVE_INVOKE,
+
         LOGGER_SET_TYPE,
         LOGGER_SET_SCRIPT,
         LOGGER_CLEAR_FILE
@@ -19,23 +21,56 @@ namespace scrDbgApp::PipeCommands
 
     struct PipeBreakpoint
     {
-        uint32_t Script;
-        uint32_t Pc;
+        uint32_t Script = 0;
+        uint32_t Pc = 0;
     };
 
     struct PipeBreakpointSet : PipeBreakpoint
     {
-        bool Set;
+        bool Set = false;
+    };
+
+    struct PipeNativeArg
+    {
+        NativeDB::Types Type = NativeDB::Types::NONE;
+        int32_t IntValue = 0;
+        int32_t RefValue32 = 0;
+        int64_t RefValue64 = 0;
+        double FloatValue = 0.0;
+        bool BoolValue = false;
+        std::string StringValue;
+    };
+
+    struct PipeNativeReturn
+    {
+        NativeDB::Types Type = NativeDB::Types::NONE;
+        int32_t IntValue = 0;
+        double FloatValue = 0.0;
+        bool BoolValue = false;
+        std::string StringValue;
+    };
+
+    struct PipeNativeOutValue
+    {
+        int32_t RefValue32 = 0;
+        int64_t RefValue64 = 0;
+    };
+
+    struct PipeNativeInvokeResult
+    {
+        std::vector<PipeNativeReturn> Returns;
+        std::vector<PipeNativeOutValue> OutValues;
     };
 
     extern void SetBreakpoint(uint32_t script, uint32_t pc, bool set);
     extern bool BreakpointExists(uint32_t script, uint32_t pc);
     extern void ResumeBreakpoint();
-    extern void ResumeBreakpoint();
     extern void SetBreakpointPauseGame(bool pause);
-    std::optional<std::pair<uint32_t, uint32_t>> GetActiveBreakpoint();
+    extern std::optional<std::pair<uint32_t, uint32_t>> GetActiveBreakpoint();
     extern std::vector<std::pair<uint32_t, uint32_t>> GetAllBreakpoints();
     extern void RemoveAllBreakpoints();
+
+    extern PipeNativeInvokeResult InvokeNative(uint32_t scriptHash, uint64_t nativeHash, const std::vector<PipeNativeArg>& args);
 
     extern void SetLoggerType(int type);
     extern void SetLoggerScript(uint32_t hash);

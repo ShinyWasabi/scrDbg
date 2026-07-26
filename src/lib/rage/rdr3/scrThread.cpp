@@ -1,5 +1,7 @@
+#if defined(_M_X64)
+
 #include "scrThread.hpp"
-#include "ResourceLoader.hpp"
+#include "core/ScriptFiber.hpp"
 #include "debugger/VMLogger.hpp"
 #include "game/RDR3.hpp"
 #include "rage/shared/atArray.hpp"
@@ -8,31 +10,9 @@
 #include "scrNativeRegistration.hpp"
 #include "scrProgram.hpp"
 
-#if defined(_M_X64)
-
 namespace rage::rdr3
 {
     using namespace scrDbgLib;
-    using namespace scrDbgShared;
-
-    static std::string FormatNativeTypes(scrValue value, NativesBin::NativeTypes type)
-    {
-        switch (type)
-        {
-        case NativesBin::NativeTypes::INT:
-            return std::to_string(value.Int);
-        case NativesBin::NativeTypes::BOOL:
-            return value.Int ? "TRUE" : "FALSE";
-        case NativesBin::NativeTypes::FLOAT:
-            return std::to_string(value.Float);
-        case NativesBin::NativeTypes::STRING:
-            return value.String ? "\"" + std::string(value.String) + "\"" : "NULL";
-        case NativesBin::NativeTypes::REFERENCE:
-            return "0x" + std::to_string(reinterpret_cast<uintptr_t>(value.Reference));
-        }
-
-        return std::to_string(value.Any);
-    }
 
     scrThread* scrThread::GetByHash(uint32_t hash)
     {
@@ -116,6 +96,8 @@ namespace rage::rdr3
         scrValue* fp = stack + context->m_Fp;
 
         JUMP(context->m_Pc);
+
+        ScriptFiber::Tick(scriptHash);
 
     NEXT:
         uint32_t pc = static_cast<uint32_t>(code - base);
@@ -428,66 +410,11 @@ namespace rage::rdr3
             ctx.m_Args = &stack[context->m_Sp - argCount];
             ctx.m_VectorRefCount = 0;
 
-            uint64_t hash{};
-            std::string_view name{};
-            std::string argsStr{};
-            std::string retsStr{};
-            bool shouldLog = VMLogger::ShouldLog(VMLogType::NATIVE_CALLS, scriptHash);
-
-            // log args before calling the native because rets will be written to the same stack slot
-            if (shouldLog)
-            {
-                // cache these here so we can use them when when logging rets as well
-                for (uint32_t bucket = 0; bucket < 256; bucket++)
-                {
-                    if (auto reg = pointers.NativeRegistrationTable[bucket])
-                    {
-                        hash = reg->GetHashByHandler(handler, *pointers.NativeRegistrationSeed);
-                        if (hash != 0)
-                            break;
-                    }
-                }
-                name = NativesBin::GetNameByHash(hash);
-
-                auto args = NativesBin::GetArgsByHash(hash);
-                if (argCount > 0 && ctx.m_Args && args && !args->empty())
-                {
-                    for (int32_t i = 0; i < argCount; i++)
-                    {
-                        auto type = (i < args->size()) ? (*args)[i] : NativesBin::NativeTypes::NONE;
-                        argsStr += FormatNativeTypes(ctx.m_Args[i], type);
-
-                        if (i < argCount - 1)
-                            argsStr += ", ";
-                    }
-                }
-            }
+            debugger->NativeLogBegin(scriptHash, handler, ctx.m_Args, argCount);
 
             (*handler)(&ctx);
 
-            if (shouldLog)
-            {
-                auto rets = NativesBin::GetRetsByHash(hash);
-                if (retCount > 0 && ctx.m_Rets && rets && !rets->empty())
-                {
-                    retsStr += " -> (";
-                    for (int32_t i = 0; i < retCount; i++)
-                    {
-                        auto type = (i < rets->size()) ? (*rets)[i] : NativesBin::NativeTypes::NONE;
-                        retsStr += FormatNativeTypes(ctx.m_Rets[i], type);
-
-                        if (i < retCount - 1)
-                            retsStr += ", ";
-                    }
-                    retsStr += ")";
-                }
-
-                // now log the entire thing
-                if (!name.empty())
-                    VMLogger::Logf("[%s+0x%08X] %s(%s)%s", scriptName, pc, name.data(), argsStr.c_str(), retsStr.c_str());
-                else
-                    VMLogger::Logf("[%s+0x%08X] unk_0x%016llX(%s)%s", scriptName, pc, hash, argsStr.c_str(), retsStr.c_str());
-            }
+            debugger->NativeLogEnd(scriptName, pc, ctx.m_Rets, retCount);
 
             if (context->m_State != State::RUNNING)
             {
@@ -542,7 +469,7 @@ namespace rage::rdr3
                 std::string argsStr = "";
                 for (int i = 0; i < argCount; i++)
                 {
-                    argsStr += std::to_string((fp + 1 + i)->Int);
+                    argsStr += std::to_string((fp + i)->Int);
                     if (i != argCount - 1)
                         argsStr += ", ";
                 }
