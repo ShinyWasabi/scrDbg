@@ -314,10 +314,15 @@ namespace scrDbgApp
 
         const auto& insnTable = m_InstructionTable[op];
 
-        std::ostringstream instr;
-        instr << insnTable.Name << " ";
+        std::string result;
+        result.reserve(512);
+
+        result += insnTable.Name;
+        result += ' ';
 
         uint32_t offset = insnPc + 1;
+
+        char buf[128];
 
         const char* fmt = insnTable.OperandFmt;
         while (*fmt)
@@ -325,43 +330,59 @@ namespace scrDbgApp
             switch (*fmt++)
             {
             case 'a': // U8
-                instr << std::dec << static_cast<int>(GetU8(offset++));
+            {
+                std::snprintf(buf, sizeof(buf), "%u", GetU8(offset++));
+                result += buf;
                 break;
+            }
             case 'b': // U16
-                instr << std::dec << GetU16(offset);
+            {
+                std::snprintf(buf, sizeof(buf), "%u", GetU16(offset));
+                result += buf;
                 offset += 2;
                 break;
+            }
             case 'c': // S16
-                instr << std::dec << GetS16(offset);
+            {
+                std::snprintf(buf, sizeof(buf), "%d", GetS16(offset));
+                result += buf;
                 offset += 2;
                 break;
+            }
             case 'e': // U32
             {
                 uint32_t val = GetU32(offset);
                 if (IsJumpOrCall(op) || op == static_cast<uint8_t>(OpcodesGTA4::NATIVE))
                 {
-                    instr << "0x" << std::uppercase << std::hex << val;
-
+                    std::snprintf(buf, sizeof(buf), "0x%X", val);
+                    result += buf;
                     if (op == static_cast<uint8_t>(OpcodesGTA4::CALL))
                     {
                         if (auto func = GetFunctionForPc(val))
                         {
                             if (!func->Name.empty())
-                                instr << " // " << func->Name;
+                            {
+                                result += " // ";
+                                result += func->Name;
+                            }
                         }
                     }
                 }
                 else
                 {
-                    instr << std::dec << val;
+                    std::snprintf(buf, sizeof(buf), "%u", val);
+                    result += buf;
                 }
                 offset += 4;
                 break;
             }
             case 'f': // FLOAT
-                instr << GetF32(offset);
+            {
+                std::snprintf(buf, sizeof(buf), "%g", GetF32(offset));
+                result += buf;
                 offset += 4;
                 break;
+            }
             case 'h': // NATIVE
             {
                 uint32_t argCount = GetU8(offset++);
@@ -371,32 +392,37 @@ namespace scrDbgApp
 
                 uint32_t hash = static_cast<uint32_t>(g_Game->GetNativeHashByHandler(handler));
 
-                instr << argCount << ", " << retCount;
+                std::snprintf(buf, sizeof(buf), "%u, %u", argCount, retCount);
+                result += buf;
                 if (handler && hash != 0)
                 {
-                    std::ostringstream nativeStr;
+                    result += " // ";
 
                     auto name = NativeDB::GetNameByHash(hash);
-                    nativeStr << " // " << (name.empty() ? "UNKNOWN_NATIVE" : name);
+                    result += name.empty() ? "UNKNOWN_NATIVE" : name;
 
-                    nativeStr << ", 0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << hash;
-                    nativeStr << ", " << Process::GetName() << "+0x" << handler - Process::GetBaseAddress();
+                    std::snprintf(buf, sizeof(buf), ", 0x%08X", hash);
+                    result += buf;
 
-                    instr << nativeStr.str();
+                    std::snprintf(buf, sizeof(buf), ", %s+0x%llX", Process::GetName().c_str(), handler - Process::GetBaseAddress());
+                    result += buf;
                 }
-
                 break;
             }
             case 'i': // SWITCH
             {
                 uint8_t count = GetU8(offset++);
-                instr << "[" << std::dec << (int)count << "]";
+                std::snprintf(buf, sizeof(buf), " [%u]", count);
+                result += buf;
                 for (int i = 0; i < count; i++)
                 {
-                    int32_t key = GetU32(offset);
+                    int32_t key = static_cast<int32_t>(GetU32(offset));
                     uint32_t target = GetU32(offset + 4);
-                    instr << " " << key << "=0x" << std::hex << target;
+                    std::snprintf(buf, sizeof(buf), " %d=0x%X", key, target);
+                    result += buf;
                     offset += 8;
+                    if (i != count - 1)
+                        result += ",";
                 }
                 break;
             }
@@ -408,11 +434,16 @@ namespace scrDbgApp
                 if (!str.empty() && str.back() == '\0')
                     str.pop_back();
 
+                result += "\"";
+                result += str;
+                result += "\"";
+
                 auto label = g_Game->GetTextLabel(JOAAT(str));
                 if (!label.empty())
-                    instr << "\"" << str << "\"" << " // GXT: " << label;
-                else
-                    instr << "\"" << str << "\"";
+                {
+                    result += " // GXT: ";
+                    result += label;
+                }
                 offset += len;
                 break;
             }
@@ -422,20 +453,25 @@ namespace scrDbgApp
                 uint16_t frameSize = GetU16(offset);
                 offset += 2;
 
-                instr << std::dec << static_cast<int>(argCount) << ", " << frameSize;
+                std::snprintf(buf, sizeof(buf), "%u, %u", argCount, frameSize);
+                result += buf;
+
                 if (auto func = GetFunctionForPc(offset - 4))
                 {
                     if (!func->Name.empty())
-                        instr << ", " << func->Name;
+                    {
+                        result += ", ";
+                        result += func->Name;
+                    }
                 }
                 break;
             }
             }
 
             if (*fmt)
-                instr << ", ";
+                result += ", ";
         }
 
-        return instr.str();
+        return result;
     }
 }

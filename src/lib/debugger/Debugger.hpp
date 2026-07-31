@@ -32,7 +32,7 @@ namespace scrDbgLib
         void NativeLogClear();
 
         virtual std::unique_ptr<NativeContext> CreateNativeContext() const;
-        virtual void PushNativeInvoke(uint32_t scriptHash, void* handler, NativeContext* ctx, std::shared_ptr<std::promise<void>> donePromise);
+        void PushNativeInvoke(uint32_t scriptHash, void* handler, NativeContext* ctx, std::shared_ptr<std::promise<void>> promise);
 
         void BeginTracking(uint32_t hash, uint32_t index, bool isGlobal);
         void AddFieldOffset(uint32_t offset);

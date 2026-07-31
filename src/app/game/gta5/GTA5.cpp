@@ -233,8 +233,9 @@ namespace scrDbgApp
     // Change this function to return all hashes associated with the handler, rather than stopping at the first match. This applies to the code in scrDbgLib as well.
     uint64_t GTA5::GetNativeHashByHandler(uintptr_t handler) const
     {
-        if (!m_Pointers.NativeRegistrationTable || !handler)
-            return 0;
+        static std::unordered_map<uintptr_t, uint64_t> cache;
+        if (auto it = cache.find(handler); it != cache.end())
+            return it->second;
 
         uint8_t buffer[0xC8]{}; // Enough to read it all I guess (scrNativeRegistration + hashes)
         for (int bucket = 0; bucket < 256; ++bucket)
@@ -263,7 +264,9 @@ namespace scrDbgApp
                         uint32_t key = static_cast<uint32_t>(addr) ^ Pointer(addr).Add(8).Get<uint32_t>();
                         uint32_t low = key ^ Pointer(addr).Add(0).Get<uint32_t>();
                         uint32_t high = key ^ Pointer(addr).Add(4).Get<uint32_t>();
-                        return (static_cast<uint64_t>(high) << 32) | low;
+                        uint64_t hash = (static_cast<uint64_t>(high) << 32) | low;
+                        cache[handler] = hash;
+                        return hash;
                     }
                 }
 
@@ -280,9 +283,6 @@ namespace scrDbgApp
     std::unordered_map<uint64_t, uintptr_t> GTA5::GetAllNatives() const
     {
         std::unordered_map<uint64_t, uintptr_t> result;
-
-        if (!m_Pointers.NativeRegistrationTable)
-            return result;
 
         uint8_t buffer[0xC8]{};
 
@@ -328,12 +328,20 @@ namespace scrDbgApp
 
     std::string GTA5::GetTextLabel(uint32_t hash) const
     {
+        static std::unordered_map<uint32_t, std::string> cache;
+        auto it = cache.find(hash);
+        if (it != cache.end())
+            return it->second;
+
         for (int i = 0; i < 23; i++)
         {
             if (auto slot = m_Pointers.TextLabels.GetArray<uintptr_t>(i))
             {
                 if (auto label = SearchTextLabelSlot(hash, slot); !label.empty())
+                {
+                    cache[hash] = label;
                     return label;
+                }
             }
         }
 

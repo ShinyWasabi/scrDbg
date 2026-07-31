@@ -145,6 +145,10 @@ namespace scrDbgApp
 
     uint64_t RDR3::GetNativeHashByHandler(uintptr_t handler) const
     {
+        static std::unordered_map<uintptr_t, uint64_t> cache;
+        if (auto it = cache.find(handler); it != cache.end())
+            return it->second;
+
         uint64_t seed = m_Pointers.NativeRegistrationSeed.Get<uint64_t>();
 
         for (uint64_t bucket = 0; bucket < 256; bucket++)
@@ -161,7 +165,9 @@ namespace scrDbgApp
                     if (storedHandler == handler)
                     {
                         uint64_t storedKey = node.Add(72 + i * 8).Get<uint64_t>();
-                        return UnscrambleNativeKey(storedKey, seed);
+                        uint64_t hash = UnscrambleNativeKey(storedKey, seed);
+                        cache[handler] = hash;
+                        return hash;
                     }
                 }
 
@@ -203,10 +209,8 @@ namespace scrDbgApp
 
     std::string RDR3::GetTextLabel(uint32_t hash) const
     {
-        static std::unordered_map<uint32_t, std::string> labelCache;
-
-        auto it = labelCache.find(hash);
-        if (it != labelCache.end())
+        static std::unordered_map<uint32_t, std::string> cache;
+        if (auto it = cache.find(hash); it != cache.end())
             return it->second;
 
         Pointer remapMap = m_Pointers.TextLabels.Add(0xD0);
@@ -261,13 +265,14 @@ namespace scrDbgApp
             std::string result = SearchTextLabelSlot(slot, lookupHash);
             if (!result.empty())
             {
-                labelCache[hash] = result;
+                cache[hash] = result;
                 return result;
             }
         }
 
+        // This might cause side effects
         // Cache the failure (empty string) as well so we never search memory for it again
-        labelCache[hash] = "";
+        // cache[hash] = "";
         return {};
     }
 }

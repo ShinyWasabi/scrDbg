@@ -1,4 +1,5 @@
 #include "NativeCommandsWidget.hpp"
+#include "gui/dialogs/StructBuilderDialog.hpp"
 #include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -9,6 +10,7 @@
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSpinBox>
 #include <QVBoxLayout>
 
@@ -43,8 +45,16 @@ namespace scrDbgApp
         m_SelectedNativeLabel = new QLabel("No native selected", callGroup);
         callLayout->addWidget(m_SelectedNativeLabel);
 
-        m_ArgsLayout = new QFormLayout();
-        callLayout->addLayout(m_ArgsLayout);
+        auto argsScrollArea = new QScrollArea(callGroup);
+        argsScrollArea->setWidgetResizable(true);
+        argsScrollArea->setMinimumHeight(180);
+
+        auto argsScrollWidget = new QWidget(argsScrollArea);
+        m_ArgsLayout = new QFormLayout(argsScrollWidget);
+
+        argsScrollArea->setWidget(argsScrollWidget);
+        callLayout->addWidget(argsScrollArea);
+        callLayout->setStretchFactor(argsScrollArea, 1);
 
         auto callButtonLayout = new QHBoxLayout();
         m_CallButton = new QPushButton("Call Native", callGroup);
@@ -57,14 +67,40 @@ namespace scrDbgApp
         rootLayout->addWidget(callGroup);
 
         auto returnsGroup = new QGroupBox("Return Values", this);
-        m_ReturnsLayout = new QFormLayout(returnsGroup);
+        auto returnsGroupLayout = new QVBoxLayout(returnsGroup);
+        returnsGroupLayout->setContentsMargins(0, 0, 0, 0);
+
+        auto returnsScrollArea = new QScrollArea(returnsGroup);
+        returnsScrollArea->setWidgetResizable(true);
+        returnsScrollArea->setMinimumHeight(80);
+
+        auto returnsScrollWidget = new QWidget(returnsScrollArea);
+        m_ReturnsLayout = new QFormLayout(returnsScrollWidget);
+
+        returnsScrollArea->setWidget(returnsScrollWidget);
+        returnsGroupLayout->addWidget(returnsScrollArea);
+
         rootLayout->addWidget(returnsGroup);
 
         auto outValuesGroup = new QGroupBox("Out Values", this);
-        m_OutValuesLayout = new QFormLayout(outValuesGroup);
+        auto outValuesGroupLayout = new QVBoxLayout(outValuesGroup);
+        outValuesGroupLayout->setContentsMargins(0, 0, 0, 0);
+
+        auto outValuesScrollArea = new QScrollArea(outValuesGroup);
+        outValuesScrollArea->setWidgetResizable(true);
+        outValuesScrollArea->setMinimumHeight(80);
+
+        auto outValuesScrollWidget = new QWidget(outValuesScrollArea);
+        m_OutValuesLayout = new QFormLayout(outValuesScrollWidget);
+
+        outValuesScrollArea->setWidget(outValuesScrollWidget);
+        outValuesGroupLayout->addWidget(outValuesScrollArea);
+
         rootLayout->addWidget(outValuesGroup);
 
-        rootLayout->addStretch();
+        rootLayout->setStretchFactor(callGroup, 1);
+        rootLayout->setStretchFactor(returnsGroup, 1);
+        rootLayout->setStretchFactor(outValuesGroup, 1);
     }
 
     QString NativeCommandsWidget::GetTypeName(NativeDB::Types type)
@@ -84,6 +120,11 @@ namespace scrDbgApp
         }
 
         return "NONE";
+    }
+
+    void NativeCommandsWidget::UpdateStructButtonLabel(QPushButton* button, const std::vector<PipeCommands::PipeStructField>& fields)
+    {
+        button->setText(fields.empty() ? "Edit Struct" : QString("Edit Struct (%1 field%2)").arg(fields.size()).arg(fields.size() == 1 ? "" : "s"));
     }
 
     void NativeCommandsWidget::SelectNative(uint64_t hash, const QString& name)
@@ -125,7 +166,7 @@ namespace scrDbgApp
         m_OutValueWidgets.clear();
     }
 
-    QWidget* NativeCommandsWidget::CreateInputForType(NativeDB::Types type)
+    QWidget* NativeCommandsWidget::CreateInputForType(NativeDB::Types type, size_t index)
     {
         switch (type)
         {
@@ -154,9 +195,17 @@ namespace scrDbgApp
         }
         case NativeDB::Types::REFERENCE:
         {
-            auto spin = new QSpinBox(this);
-            spin->setRange(INT_MIN, INT_MAX);
-            return spin;
+            auto button = new QPushButton(this);
+            UpdateStructButtonLabel(button, m_ArgStructFields[index]);
+            connect(button, &QPushButton::clicked, this, [this, index, button]() {
+                auto fields = m_ArgStructFields[index];
+                if (StructBuilderDialog::Edit(this, fields))
+                {
+                    m_ArgStructFields[index] = fields;
+                    UpdateStructButtonLabel(button, fields);
+                }
+            });
+            return button;
         }
         }
 
@@ -168,11 +217,12 @@ namespace scrDbgApp
     void NativeCommandsWidget::RebuildArgumentInputs()
     {
         ClearArgumentInputs();
+        m_ArgStructFields.assign(m_ArgTypes.size(), {});
 
         for (size_t i = 0; i < m_ArgTypes.size(); i++)
         {
             NativeDB::Types type = m_ArgTypes[i];
-            QWidget* input = CreateInputForType(type);
+            QWidget* input = CreateInputForType(type, i);
 
             m_ArgWidgets.push_back(input);
             m_ArgsLayout->addRow(QString("Arg %1 (%2)").arg(i).arg(GetTypeName(type)), input);
@@ -242,10 +292,54 @@ namespace scrDbgApp
 
     QWidget* NativeCommandsWidget::CreateOutValue(const PipeCommands::PipeNativeOutValue& value)
     {
-        uint64_t val = g_Game->Is64Bit() ? value.RefValue64 : value.RefValue32;
-        auto edit = new QLineEdit(QString::number(val), this);
-        edit->setReadOnly(true);
-        return edit;
+        auto widget = new QWidget(this);
+        auto layout = new QVBoxLayout(widget);
+        layout->setContentsMargins(0, 0, 0, 0);
+
+        if (value.Fields.empty())
+        {
+            auto label = new QLabel("Struct has no fields.", widget);
+            layout->addWidget(label);
+            return widget;
+        }
+
+        for (size_t i = 0; i < value.Fields.size(); i++)
+        {
+            const auto& field = value.Fields[i];
+
+            auto row = new QHBoxLayout();
+            auto label = new QLabel(QString("[%1] %2:").arg(i).arg(ScriptStruct::GetTypeName(field.Type)), widget);
+            row->addWidget(label);
+
+            QString text;
+            switch (field.Type)
+            {
+            case ScriptStruct::FieldType::INT:
+                text = QString::number(field.IntValue);
+                break;
+            case ScriptStruct::FieldType::BOOL:
+                text = field.BoolValue ? "TRUE" : "FALSE";
+                break;
+            case ScriptStruct::FieldType::FLOAT:
+                text = QString::number(field.FloatValue);
+                break;
+            case ScriptStruct::FieldType::STRING:
+            case ScriptStruct::FieldType::TEXT_LABEL_7:
+            case ScriptStruct::FieldType::TEXT_LABEL_15:
+            case ScriptStruct::FieldType::TEXT_LABEL_23:
+            case ScriptStruct::FieldType::TEXT_LABEL_31:
+            case ScriptStruct::FieldType::TEXT_LABEL_63:
+                text = QString::fromStdString(field.StringValue);
+                break;
+            }
+
+            auto valueEdit = new QLineEdit(text, widget);
+            valueEdit->setReadOnly(true);
+            row->addWidget(valueEdit);
+            layout->addLayout(row);
+        }
+
+        return widget;
     }
 
     void NativeCommandsWidget::ShowOutValues(const std::vector<PipeCommands::PipeNativeOutValue>& values, const std::vector<size_t>& argIndices)
@@ -365,13 +459,9 @@ namespace scrDbgApp
                 arg.StringValue = static_cast<QLineEdit*>(widget)->text().toStdString();
                 break;
             case NativeDB::Types::REFERENCE:
-            {
-                int value = static_cast<QSpinBox*>(widget)->value();
-                arg.RefValue64 = static_cast<int64_t>(value);
-                arg.RefValue32 = static_cast<int32_t>(value);
+                arg.StructFields = m_ArgStructFields[i];
                 refArgIndices.push_back(i);
                 break;
-            }
             }
 
             args.push_back(std::move(arg));

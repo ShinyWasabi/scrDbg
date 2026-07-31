@@ -58,11 +58,17 @@ namespace scrDbgApp
 
     std::optional<Disassembler::FunctionInfo> Disassembler::GetFunctionForPc(uint32_t pc) const
     {
-        for (const auto& func : m_Functions)
-        {
-            if (pc >= func.Start && pc <= func.End)
-                return func;
-        }
+        auto it = std::upper_bound(m_Functions.begin(), m_Functions.end(), pc, [](uint32_t value, const FunctionInfo& func) {
+            return value < func.Start;
+        });
+
+        if (it == m_Functions.begin())
+            return std::nullopt;
+
+        --it;
+
+        if (pc <= it->End)
+            return *it;
 
         return std::nullopt;
     }
@@ -85,22 +91,24 @@ namespace scrDbgApp
         if (index < 0 || index >= static_cast<int>(m_Instructions.size()))
             return {};
 
-        uint32_t pc = m_Instructions[index];
-
         DecodedInstruction result{};
 
-        std::ostringstream addr;
-        addr << "0x" << std::uppercase << std::setfill('0') << std::setw(8) << std::hex << pc;
-        result.Address = addr.str();
-
-        std::ostringstream bytes;
-        bytes << std::hex << std::uppercase << std::setfill('0');
+        uint32_t pc = m_Instructions[index];
         int size = GetInstructionSize(pc);
+
+        result.Address.resize(10);
+        std::snprintf(result.Address.data(), result.Address.size() + 1, "0x%08X", pc);
+
+        char byte[4];
+        result.Bytes.reserve(size * 3);
         for (int i = 0; i < size; i++)
-            bytes << std::setw(2) << static_cast<int>(GetU8(pc + i)) << " ";
-        result.Bytes = bytes.str();
+        {
+            std::snprintf(byte, sizeof(byte), "%02X ", GetU8(pc + i));
+            result.Bytes += byte;
+        }
 
         result.Instruction = DecodeInstructionInternal(index);
+
         return result;
     }
 

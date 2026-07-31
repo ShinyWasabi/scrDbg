@@ -176,12 +176,10 @@ namespace scrDbgApp
         return result;
     }
 
-    std::string RDR2::GetTextLabel(uint32_t rawHash) const
+    std::string RDR2::GetTextLabel(uint32_t hash) const
     {
-        static std::unordered_map<uint32_t, std::string> labelCache;
-
-        auto it = labelCache.find(rawHash);
-        if (it != labelCache.end())
+        static std::unordered_map<uint32_t, std::string> cache;
+        if (auto it = cache.find(hash); it != cache.end())
             return it->second;
 
         Pointer stringTables = m_Pointers.StringTables.Deref();
@@ -229,20 +227,20 @@ namespace scrDbgApp
             Pointer entryTable = optTable1Array.Add(i * 8).Deref();
             if (entryTable)
             {
-                std::string res = searchTableMap(entryTable, rawHash);
+                std::string res = searchTableMap(entryTable, hash);
                 if (!res.empty())
                 {
-                    labelCache[rawHash] = res;
+                    cache[hash] = res;
                     return res;
                 }
             }
         }
 
         Pointer baseTable = stringTables.Add(32);
-        std::string baseRes = searchTableMap(baseTable, rawHash);
+        std::string baseRes = searchTableMap(baseTable, hash);
         if (!baseRes.empty())
         {
-            labelCache[rawHash] = baseRes;
+            cache[hash] = baseRes;
             return baseRes;
         }
 
@@ -253,17 +251,18 @@ namespace scrDbgApp
             Pointer entryTable = optTable2Array.Add(i * 8).Deref();
             if (entryTable)
             {
-                std::string res = searchTableMap(entryTable, rawHash);
+                std::string res = searchTableMap(entryTable, hash);
                 if (!res.empty())
                 {
-                    labelCache[rawHash] = res;
+                    cache[hash] = res;
                     return res;
                 }
             }
         }
 
+        // This might cause side effects
         // Cache the failure (empty string) as well so we never search memory for it again
-        labelCache[rawHash] = "";
+        // cache[hash] = "";
         return {};
     }
 }

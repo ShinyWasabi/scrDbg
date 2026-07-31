@@ -20,6 +20,7 @@
 // clang-format off
 #include "scrDbg.h"
 #include "util/Joaat.hpp"
+#include "util/ScriptStruct.hpp"
 #include "resources/NativeDB.hpp"
 #include "resources/x86Injector.hpp"
 #include "game/Game.hpp"

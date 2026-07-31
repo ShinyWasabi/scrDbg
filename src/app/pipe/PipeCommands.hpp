@@ -30,15 +30,23 @@ namespace scrDbgApp::PipeCommands
         bool Set = false;
     };
 
+    struct PipeStructField
+    {
+        ScriptStruct::FieldType Type = ScriptStruct::FieldType::INT;
+        int32_t IntValue = 0;
+        bool BoolValue = false;
+        double FloatValue = 0.0;
+        std::string StringValue; // used for string and text label
+    };
+
     struct PipeNativeArg
     {
         NativeDB::Types Type = NativeDB::Types::NONE;
         int32_t IntValue = 0;
-        int32_t RefValue32 = 0;
-        int64_t RefValue64 = 0;
         double FloatValue = 0.0;
         bool BoolValue = false;
         std::string StringValue;
+        std::vector<PipeStructField> StructFields; // used when type is ref
     };
 
     struct PipeNativeReturn
@@ -52,8 +60,7 @@ namespace scrDbgApp::PipeCommands
 
     struct PipeNativeOutValue
     {
-        int32_t RefValue32 = 0;
-        int64_t RefValue64 = 0;
+        std::vector<PipeStructField> Fields; // updated struct values after the call
     };
 
     struct PipeNativeInvokeResult

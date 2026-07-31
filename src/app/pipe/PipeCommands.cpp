@@ -89,6 +89,77 @@ namespace scrDbgApp::PipeCommands
         PipeClient::Send(&cmd, sizeof(cmd));
     }
 
+    static void SendStructField(const PipeStructField& field)
+    {
+        uint8_t type = static_cast<uint8_t>(field.Type);
+        PipeClient::Send(&type, sizeof(type));
+
+        switch (field.Type)
+        {
+        case ScriptStruct::FieldType::INT:
+            PipeClient::Send(&field.IntValue, sizeof(field.IntValue));
+            break;
+        case ScriptStruct::FieldType::BOOL:
+            PipeClient::Send(&field.BoolValue, sizeof(field.BoolValue));
+            break;
+        case ScriptStruct::FieldType::FLOAT:
+            PipeClient::Send(&field.FloatValue, sizeof(field.FloatValue));
+            break;
+        case ScriptStruct::FieldType::STRING:
+        case ScriptStruct::FieldType::TEXT_LABEL_7:
+        case ScriptStruct::FieldType::TEXT_LABEL_15:
+        case ScriptStruct::FieldType::TEXT_LABEL_23:
+        case ScriptStruct::FieldType::TEXT_LABEL_31:
+        case ScriptStruct::FieldType::TEXT_LABEL_63:
+        {
+            uint32_t len = static_cast<uint32_t>(field.StringValue.size());
+            PipeClient::Send(&len, sizeof(len));
+            if (len > 0)
+                PipeClient::Send(field.StringValue.data(), len);
+            break;
+        }
+        }
+    }
+
+    static bool ReceiveStructField(PipeStructField& field)
+    {
+        uint8_t type = 0;
+        if (!PipeClient::Receive(&type, sizeof(type)))
+            return false;
+
+        field.Type = static_cast<ScriptStruct::FieldType>(type);
+
+        switch (field.Type)
+        {
+        case ScriptStruct::FieldType::INT:
+            return PipeClient::Receive(&field.IntValue, sizeof(field.IntValue));
+        case ScriptStruct::FieldType::BOOL:
+            return PipeClient::Receive(&field.BoolValue, sizeof(field.BoolValue));
+        case ScriptStruct::FieldType::FLOAT:
+            return PipeClient::Receive(&field.FloatValue, sizeof(field.FloatValue));
+        case ScriptStruct::FieldType::STRING:
+        case ScriptStruct::FieldType::TEXT_LABEL_7:
+        case ScriptStruct::FieldType::TEXT_LABEL_15:
+        case ScriptStruct::FieldType::TEXT_LABEL_23:
+        case ScriptStruct::FieldType::TEXT_LABEL_31:
+        case ScriptStruct::FieldType::TEXT_LABEL_63:
+        {
+            uint32_t len = 0;
+            if (!PipeClient::Receive(&len, sizeof(len)))
+                return false;
+            if (len > 0)
+            {
+                field.StringValue.resize(len);
+                if (!PipeClient::Receive(field.StringValue.data(), len))
+                    return false;
+            }
+            return true;
+        }
+        }
+
+        return false;
+    }
+
     static void SendNativeArg(const PipeNativeArg& arg)
     {
         switch (arg.Type)
@@ -112,10 +183,10 @@ namespace scrDbgApp::PipeCommands
         }
         case NativeDB::Types::REFERENCE:
         {
-            if (g_Game->Is64Bit())
-                PipeClient::Send(&arg.RefValue64, sizeof(arg.RefValue64));
-            else
-                PipeClient::Send(&arg.RefValue32, sizeof(arg.RefValue32));
+            uint32_t fieldCount = static_cast<uint32_t>(arg.StructFields.size());
+            PipeClient::Send(&fieldCount, sizeof(fieldCount));
+            for (const auto& field : arg.StructFields)
+                SendStructField(field);
             break;
         }
         }
@@ -146,7 +217,7 @@ namespace scrDbgApp::PipeCommands
         }
         }
 
-        return true;
+        return false;
     }
 
     PipeNativeInvokeResult InvokeNative(uint32_t scriptHash, uint64_t nativeHash, const std::vector<PipeNativeArg>& args)
@@ -188,17 +259,26 @@ namespace scrDbgApp::PipeCommands
             if (arg.Type != NativeDB::Types::REFERENCE)
                 continue;
 
-            PipeNativeOutValue outValue{};
-            bool ok = false;
-            if (g_Game->Is64Bit())
-                ok = PipeClient::Receive(&outValue.RefValue64, sizeof(outValue.RefValue64));
-            else
-                ok = PipeClient::Receive(&outValue.RefValue32, sizeof(outValue.RefValue32));
+            uint32_t fieldCount = 0;
+            if (!PipeClient::Receive(&fieldCount, sizeof(fieldCount)))
+                break;
+
+            PipeNativeOutValue outValue;
+            outValue.Fields.reserve(fieldCount);
+
+            bool ok = true;
+            for (uint32_t i = 0; i < fieldCount && ok; i++)
+            {
+                PipeStructField field;
+                ok = ReceiveStructField(field);
+                if (ok)
+                    outValue.Fields.push_back(std::move(field));
+            }
 
             if (!ok)
                 break;
 
-            result.OutValues.push_back(outValue);
+            result.OutValues.push_back(std::move(outValue));
         }
 
         return result;

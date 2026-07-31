@@ -137,11 +137,11 @@ namespace scrDbgLib
         return std::make_unique<NativeContextDefault>();
     }
 
-    void Debugger::PushNativeInvoke(uint32_t scriptHash, void* handler, NativeContext* ctx, std::shared_ptr<std::promise<void>> donePromise)
+    void Debugger::PushNativeInvoke(uint32_t scriptHash, void* handler, NativeContext* ctx, std::shared_ptr<std::promise<void>> promise)
     {
-        ScriptFiber::PushJob([ctx, handler, donePromise]() {
+        ScriptFiber::PushJob([ctx, handler, promise]() {
             ctx->Invoke(handler);
-            donePromise->set_value();
+            promise->set_value();
         },
             scriptHash);
     }

@@ -212,6 +212,10 @@ namespace scrDbgApp
             uint32_t KeyHash;
         };
 
+        static std::unordered_map<uint32_t, std::string> cache;
+        if (auto it = cache.find(hash); it != cache.end())
+            return it->second;
+
         Pointer data = m_Pointers.TextLabels.Add(0).Deref();
         int32_t count = m_Pointers.TextLabels.Add(4).Get<int32_t>();
         if (!data || count <= 0)
@@ -235,6 +239,7 @@ namespace scrDbgApp
 
             std::string result(len - 1, '\0');
             WideCharToMultiByte(CP_UTF8, 0, buffer.data(), -1, result.data(), len, nullptr, nullptr);
+            cache[hash] = result;
             return result;
         }
 

@@ -1,13 +1,13 @@
 #include "ExportOptionsDialog.hpp"
 #include <QCheckBox>
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QGridLayout>
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QTableView>
-#include <algorithm>
 
 namespace scrDbgApp
 {
@@ -166,6 +166,8 @@ namespace scrDbgApp
         auto oldModel = view->model();
 
         ExportToFile("Disassembly", "disassembly.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            QElapsedTimer timer;
+            timer.start();
             for (int row = 0; row < count; row++)
             {
                 if (progress.wasCanceled())
@@ -184,10 +186,12 @@ namespace scrDbgApp
 
                 out << QString("%1  %2  %3\n").arg(addr, -10).arg(bytes, -25).arg(instr);
 
-                if (row % 50 == 0)
+                if (timer.elapsed() >= 50)
                 {
                     progress.setValue(row);
                     QCoreApplication::processEvents();
+
+                    timer.restart();
                 }
             }
 
@@ -211,6 +215,8 @@ namespace scrDbgApp
         }
 
         ExportToFile("Statics", "statics.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            QElapsedTimer timer;
+            timer.start();
             for (uint32_t i = 0; i < count; i++)
             {
                 if (progress.wasCanceled())
@@ -220,10 +226,12 @@ namespace scrDbgApp
                 const int defaultVal = program->GetStatic(i).Get<int32_t>();
                 out << "Static_" << i << " = " << currentVal << " // Default: " << defaultVal << "\n";
 
-                if (i % 50 == 0)
+                if (timer.elapsed() >= 50)
                 {
                     progress.setValue(i);
                     QCoreApplication::processEvents();
+
+                    timer.restart();
                 }
             }
 
@@ -244,6 +252,8 @@ namespace scrDbgApp
             }
 
             ExportToFile("Globals", "globals.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+                QElapsedTimer timer;
+                timer.start();
                 for (uint32_t i = 0; i < count; i++)
                 {
                     if (progress.wasCanceled())
@@ -252,10 +262,12 @@ namespace scrDbgApp
                     int32_t value = g_Game->GetGlobal(i).Get<int32_t>();
                     out << "Global_" << i << " = " << value << "\n";
 
-                    if (i % 50 == 0)
+                    if (timer.elapsed() >= 50)
                     {
                         progress.setValue(i);
                         QCoreApplication::processEvents();
+
+                        timer.restart();
                     }
                 }
 
@@ -286,6 +298,8 @@ namespace scrDbgApp
             }
 
             ExportToFile("All Globals", "all_globals.txt", totalGlobalCount, [&](QTextStream& out, QProgressDialog& progress) {
+                QElapsedTimer timer;
+                timer.start();
                 for (int block = 0; block <= lastValidBlock; block++)
                 {
                     int blockCount = g_Game->GetGlobalBlockCount(block);
@@ -303,10 +317,12 @@ namespace scrDbgApp
                         int value = g_Game->GetGlobal(globalIndex).Get<int32_t>();
                         out << "Global_" << globalIndex << " = " << value << "\n";
 
-                        if (globalIndex % 50 == 0)
+                        if (timer.elapsed() >= 50)
                         {
                             progress.setValue(globalIndex);
                             QCoreApplication::processEvents();
+
+                            timer.restart();
                         }
                     }
                 }
@@ -330,6 +346,8 @@ namespace scrDbgApp
             }
 
             ExportToFile("Globals", "globals.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+                QElapsedTimer timer;
+                timer.start();
                 for (uint32_t i = 0; i < count; i++)
                 {
                     if (progress.wasCanceled())
@@ -340,10 +358,12 @@ namespace scrDbgApp
                     int defaultVal = program->GetProgramGlobal(i).Get<int32_t>();
                     out << "Global_" << globalIndex << " = " << currentVal << " // Default: " << defaultVal << "\n";
 
-                    if (i % 50 == 0)
+                    if (timer.elapsed() >= 50)
                     {
                         progress.setValue(i);
                         QCoreApplication::processEvents();
+
+                        timer.restart();
                     }
                 }
 
@@ -366,7 +386,9 @@ namespace scrDbgApp
                 return;
             }
 
-            ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            ExportToFile("Natives", "all_natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+                QElapsedTimer timer;
+                timer.start();
                 uint32_t index = 0;
                 for (auto& [hash, handler] : allNatives)
                 {
@@ -379,10 +401,12 @@ namespace scrDbgApp
                     auto name = std::string(NativeDB::GetNameByHash(hash));
                     out << " // " << (name.empty() ? "UNKNOWN_NATIVE" : QString::fromStdString(name)) << "\n";
 
-                    if (index % 50 == 0)
+                    if (timer.elapsed() >= 50)
                     {
                         progress.setValue(index);
                         QCoreApplication::processEvents();
+
+                        timer.restart();
                     }
                     index++;
                 }
@@ -405,6 +429,8 @@ namespace scrDbgApp
             }
 
             ExportToFile("Natives", "natives.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+                QElapsedTimer timer;
+                timer.start();
                 for (uint32_t i = 0; i < count; i++)
                 {
                     if (progress.wasCanceled())
@@ -418,10 +444,12 @@ namespace scrDbgApp
                     auto name = std::string(NativeDB::GetNameByHash(hash));
                     out << " // " << (name.empty() ? "UNKNOWN_NATIVE" : QString::fromStdString(name)) << "\n";
 
-                    if (i % 50 == 0)
+                    if (timer.elapsed() >= 50)
                     {
                         progress.setValue(i);
                         QCoreApplication::processEvents();
+
+                        timer.restart();
                     }
                 }
 
@@ -447,6 +475,8 @@ namespace scrDbgApp
 
         int exportedCount = 0;
         ExportToFile(onlyTextLabels ? "Text Labels" : "Strings", onlyTextLabels ? "text_labels.txt" : "strings.txt", count, [&](QTextStream& out, QProgressDialog& progress) {
+            QElapsedTimer timer;
+            timer.start();
             for (int i = 0; i < count; i++)
             {
                 if (progress.wasCanceled())
@@ -470,10 +500,12 @@ namespace scrDbgApp
                     ++exportedCount;
                 }
 
-                if (i % 50 == 0)
+                if (timer.elapsed() >= 50)
                 {
                     progress.setValue(i);
                     QCoreApplication::processEvents();
+
+                    timer.restart();
                 }
             }
 

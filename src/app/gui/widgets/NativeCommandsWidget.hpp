@@ -26,6 +26,7 @@ namespace scrDbgApp
 
     private:
         static QString GetTypeName(NativeDB::Types type);
+        static void UpdateStructButtonLabel(QPushButton* button, const std::vector<PipeCommands::PipeStructField>& fields);
 
         void SelectNative(uint64_t hash, const QString& name);
         void RebuildArgumentInputs();
@@ -34,7 +35,7 @@ namespace scrDbgApp
         void ClearOutValueOutputs();
         void ShowReturnValues(const std::vector<PipeCommands::PipeNativeReturn>& values);
         void ShowOutValues(const std::vector<PipeCommands::PipeNativeOutValue>& values, const std::vector<size_t>& argIndices);
-        QWidget* CreateInputForType(NativeDB::Types type);
+        QWidget* CreateInputForType(NativeDB::Types type, size_t index);
         QWidget* CreateOutputForType(const PipeCommands::PipeNativeReturn& value);
         QWidget* CreateOutValue(const PipeCommands::PipeNativeOutValue& value);
 
@@ -52,5 +53,6 @@ namespace scrDbgApp
         std::vector<QWidget*> m_ArgWidgets;
         std::vector<QWidget*> m_ReturnWidgets;
         std::vector<QWidget*> m_OutValueWidgets;
+        std::vector<std::vector<PipeCommands::PipeStructField>> m_ArgStructFields; // one entry per ref arg (indexed like m_ArgTypes)
     };
 }

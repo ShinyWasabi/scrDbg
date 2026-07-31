@@ -30,6 +30,15 @@ namespace scrDbgLib::PipeCommands
         bool Set = 0;
     };
 
+    struct PipeStructField
+    {
+        ScriptStruct::FieldType Type = ScriptStruct::FieldType::INT;
+        int32_t IntValue = 0;
+        bool BoolValue = false;
+        double FloatValue = 0.0;
+        std::string StringValue; // used for string and text label
+    };
+
     extern void SetBreakpoint();
     extern void BreakpointExists();
     extern void ResumeBreakpoint();
