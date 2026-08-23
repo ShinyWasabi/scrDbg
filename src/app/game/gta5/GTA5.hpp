@@ -48,7 +48,7 @@ namespace scrDbgApp
 
         const char* GetTargetBuild() const override
         {
-            return "1013.34-1.72";
+            return "1158.13-1.73";
         }
 
         bool Is64Bit() const override
@@ -72,7 +72,7 @@ namespace scrDbgApp
 
         const char* GetTargetBuild() const override
         {
-            return "3788.0-1.72";
+            return "3889.0-1.73";
         }
 
         bool Is64Bit() const override

@@ -159,6 +159,28 @@ namespace scrDbgApp
         file.close();
     }
 
+    QString ExportOptionsDialog::FormatValue(Pointer value, bool includeString)
+    {
+        int32_t intVal = value.Get<int32_t>();
+        float floatVal = value.Get<float>();
+        QString textLabelVal = QString::fromStdString(value.GetString(64));
+
+        QString result = QString("INT:%1  FLOAT:%2  HEX:0x%3  TEXT_LABEL:\"%4\"")
+                             .arg(intVal)
+                             .arg(floatVal, 0, 'g', 6)
+                             .arg(QString::number(static_cast<uint32_t>(intVal), 16).toUpper().rightJustified(8, '0'))
+                             .arg(textLabelVal);
+
+        if (includeString)
+        {
+            auto ptr = value.Deref();
+            QString stringVal = ptr ? QString::fromStdString(ptr.GetString(255)) : QString();
+            result += QString("  STRING:\"%1\"").arg(stringVal);
+        }
+
+        return result;
+    }
+
     void ExportOptionsDialog::ExportDisassembly(QTableView* view)
     {
         const int count = view->model()->rowCount();
@@ -222,9 +244,7 @@ namespace scrDbgApp
                 if (progress.wasCanceled())
                     return;
 
-                const int currentVal = thread->GetStack(i).Get<int32_t>();
-                const int defaultVal = program->GetStatic(i).Get<int32_t>();
-                out << "Static_" << i << " = " << currentVal << " // Default: " << defaultVal << "\n";
+                out << "Static_" << i << " = " << FormatValue(thread->GetStack(i), true) << " // Default: " << FormatValue(program->GetStatic(i), true) << "\n";
 
                 if (timer.elapsed() >= 50)
                 {
@@ -259,8 +279,7 @@ namespace scrDbgApp
                     if (progress.wasCanceled())
                         return;
 
-                    int32_t value = g_Game->GetGlobal(i).Get<int32_t>();
-                    out << "Global_" << i << " = " << value << "\n";
+                    out << "Global_" << i << " = " << FormatValue(g_Game->GetGlobal(i), false) << "\n";
 
                     if (timer.elapsed() >= 50)
                     {
@@ -314,8 +333,7 @@ namespace scrDbgApp
                             return;
 
                         int globalIndex = (block << 18) + i;
-                        int value = g_Game->GetGlobal(globalIndex).Get<int32_t>();
-                        out << "Global_" << globalIndex << " = " << value << "\n";
+                        out << "Global_" << globalIndex << " = " << FormatValue(g_Game->GetGlobal(globalIndex), false) << "\n";
 
                         if (timer.elapsed() >= 50)
                         {
@@ -354,9 +372,7 @@ namespace scrDbgApp
                         return;
 
                     int globalIndex = (block << 0x12) + i;
-                    int currentVal = g_Game->GetGlobal(globalIndex).Get<int32_t>();
-                    int defaultVal = program->GetProgramGlobal(i).Get<int32_t>();
-                    out << "Global_" << globalIndex << " = " << currentVal << " // Default: " << defaultVal << "\n";
+                    out << "Global_" << globalIndex << " = " << FormatValue(g_Game->GetGlobal(globalIndex), false) << " // Default: " << FormatValue(program->GetProgramGlobal(i), false) << "\n";
 
                     if (timer.elapsed() >= 50)
                     {

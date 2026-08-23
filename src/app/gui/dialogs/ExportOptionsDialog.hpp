@@ -1,6 +1,5 @@
 #pragma once
 #include <QDialog>
-#include <functional>
 
 class QPushButton;
 class QCheckBox;
@@ -23,6 +22,7 @@ namespace scrDbgApp
         static bool HasProgramNatives(GameType type);
 
         static void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
+        static QString FormatValue(Pointer value, bool includeString);
         static void ExportDisassembly(QTableView* view);
         static void ExportStatics(uint32_t scriptHash);
         static void ExportGlobals(uint32_t scriptHash, bool exportAll);
