@@ -17,6 +17,11 @@ namespace scrDbgApp
         return nameStr.str();
     }
 
+    uint16_t DisassemblerRDR2::GetOpcodeNumber(Opcodes opcode) const
+    {
+        return g_OpcodesRDR2Map[static_cast<uint16_t>(opcode)];
+    }
+
     int DisassemblerRDR2::GetInstructionSize(uint32_t pc) const
     {
         return GetInsnSizeRDR2(m_Code.data(), pc);

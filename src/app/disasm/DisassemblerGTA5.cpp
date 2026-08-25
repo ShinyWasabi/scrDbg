@@ -59,6 +59,11 @@ namespace scrDbgApp
         return std::nullopt;
     }
 
+    uint16_t DisassemblerGTA5::GetOpcodeNumber(Opcodes opcode) const
+    {
+        return g_OpcodesGTA5Map[static_cast<uint16_t>(opcode)];
+    }
+
     int DisassemblerGTA5::GetInstructionSize(uint32_t pc) const
     {
         return GetInsnSizeGTA5(m_Code.data(), pc);

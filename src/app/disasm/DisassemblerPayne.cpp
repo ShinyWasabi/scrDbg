@@ -33,6 +33,11 @@ namespace scrDbgApp
         return nameStr.str();
     }
 
+    uint16_t DisassemblerPayne::GetOpcodeNumber(Opcodes opcode) const
+    {
+        return g_OpcodesPayneMap[static_cast<uint16_t>(opcode)];
+    }
+
     int DisassemblerPayne::GetInstructionSize(uint32_t pc) const
     {
         return GetInsnSizePayne(m_Code.data(), pc);

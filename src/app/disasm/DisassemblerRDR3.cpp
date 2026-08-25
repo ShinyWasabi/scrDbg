@@ -59,6 +59,11 @@ namespace scrDbgApp
         return std::nullopt;
     }
 
+    uint16_t DisassemblerRDR3::GetOpcodeNumber(Opcodes opcode) const
+    {
+        return g_OpcodesRDR3Map[static_cast<uint16_t>(opcode)];
+    }
+
     int DisassemblerRDR3::GetInstructionSize(uint32_t pc) const
     {
         return GetInsnSizeRDR3(m_Code.data(), pc);

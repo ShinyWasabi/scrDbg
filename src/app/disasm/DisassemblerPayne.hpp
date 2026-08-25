@@ -9,6 +9,7 @@ namespace scrDbgApp
         using Disassembler::Disassembler;
 
         std::optional<FunctionInfo> GetFunctionForPc(uint32_t pc) const override;
+        uint16_t GetOpcodeNumber(Opcodes opcode) const override;
         int GetInstructionSize(uint32_t pc) const override;
         bool IsJumpOrCall(uint8_t op) const override;
         uint32_t GetJumpTarget(uint32_t pc) const override;
@@ -82,14 +83,14 @@ namespace scrDbgApp
             {"STORE_REV", "Store value to reference (reversed)", ""},
             {"LOAD_N", "Load array elements", ""},
             {"STORE_N", "Store array elements", ""},
-            {"LOCAL_U8_0", "Push reference to local 0", ""},
-            {"LOCAL_U8_1", "Push reference to local 1", ""},
-            {"LOCAL_U8_2", "Push reference to local 2", ""},
-            {"LOCAL_U8_3", "Push reference to local 3", ""},
-            {"LOCAL_U8_4", "Push reference to local 4", ""},
-            {"LOCAL_U8_5", "Push reference to local 5", ""},
-            {"LOCAL_U8_6", "Push reference to local 6", ""},
-            {"LOCAL_U8_7", "Push reference to local 7", ""},
+            {"LOCAL_0", "Push reference to local 0", ""},
+            {"LOCAL_1", "Push reference to local 1", ""},
+            {"LOCAL_2", "Push reference to local 2", ""},
+            {"LOCAL_3", "Push reference to local 3", ""},
+            {"LOCAL_4", "Push reference to local 4", ""},
+            {"LOCAL_5", "Push reference to local 5", ""},
+            {"LOCAL_6", "Push reference to local 6", ""},
+            {"LOCAL_7", "Push reference to local 7", ""},
             {"LOCAL", "Push reference to local (indexed)", ""},
             {"STATIC", "Push reference to static (indexed)", ""},
             {"GLOBAL", "Push reference to global (indexed)", ""},

@@ -1,4 +1,5 @@
 #pragma once
+#include "opcodes/Opcodes.hpp"
 
 namespace scrDbgApp
 {
@@ -40,6 +41,7 @@ namespace scrDbgApp
         DecodedInstruction DecodeInstruction(int index) const;
         std::vector<uint32_t> ScanPattern(const std::vector<std::optional<uint8_t>>& pattern) const;
 
+        virtual uint16_t GetOpcodeNumber(Opcodes opcode) const = 0;
         virtual int GetInstructionSize(uint32_t pc) const = 0;
         virtual bool IsJumpOrCall(uint8_t op) const = 0;
         virtual uint32_t GetJumpTarget(uint32_t pc) const = 0;

@@ -72,8 +72,9 @@ namespace scrDbgApp
     {
         uint32_t pc = m_Disassembler->GetInstruction(index.row());
         uint32_t size = m_Disassembler->GetInstructionSize(pc);
+        uint8_t nop = (uint8_t)m_Disassembler->GetOpcodeNumber(Opcodes::NOP);
 
-        std::vector<uint8_t> patch(size, 0);
+        std::vector<uint8_t> patch(size, nop);
         m_Disassembler->GetProgram()->SetCode(pc, patch);
         m_Disassembler->Refresh();
         static_cast<DisassemblyModel*>(const_cast<QAbstractItemModel*>(index.model()))->layoutChanged();

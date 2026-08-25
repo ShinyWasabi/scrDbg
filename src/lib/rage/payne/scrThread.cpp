@@ -694,16 +694,16 @@ namespace rage::payne
                 debugger->FinalizeTracking(_this->m_ScriptName, pc - 1, count, true);
                 break;
             }
-            case scrOpcode::LOCAL_U8_0:
-            case scrOpcode::LOCAL_U8_1:
-            case scrOpcode::LOCAL_U8_2:
-            case scrOpcode::LOCAL_U8_3:
-            case scrOpcode::LOCAL_U8_4:
-            case scrOpcode::LOCAL_U8_5:
-            case scrOpcode::LOCAL_U8_6:
-            case scrOpcode::LOCAL_U8_7:
+            case scrOpcode::LOCAL_0:
+            case scrOpcode::LOCAL_1:
+            case scrOpcode::LOCAL_2:
+            case scrOpcode::LOCAL_3:
+            case scrOpcode::LOCAL_4:
+            case scrOpcode::LOCAL_5:
+            case scrOpcode::LOCAL_6:
+            case scrOpcode::LOCAL_7:
             {
-                uint32_t slot = static_cast<uint8_t>(op) - static_cast<uint8_t>(scrOpcode::LOCAL_U8_0);
+                uint32_t slot = static_cast<uint8_t>(op) - static_cast<uint8_t>(scrOpcode::LOCAL_0);
                 ENSURE_STACK(1);
                 (++sp)[0].Uns = static_cast<uint32_t>(AddrType::LOCAL) | ((_this->m_Context.m_Fp + slot) * sizeof(scrValue));
                 break;

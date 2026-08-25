@@ -8,6 +8,7 @@ namespace scrDbgApp
     public:
         using Disassembler::Disassembler;
 
+        uint16_t GetOpcodeNumber(Opcodes opcode) const override;
         int GetInstructionSize(uint32_t pc) const override;
         bool IsJumpOrCall(uint8_t op) const override;
         uint32_t GetJumpTarget(uint32_t pc) const override;
