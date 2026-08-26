@@ -17,6 +17,15 @@ namespace scrDbgApp
         void OnEditStack(int row, int column);
 
     private:
+        // for GTA 4, MP3, and RDR1, which doesn't natively have call stack and depth in their scrThreads
+        struct CallStack
+        {
+            uint8_t Depth;
+            uint32_t Frames[16];
+        };
+
+        CallStack GetCallStack() const;
+
         void PopulateCallstack();
         void PopulateFrameDetails(int frameIndex);
         void UpdateStackValue(int row, Pointer pointer, int type);

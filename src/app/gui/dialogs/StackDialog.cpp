@@ -4,6 +4,7 @@
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLabel>
+#include <QMessageBox>
 #include <QSplitter>
 #include <QTableWidget>
 #include <QVBoxLayout>
@@ -63,9 +64,55 @@ namespace scrDbgApp
         PopulateCallstack();
     }
 
+    StackDialog::CallStack StackDialog::GetCallStack() const
+    {
+        CallStack result{};
+
+        auto type = g_Game->GetType();
+        if (type == GameType::GTA5_GEN8 || type == GameType::GTA5_GEN9 || type == GameType::RDR3)
+        {
+            result.Depth = m_Thread->GetCallDepth();
+            for (uint32_t i = 0; i < 16; i++)
+                result.Frames[i] = m_Thread->GetCallStack(i);
+
+            return result;
+        }
+
+        uint32_t pc = m_Thread->GetPc();
+        uint32_t fp = m_Thread->GetFp();
+
+        uint32_t frames[16];
+        uint8_t depth = 0;
+
+        while (depth < 16)
+        {
+            auto func = m_Disassembler->GetFunctionForPc(pc);
+            if (!func.has_value())
+                break;
+
+            frames[depth++] = func->Start;
+
+            uint32_t retPc = m_Thread->GetStack(fp + func->ArgCount).Get<uint32_t>();
+            uint32_t callerFp = m_Thread->GetStack(fp + func->ArgCount + 1).Get<uint32_t>();
+            if (retPc == 0)
+                break;
+
+            pc = retPc - (type == GameType::RDR2 ? 3 : 5);
+            fp = callerFp;
+        }
+
+        result.Depth = depth;
+        for (uint8_t i = 0; i < depth; i++)
+            result.Frames[i] = frames[depth - 1 - i]; // reverse into root-first order
+
+        return result;
+    }
+
     void StackDialog::PopulateCallstack()
     {
-        uint8_t depth = m_Thread->GetCallDepth();
+        auto callStack = GetCallStack();
+
+        uint8_t depth = callStack.Depth;
 
         m_CallStack->setRowCount(depth);
         m_FramePointers.clear();
@@ -73,9 +120,9 @@ namespace scrDbgApp
 
         uint32_t fp = m_Thread->GetFp();
 
-        for (int i = depth - 1; i >= 0; --i)
+        for (int i = depth - 1; i >= 0; i--)
         {
-            uint32_t addr = m_Thread->GetCallStack(i);
+            uint32_t addr = callStack.Frames[i];
 
             auto func = m_Disassembler->GetFunctionForPc(addr);
 
@@ -96,9 +143,11 @@ namespace scrDbgApp
 
     void StackDialog::PopulateFrameDetails(int frameIndex)
     {
+        auto callStack = GetCallStack();
+
         uint32_t fp = m_FramePointers[frameIndex];
-        uint32_t sp = m_Thread->GetSp();
-        uint32_t pc = m_Thread->GetCallStack(frameIndex);
+        uint32_t pc = callStack.Frames[frameIndex];
+        uint32_t curSp = (frameIndex == callStack.Depth - 1) ? m_Thread->GetSp() : m_FramePointers[frameIndex + 1]; // next inner frame's fp
 
         auto func = m_Disassembler->GetFunctionForPc(pc);
 
@@ -128,7 +177,12 @@ namespace scrDbgApp
         for (int i = 0; i < localCount; i++)
             addRow("Local", func->ArgCount + 2 + i, m_Thread->GetStack(fp + func->ArgCount + 2 + i));
 
-        int tempCount = sp - (fp + func->FrameSize);
+        int tempCount = static_cast<int>(curSp) - static_cast<int>(fp + func->FrameSize);
+        if (tempCount > 1024) // some stackframes can have thousands of temps
+        {
+            QMessageBox::warning(this, "Too Large", QString("This stack frame contains %1 temporary variables, capping to 1024.").arg(tempCount));
+            tempCount = 1024;
+        }
         for (int i = 0; i < tempCount; i++)
             addRow("Temp", func->FrameSize + i, m_Thread->GetStack(fp + func->FrameSize + i));
     }
