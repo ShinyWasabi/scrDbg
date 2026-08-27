@@ -34,6 +34,12 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
   - Generate patterns
   - View xrefs
   - Set breakpoints
+- Dynamic native invoker
+  - Search natives by name and invoke them dynamically
+  - Specify the script to execute the native in
+  - Automatically resolve argument and return types and counts
+  - Dynamically build structs for reference arguments
+  - View return values and reference argument out values
 - Logging
   - Log script frame times
   - Log function calls
@@ -127,7 +133,7 @@ It allows you to inspect, manipulate, and debug game scripts in real-time.
 
 To build scrDbg, you need:
 
-- [Visual Studio 2022](https://visualstudio.microsoft.com/)
+- [Visual Studio 2022/2026](https://visualstudio.microsoft.com/)
   - Desktop development with C++
   - C++ CMake tools for Windows
 - [Qt 6.10.0](https://www.qt.io/download-qt-installer-oss)
