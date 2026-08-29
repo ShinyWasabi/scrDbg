@@ -21,8 +21,8 @@ namespace rage::gta5
 
         if constexpr (std::is_same_v<T, scrThreadGEN8::TLS>)
         {
-            tls.m_CurrentThread = reinterpret_cast<scrThreadGEN8**>(*reinterpret_cast<uintptr_t*>(__readgsqword(0x58)) + 0x2A50);
-            tls.m_CurrentThreadActive = reinterpret_cast<bool*>(*reinterpret_cast<uintptr_t*>(__readgsqword(0x58)) + 0x2A58);
+            tls.m_CurrentThread = reinterpret_cast<scrThreadGEN8**>(*reinterpret_cast<uintptr_t*>(__readgsqword(0x58)) + 0x2A48);
+            tls.m_CurrentThreadActive = reinterpret_cast<bool*>(*reinterpret_cast<uintptr_t*>(__readgsqword(0x58)) + 0x2A50);
         }
         else
         {
