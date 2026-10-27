@@ -213,4 +213,31 @@ namespace scrDbgLib
         m_TrackerPathLen = 0;
         m_TrackerPathBuf[0] = '\0';
     }
+
+    void Debugger::RecordIndirectCall(uint32_t scriptHash, uint32_t pc, uint32_t target)
+    {
+        if (scriptHash == m_LastIndirectScript && pc == m_LastIndirectPc && target == m_LastIndirectTarget)
+            return;
+
+        m_LastIndirectScript = scriptHash;
+        m_LastIndirectPc = pc;
+        m_LastIndirectTarget = target;
+
+        std::lock_guard lock(m_IndirectCallsMutex);
+
+        auto& targets = m_IndirectCalls[scriptHash][pc];
+        if (targets.size() < 64 && std::find(targets.begin(), targets.end(), target) == targets.end())
+            targets.push_back(target);
+    }
+
+    std::unordered_map<uint32_t, std::vector<uint32_t>> Debugger::GetIndirectCalls(uint32_t scriptHash) const
+    {
+        std::lock_guard lock(m_IndirectCallsMutex);
+
+        auto it = m_IndirectCalls.find(scriptHash);
+        if (it == m_IndirectCalls.end())
+            return {};
+
+        return it->second;
+    }
 }

@@ -445,4 +445,22 @@ namespace scrDbgLib::PipeCommands
     {
         VMLogger::Clear();
     }
+
+    void GetIndirectCalls()
+    {
+        uint32_t script = 0;
+        PipeServer::Receive(&script, sizeof(script));
+
+        auto calls = g_Game->GetDebugger()->GetIndirectCalls(script);
+
+        uint32_t count = static_cast<uint32_t>(calls.size());
+        PipeServer::Send(&count, sizeof(count));
+
+        for (const auto& [pc, targets] : calls)
+        {
+            PipeIndirectCallSite site{pc, static_cast<uint32_t>(targets.size())};
+            PipeServer::Send(&site, sizeof(site));
+            PipeServer::Send(targets.data(), targets.size() * sizeof(uint32_t));
+        }
+    }
 }

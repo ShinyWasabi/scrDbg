@@ -96,6 +96,11 @@ namespace scrDbgLib
                 PipeCommands::ClearLoggerFile();
                 break;
             }
+            case PipeCommands::ePipeCommands::INDIRECT_CALLS_GET:
+            {
+                PipeCommands::GetIndirectCalls();
+                break;
+            }
             }
         }
     }

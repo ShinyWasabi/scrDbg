@@ -41,6 +41,10 @@ namespace scrDbgLib
         bool ShouldBreakTracking(uint8_t op) const;
         void BreakTracking();
 
+        // Observed CALLINDIRECT targets, recorded by the VM on every indirect call
+        void RecordIndirectCall(uint32_t scriptHash, uint32_t pc, uint32_t target);
+        std::unordered_map<uint32_t, std::vector<uint32_t>> GetIndirectCalls(uint32_t scriptHash) const;
+
     protected:
         virtual void PauseGame(bool pause) = 0;
 
@@ -61,5 +65,12 @@ namespace scrDbgLib
         uint32_t m_TrackerVariableIndex = 0;
         char m_TrackerPathBuf[256] = {};
         std::size_t m_TrackerPathLen = 0;
+
+    private:
+        mutable std::mutex m_IndirectCallsMutex; // so that pipe thread doesnt attempt to read when vm is inserting calls
+        std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::vector<uint32_t>>> m_IndirectCalls;
+        uint32_t m_LastIndirectScript = 0;
+        uint32_t m_LastIndirectPc = 0;
+        uint32_t m_LastIndirectTarget = 0;
     };
 }

@@ -33,12 +33,12 @@ namespace scrDbgApp
             OnCustomPatch(index);
         });
 
-        QAction* patternAction = addAction("Generate Pattern");
+        QAction* patternAction = addAction("Generate Pattern\tCtrl+Alt+S");
         connect(patternAction, &QAction::triggered, [this, index]() {
             OnGeneratePattern(index);
         });
 
-        QAction* xrefAction = addAction("View Xrefs");
+        QAction* xrefAction = addAction("View Xrefs\tCtrl+X");
         connect(xrefAction, &QAction::triggered, [this, index]() {
             OnViewXrefsDialog(index);
         });
@@ -51,8 +51,16 @@ namespace scrDbgApp
             });
         }
 
+        if (g_Game->CreateDecompiler(*disassembler))
+        {
+            QAction* decompileAction = addAction("Decompile Function\tF5");
+            connect(decompileAction, &QAction::triggered, [this, index]() {
+                OnDecompileFunction(index);
+            });
+        }
+
         bool exists = PipeCommands::BreakpointExists(scriptHash, pc);
-        QAction* breakpointAction = exists ? addAction("Remove Breakpoint") : addAction("Set Breakpoint");
+        QAction* breakpointAction = exists ? addAction("Remove Breakpoint\tF2") : addAction("Set Breakpoint\tF2");
         connect(breakpointAction, &QAction::triggered, [this, index, exists]() {
             OnSetBreakpoint(index, !exists);
         });
@@ -78,6 +86,7 @@ namespace scrDbgApp
         m_Disassembler->GetProgram()->SetCode(pc, patch);
         m_Disassembler->Refresh();
         static_cast<DisassemblyModel*>(const_cast<QAbstractItemModel*>(index.model()))->layoutChanged();
+        emit CodePatched();
     }
 
     void DisassemblyContextMenu::OnCustomPatch(const QModelIndex& index)
@@ -128,6 +137,7 @@ namespace scrDbgApp
         m_Disassembler->GetProgram()->SetCode(pc, patch);
         m_Disassembler->Refresh();
         static_cast<DisassemblyModel*>(const_cast<QAbstractItemModel*>(index.model()))->layoutChanged();
+        emit CodePatched();
     }
 
     void DisassemblyContextMenu::OnGeneratePattern(const QModelIndex& index)
@@ -196,5 +206,11 @@ namespace scrDbgApp
     {
         uint32_t pc = m_Disassembler->GetInstruction(index.row());
         PipeCommands::SetBreakpoint(m_ScriptHash, pc, set);
+        emit BreakpointToggled();
+    }
+
+    void DisassemblyContextMenu::OnDecompileFunction(const QModelIndex& index)
+    {
+        emit DecompileRequested(m_Disassembler->GetInstruction(index.row()));
     }
 }

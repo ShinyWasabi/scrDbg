@@ -19,6 +19,7 @@ namespace scrDbgApp
         uint32_t GetNativeCount() const override;
         uint32_t GetNameHash() const override;
         uint32_t GetRefCount() const override;
+        std::string GetName() const override;
         uint32_t GetStringsSize() const override;
         std::vector<uint8_t> GetCode() const override;
         void SetCode(uint32_t index, const std::vector<uint8_t>& bytes) const override;
@@ -42,6 +43,7 @@ namespace scrDbgApp
         static constexpr size_t NATIVES = 0x40;
         static constexpr size_t NAME_HASH = 0x58;
         static constexpr size_t REF_COUNT = 0x5C;
+        static constexpr size_t NAME = 0x60;
         static constexpr size_t STRING_PAGES = 0x68;
         static constexpr size_t STRINGS_SIZE = 0x70;
 

@@ -305,4 +305,34 @@ namespace scrDbgApp::PipeCommands
         uint8_t cmd = static_cast<uint8_t>(ePipeCommands::LOGGER_CLEAR_FILE);
         PipeClient::Send(&cmd, sizeof(cmd));
     }
+
+    std::unordered_map<uint32_t, std::vector<uint32_t>> GetIndirectCalls(uint32_t scriptHash)
+    {
+        uint8_t cmd = static_cast<uint8_t>(ePipeCommands::INDIRECT_CALLS_GET);
+        PipeClient::Send(&cmd, sizeof(cmd));
+
+        PipeClient::Send(&scriptHash, sizeof(scriptHash));
+
+        uint32_t count = 0;
+        if (!PipeClient::Receive(&count, sizeof(count)))
+            return {};
+
+        std::unordered_map<uint32_t, std::vector<uint32_t>> result;
+        result.reserve(count);
+
+        for (uint32_t i = 0; i < count; i++)
+        {
+            PipeIndirectCallSite site{};
+            if (!PipeClient::Receive(&site, sizeof(site)))
+                break;
+
+            std::vector<uint32_t> targets(site.TargetCount);
+            if (site.TargetCount && !PipeClient::Receive(targets.data(), targets.size() * sizeof(uint32_t)))
+                break;
+
+            result.emplace(site.Pc, std::move(targets));
+        }
+
+        return result;
+    }
 }

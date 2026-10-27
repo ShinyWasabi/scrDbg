@@ -16,7 +16,9 @@ namespace scrDbgLib::PipeCommands
 
         LOGGER_SET_TYPE,
         LOGGER_SET_SCRIPT,
-        LOGGER_CLEAR_FILE
+        LOGGER_CLEAR_FILE,
+
+        INDIRECT_CALLS_GET
     };
 
     struct PipeBreakpoint
@@ -28,6 +30,12 @@ namespace scrDbgLib::PipeCommands
     struct PipeBreakpointSet : PipeBreakpoint
     {
         bool Set = 0;
+    };
+
+    struct PipeIndirectCallSite
+    {
+        uint32_t Pc = 0;
+        uint32_t TargetCount = 0; // followed by TargetCount uint32_t target addresses
     };
 
     struct PipeStructField
@@ -52,4 +60,6 @@ namespace scrDbgLib::PipeCommands
     extern void SetLoggerType();
     extern void SetLoggerScript();
     extern void ClearLoggerFile();
+
+    extern void GetIndirectCalls();
 }

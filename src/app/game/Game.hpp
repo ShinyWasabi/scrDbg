@@ -1,5 +1,6 @@
 #pragma once
 #include "Types.hpp"
+#include "decomp/Decompiler.hpp"
 #include "disasm/Disassembler.hpp"
 
 namespace scrDbgApp
@@ -34,6 +35,10 @@ namespace scrDbgApp
         virtual int GetResourceId() const = 0;
         virtual bool Is64Bit() const = 0;
         virtual std::unique_ptr<Disassembler> CreateDisassembly(std::unique_ptr<ScriptProgram> program) const = 0;
+        virtual std::unique_ptr<Decompiler> CreateDecompiler(const Disassembler& disassembler) const // nullptr for games the decompiler doesn't support yet.
+        {
+            return nullptr;
+        }
 
         virtual std::string GetGameBuild() const
         {

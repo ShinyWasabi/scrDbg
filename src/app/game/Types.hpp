@@ -5,6 +5,8 @@ namespace scrDbgApp
     class ScriptProgram
     {
     public:
+        virtual ~ScriptProgram() = default;
+
         virtual std::string GetName() const
         {
             return {};
@@ -113,6 +115,8 @@ namespace scrDbgApp
     class ScriptThread
     {
     public:
+        virtual ~ScriptThread() = default;
+
         enum State : uint32_t
         {
             RUNNING,

@@ -38,6 +38,18 @@ namespace scrDbgApp
         return false;
     }
 
+    bool ExportOptionsDialog::HasDecompiler(GameType type)
+    {
+        switch (type)
+        {
+        case GameType::GTA5_GEN8:
+        case GameType::GTA5_GEN9:
+            return true;
+        }
+
+        return false;
+    }
+
     ExportOptionsDialog::ExportOptionsDialog(uint32_t scriptHash, QTableView* disassembly, QWidget* parent)
         : QDialog(parent)
     {
@@ -62,17 +74,27 @@ namespace scrDbgApp
         m_ExportStrings = new QPushButton("Export Strings");
         m_ExportStrings->setToolTip("Export the string literals of this script program.");
 
+        m_ExportDecompiled = new QPushButton("Export Decompiled");
+        m_ExportDecompiled->setToolTip("Decompile every function of this script program to a C source file.");
+        if (!HasDecompiler(gameType))
+        {
+            m_ExportDecompiled->setEnabled(false);
+            m_ExportDecompiled->setToolTip("Decompilation is not supported for this game yet.");
+        }
+
         int maxButtonWidth = std::max({m_ExportDisassembly->sizeHint().width(),
             m_ExportStatics->sizeHint().width(),
             m_ExportGlobals->sizeHint().width(),
             m_ExportNatives->sizeHint().width(),
-            m_ExportStrings->sizeHint().width()});
+            m_ExportStrings->sizeHint().width(),
+            m_ExportDecompiled->sizeHint().width()});
 
         m_ExportDisassembly->setMinimumWidth(maxButtonWidth);
         m_ExportStatics->setMinimumWidth(maxButtonWidth);
         m_ExportGlobals->setMinimumWidth(maxButtonWidth);
         m_ExportNatives->setMinimumWidth(maxButtonWidth);
         m_ExportStrings->setMinimumWidth(maxButtonWidth);
+        m_ExportDecompiled->setMinimumWidth(maxButtonWidth);
 
         if (hasProgGlobals)
         {
@@ -112,6 +134,7 @@ namespace scrDbgApp
         row++;
         grid->addWidget(m_ExportStrings, row, 0);
         grid->addWidget(m_OnlyTextLabels, row++, 1);
+        grid->addWidget(m_ExportDecompiled, row++, 0);
 
         connect(m_ExportDisassembly, &QPushButton::clicked, this, [disassembly]() {
             ExportDisassembly(disassembly);
@@ -132,11 +155,15 @@ namespace scrDbgApp
         connect(m_ExportStrings, &QPushButton::clicked, this, [this, scriptHash]() {
             ExportStrings(scriptHash, m_OnlyTextLabels->isChecked());
         });
+
+        connect(m_ExportDecompiled, &QPushButton::clicked, this, [scriptHash]() {
+            ExportDecompiled(scriptHash);
+        });
     }
 
-    void ExportOptionsDialog::ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb)
+    void ExportOptionsDialog::ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb, const QString& filter)
     {
-        QString name = QFileDialog::getSaveFileName(nullptr, title, filename, "Text Files (*.txt);;All Files (*)");
+        QString name = QFileDialog::getSaveFileName(nullptr, title, filename, filter);
         if (name.isEmpty())
             return;
 
@@ -528,5 +555,58 @@ namespace scrDbgApp
             progress.setValue(count);
             QMessageBox::information(nullptr, "Export Strings", QString("Exported %1 strings.").arg(exportedCount));
         });
+    }
+
+    void ExportOptionsDialog::ExportDecompiled(uint32_t scriptHash)
+    {
+        auto program = g_Game->GetProgram(scriptHash);
+        if (!program)
+            return;
+
+        std::string scriptName = program->GetName();
+
+        auto disassembler = g_Game->CreateDisassembly(std::move(program));
+        auto decompiler = disassembler ? g_Game->CreateDecompiler(*disassembler) : nullptr;
+        if (!decompiler)
+        {
+            QMessageBox::warning(nullptr, "Export Decompiled", "Decompilation is not supported for this game yet.");
+            return;
+        }
+
+        const int count = decompiler->GetFunctionCount();
+        if (count == 0)
+        {
+            QMessageBox::warning(nullptr, "No Functions", "This script has no functions.");
+            return;
+        }
+
+        QString fileName = QString::fromStdString(scriptName.empty() ? "script" : scriptName) + ".c";
+
+        auto exportFunctions = [&](QTextStream& out, QProgressDialog& progress) {
+            out << QString::fromStdString(decompiler->GetScriptHeader()) << "\n";
+
+            QElapsedTimer timer;
+            timer.start();
+            for (int i = 0; i < count; i++)
+            {
+                if (progress.wasCanceled())
+                    return;
+
+                out << QString::fromStdString(decompiler->DecompileFunction(i).ToText()) << "\n";
+
+                if (timer.elapsed() >= 50)
+                {
+                    progress.setValue(i);
+                    QCoreApplication::processEvents();
+
+                    timer.restart();
+                }
+            }
+
+            progress.setValue(count);
+            QMessageBox::information(nullptr, "Export Decompiled", QString("Decompiled %1 functions.").arg(count));
+        };
+
+        ExportToFile("Decompiled Script", fileName, count, exportFunctions, "C Source Files (*.c);;All Files (*)");
     }
 }

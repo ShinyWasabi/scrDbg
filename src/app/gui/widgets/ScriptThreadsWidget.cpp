@@ -7,17 +7,21 @@
 #include "gui/menus/DisassemblyContextMenu.hpp"
 #include "gui/models/DisassemblyModel.hpp"
 #include "gui/models/FunctionListModel.hpp"
+#include "gui/widgets/PseudocodeView.hpp"
 #include "pipe/PipeCommands.hpp"
-#include <QCheckBox>
 #include <QComboBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QShortcut>
 #include <QSplitter>
+#include <QTabWidget>
 #include <QTableView>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -153,12 +157,12 @@ namespace scrDbgApp
         m_ExportOptions->setToolTip("View export options.");
         connect(m_ExportOptions, &QPushButton::clicked, this, &ScriptThreadsWidget::OnExportOptionsDialog);
 
-        m_JumpToAddress = new QPushButton("Jump to Address");
-        m_JumpToAddress->setToolTip("Jump to a raw address in the disassembly.");
+        m_JumpToAddress = new QPushButton("Jump to Address (G)");
+        m_JumpToAddress->setToolTip("Jump to a raw address in the disassembly or pseudocode. Shortcut: G");
         connect(m_JumpToAddress, &QPushButton::clicked, this, &ScriptThreadsWidget::OnJumpToAddress);
 
-        m_BinarySearch = new QPushButton("Binary Search");
-        m_BinarySearch->setToolTip("Search for a byte sequence in the disassembly.");
+        m_BinarySearch = new QPushButton("Binary Search (Alt+B)");
+        m_BinarySearch->setToolTip("Search for a byte sequence in the disassembly. Shortcut: Alt+B");
         connect(m_BinarySearch, &QPushButton::clicked, this, &ScriptThreadsWidget::OnBinarySearch);
 
         m_ViewStack = new QPushButton("View Stack");
@@ -166,13 +170,14 @@ namespace scrDbgApp
         connect(m_ViewStack, &QPushButton::clicked, this, &ScriptThreadsWidget::OnViewStack);
 
         m_ViewBreakpoints = new QPushButton("View Breakpoints");
-        m_ViewBreakpoints->setToolTip("View currently set breakpoints.");
-        m_BreakpointsPauseGame = new QCheckBox("Breakpoints pause game");
-        m_BreakpointsPauseGame->setToolTip("Choose whether a breakpoint should pause the entire game or only its script thread.");
+        m_ViewBreakpoints->setToolTip("View, add and remove breakpoints.");
         connect(m_ViewBreakpoints, &QPushButton::clicked, this, &ScriptThreadsWidget::OnBreakpointsDialog);
-        connect(m_BreakpointsPauseGame, &QCheckBox::toggled, this, [](bool checked) {
-            PipeCommands::SetBreakpointPauseGame(checked);
-        });
+
+        // Scoped to this tab, so they don't fire on the other main tabs
+        auto jumpShortcut = new QShortcut(QKeySequence(Qt::Key_G), this, this, &ScriptThreadsWidget::OnJumpToAddress, Qt::WidgetWithChildrenShortcut);
+        auto searchShortcut = new QShortcut(QKeySequence(Qt::ALT | Qt::Key_B), this, this, &ScriptThreadsWidget::OnBinarySearch, Qt::WidgetWithChildrenShortcut);
+        Q_UNUSED(jumpShortcut);
+        Q_UNUSED(searchShortcut);
 
         QHBoxLayout* buttonsLayout = new QHBoxLayout();
         buttonsLayout->addWidget(m_TogglePauseScript);
@@ -182,7 +187,6 @@ namespace scrDbgApp
         buttonsLayout->addWidget(m_BinarySearch);
         buttonsLayout->addWidget(m_ViewStack);
         buttonsLayout->addWidget(m_ViewBreakpoints);
-        buttonsLayout->addWidget(m_BreakpointsPauseGame);
         buttonsLayout->addStretch();
 
         m_FunctionList = new QTableView(this);
@@ -197,7 +201,12 @@ namespace scrDbgApp
         connect(m_FunctionList, &QTableView::doubleClicked, this, [this](const QModelIndex& index) {
             QModelIndex idx = m_FunctionFilter->mapToSource(index);
             uint32_t pc = m_Disassembler->GetFunction(idx.row()).Start;
-            ScrollToAddress(pc);
+
+            // Open it in whichever view is showing.
+            if (m_CodeTabs->currentWidget() == m_Pseudocode && m_Pseudocode->ShowAddress(pc))
+                m_Pseudocode->FocusEditor();
+            else
+                ScrollToAddress(pc);
         });
 
         m_FunctionSearch = new QLineEdit(this);
@@ -230,6 +239,8 @@ namespace scrDbgApp
         m_Disassembly->setStyleSheet("QTableView { font-family: Consolas; font-size: 11pt; }");
         m_Disassembly->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(m_Disassembly, &QWidget::customContextMenuRequested, this, &ScriptThreadsWidget::OnDisassemblyContextMenu);
+        m_Disassembly->installEventFilter(this);
+        m_Disassembly->viewport()->installEventFilter(this);
 
         QVBoxLayout* disasmLayout = new QVBoxLayout();
         disasmLayout->addWidget(m_Disassembly);
@@ -238,9 +249,28 @@ namespace scrDbgApp
         QWidget* disasmWidget = new QWidget(this);
         disasmWidget->setLayout(disasmLayout);
 
+        m_Pseudocode = new PseudocodeView(this);
+        connect(m_Pseudocode, &PseudocodeView::AddressActivated, this, &ScriptThreadsWidget::OnPseudocodeAddressActivated);
+        connect(m_Pseudocode, &PseudocodeView::BreakpointsChanged, this, [this]() {
+            if (auto model = GetDisassemblyModel())
+                model->InvalidateBreakpoints();
+        });
+
+        // disassembly and pseudocode share one panel, tab switches between them (like ida)
+        m_CodeTabs = new QTabWidget(this);
+        m_CodeTabs->addTab(disasmWidget, "Disassembly");
+        m_CodeTabs->addTab(m_Pseudocode, "Pseudocode");
+        m_CodeTabs->setTabEnabled(1, false);
+        connect(m_CodeTabs, &QTabWidget::currentChanged, this, [this](int index) {
+            if (m_CodeTabs->widget(index) == m_Pseudocode)
+                m_Pseudocode->RefreshBreakpoints(); // may have changed from the disassembly
+            else if (auto model = GetDisassemblyModel())
+                model->InvalidateBreakpoints(); // or from the pseudocode..
+        });
+
         QSplitter* splitter = new QSplitter(Qt::Horizontal, this);
         splitter->addWidget(m_FunctionWidget);
-        splitter->addWidget(disasmWidget);
+        splitter->addWidget(m_CodeTabs);
         splitter->setChildrenCollapsible(false);
         splitter->setStretchFactor(0, 2);
         splitter->setStretchFactor(1, 4);
@@ -283,6 +313,7 @@ namespace scrDbgApp
         if (!idx.isValid())
             return false;
 
+        m_CodeTabs->setCurrentIndex(0);
         m_Disassembly->scrollTo(idx, QAbstractItemView::PositionAtCenter);
         m_Disassembly->setCurrentIndex(idx);
         m_Disassembly->setFocus(Qt::OtherFocusReason);
@@ -318,6 +349,11 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::CleanupDisassembly()
     {
+        // The pseudocode view holds a raw pointer to the disassembler
+        m_Pseudocode->SetDisassembler(nullptr, 0);
+        m_CodeTabs->setCurrentIndex(0);
+        m_CodeTabs->setTabEnabled(1, false);
+
         m_Disassembler.reset();
 
         if (m_Disassembly->model())
@@ -340,9 +376,12 @@ namespace scrDbgApp
 
         m_Disassembler = g_Game->CreateDisassembly(std::move(program));
 
+        m_Pseudocode->SetDisassembler(m_Disassembler.get(), m_Disassembler->GetHash());
+        m_CodeTabs->setTabEnabled(1, m_Pseudocode->IsSupported());
+
         auto disasmModel = new DisassemblyModel(m_Disassembler.get(), m_Disassembly);
         m_Disassembly->setModel(disasmModel);
-        m_Disassembly->setColumnWidth(0, 100);
+        m_Disassembly->setColumnWidth(0, 100 + 24); // have some space for the breakpoint marker
         m_Disassembly->setColumnWidth(1, 150);
         m_Disassembly->setColumnWidth(2, 400);
 
@@ -370,10 +409,18 @@ namespace scrDbgApp
         auto state = thread->GetState();
         auto activeBp = PipeCommands::GetActiveBreakpoint();
 
-        m_BreakpointsPauseGame->setEnabled(!activeBp.has_value());
-
-        bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame->isChecked();
+        bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame;
         bool isLocalBreakpoint = activeBp.has_value() && activeBp->first == hash;
+
+        m_Pseudocode->SetExecutionAddress(isLocalBreakpoint ? std::optional<uint32_t>(activeBp->second) : std::nullopt);
+
+        // Repaint the execution marker when a breakpoint is hit or resumed.
+        if (activeBp != m_LastActiveBreakpoint)
+        {
+            m_LastActiveBreakpoint = activeBp;
+            if (auto model = GetDisassemblyModel())
+                model->InvalidateBreakpoints();
+        }
 
         if (isGlobalBreakpointPause || isLocalBreakpoint)
         {
@@ -497,7 +544,7 @@ namespace scrDbgApp
             return;
 
         auto activeBp = PipeCommands::GetActiveBreakpoint();
-        bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame->isChecked();
+        bool isGlobalBreakpointPause = activeBp.has_value() && m_BreakpointsPauseGame;
         bool isLocalBreakpoint = activeBp.has_value() && activeBp->first == hash;
 
         if (isGlobalBreakpointPause || isLocalBreakpoint)
@@ -541,6 +588,12 @@ namespace scrDbgApp
             return;
         }
 
+        if (m_CodeTabs->currentWidget() == m_Pseudocode && m_Pseudocode->ShowAddress(addr))
+        {
+            m_Pseudocode->FocusEditor();
+            return;
+        }
+
         if (!ScrollToAddress(addr))
             QMessageBox::warning(this, "Not Found", "No instruction at this address.");
     }
@@ -568,12 +621,16 @@ namespace scrDbgApp
 
     void ScriptThreadsWidget::OnBreakpointsDialog()
     {
-        BreakpointsDialog dlg(this);
+        BreakpointsDialog dlg(m_BreakpointsPauseGame, !PipeCommands::GetActiveBreakpoint().has_value(), this);
+        connect(&dlg, &BreakpointsDialog::PauseGameChanged, this, [this](bool pause) {
+            m_BreakpointsPauseGame = pause;
+            PipeCommands::SetBreakpointPauseGame(pause);
+        });
         connect(&dlg, &BreakpointsDialog::BreakpointDoubleClicked, this, [this, &dlg](uint32_t script, uint32_t pc) {
             int idx = m_ScriptNames->findData(script);
             if (idx == -1)
             {
-                QMessageBox::warning(this, "Script not found", "Script does not exist.");
+                QMessageBox::warning(this, "Script not found", "That script is not running.");
                 return;
             }
 
@@ -586,6 +643,9 @@ namespace scrDbgApp
             dlg.close();
         });
         dlg.exec();
+
+        // Breakpoints may have been added or removed in the dialog
+        OnBreakpointsChanged();
     }
 
     void ScriptThreadsWidget::OnUpdateDisassemblyInfoByScroll()
@@ -610,11 +670,98 @@ namespace scrDbgApp
 
         DisassemblyContextMenu menu(index, m_Disassembler.get(), GetCurrentScriptHash(), this);
         connect(&menu, &DisassemblyContextMenu::JumpToAddressRequested, this, &ScriptThreadsWidget::OnJumpToAddressFromMenu);
+        connect(&menu, &DisassemblyContextMenu::DecompileRequested, this, &ScriptThreadsWidget::OnDecompileAt);
+        connect(&menu, &DisassemblyContextMenu::CodePatched, this, [this]() {
+            m_Pseudocode->Invalidate();
+        });
+        connect(&menu, &DisassemblyContextMenu::BreakpointToggled, this, &ScriptThreadsWidget::OnBreakpointsChanged);
         menu.exec(m_Disassembly->viewport()->mapToGlobal(pos));
     }
 
     void ScriptThreadsWidget::OnJumpToAddressFromMenu(uint32_t address)
     {
         ScrollToAddress(address);
+    }
+
+    void ScriptThreadsWidget::OnDecompileAt(uint32_t address)
+    {
+        if (!m_Pseudocode->ShowAddress(address))
+        {
+            QMessageBox::warning(this, "Decompile Function", "This instruction is not inside a function.");
+            return;
+        }
+
+        m_CodeTabs->setCurrentWidget(m_Pseudocode);
+        m_Pseudocode->FocusEditor();
+    }
+
+    void ScriptThreadsWidget::OnPseudocodeAddressActivated(uint32_t address)
+    {
+        ScrollToAddress(address);
+    }
+
+    DisassemblyModel* ScriptThreadsWidget::GetDisassemblyModel() const
+    {
+        return qobject_cast<DisassemblyModel*>(m_Disassembly->model());
+    }
+
+    void ScriptThreadsWidget::OnBreakpointsChanged()
+    {
+        if (auto model = GetDisassemblyModel())
+            model->InvalidateBreakpoints();
+        m_Pseudocode->RefreshBreakpoints();
+    }
+
+    void ScriptThreadsWidget::ToggleDisassemblyBreakpoint(int row)
+    {
+        if (!m_Disassembler || row < 0 || row >= m_Disassembler->GetInstructionCount())
+            return;
+
+        const uint32_t hash = GetCurrentScriptHash();
+        const uint32_t pc = m_Disassembler->GetInstruction(row);
+        PipeCommands::SetBreakpoint(hash, pc, !PipeCommands::BreakpointExists(hash, pc));
+        OnBreakpointsChanged();
+    }
+
+    bool ScriptThreadsWidget::eventFilter(QObject* watched, QEvent* event)
+    {
+        // F2 toggles a breakpoint on the selected instruction like in the pseudocode
+        if (watched == m_Disassembly && event->type() == QEvent::KeyPress && static_cast<QKeyEvent*>(event)->key() == Qt::Key_F2)
+        {
+            ToggleDisassemblyBreakpoint(m_Disassembly->currentIndex().row());
+            return true;
+        }
+
+        // a click on the marker area (left edge of the address column) toggles a breakpoint
+        if (watched == m_Disassembly->viewport() && event->type() == QEvent::MouseButtonPress)
+        {
+            auto mouse = static_cast<QMouseEvent*>(event);
+            QPoint pos = mouse->position().toPoint();
+            QModelIndex index = m_Disassembly->indexAt(pos);
+
+            if (mouse->button() == Qt::LeftButton && index.isValid() && index.column() == 0)
+            {
+                QRect cell = m_Disassembly->visualRect(index);
+                if (pos.x() < cell.left() + 22) // 16+6
+                {
+                    ToggleDisassemblyBreakpoint(index.row());
+                    return true;
+                }
+            }
+        }
+
+        // Tab in the disassembly opens the pseudocode at the selected instruction. we filter here because QWidget::event() would use tab for focus navigation.
+        if (watched == m_Disassembly && event->type() == QEvent::KeyPress && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Tab)
+        {
+            if (!m_Disassembler || !m_Pseudocode->IsSupported())
+                return QWidget::eventFilter(watched, event);
+
+            QModelIndex index = m_Disassembly->currentIndex();
+            if (index.isValid())
+                OnDecompileAt(m_Disassembler->GetInstruction(index.row()));
+            return true;
+        }
+
+        return QWidget::eventFilter(watched, event);
     }
 }

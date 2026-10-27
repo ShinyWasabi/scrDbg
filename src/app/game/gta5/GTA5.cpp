@@ -1,5 +1,6 @@
 #include "GTA5.hpp"
 #include "core/Scanner.hpp"
+#include "decomp/DecompilerGTA5.hpp"
 #include "disasm/DisassemblerGTA5.hpp"
 #include "types/ScriptProgramGTA5.hpp"
 #include "types/ScriptThreadGTA5_GEN8.hpp"
@@ -41,6 +42,11 @@ namespace scrDbgApp
         auto disasm = std::make_unique<DisassemblerGTA5>(std::move(program));
         disasm->Refresh();
         return disasm;
+    }
+
+    std::unique_ptr<Decompiler> GTA5::CreateDecompiler(const Disassembler& disassembler) const
+    {
+        return std::make_unique<DecompilerGTA5>(disassembler);
     }
 
     bool GTA5_GEN9::Init()

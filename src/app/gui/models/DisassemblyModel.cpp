@@ -1,6 +1,8 @@
 #include "DisassemblyModel.hpp"
 #include "disasm/Disassembler.hpp"
+#include "gui/style/BreakpointStyle.hpp"
 #include "pipe/PipeCommands.hpp"
+#include <QBrush>
 
 namespace scrDbgApp
 {
@@ -29,23 +31,57 @@ namespace scrDbgApp
         return section < 3 ? headers[section] : QVariant();
     }
 
+    void DisassemblyModel::RefreshBreakpointsIfStale() const
+    {
+        if (m_BreakpointsValid && m_BreakpointsAge.isValid() && m_BreakpointsAge.elapsed() < 250)
+            return;
+
+        const uint32_t hash = m_Disassembler->GetHash();
+
+        m_Breakpoints.clear();
+        for (const auto& [script, pc] : PipeCommands::GetAllBreakpoints())
+        {
+            if (script == hash)
+                m_Breakpoints.insert(pc);
+        }
+
+        m_ActivePc.reset();
+        auto active = PipeCommands::GetActiveBreakpoint();
+        if (active && active->first == hash)
+            m_ActivePc = active->second;
+
+        m_BreakpointsValid = true;
+        m_BreakpointsAge.start();
+    }
+
+    void DisassemblyModel::InvalidateBreakpoints()
+    {
+        m_BreakpointsValid = false;
+
+        if (rowCount() > 0)
+            emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount({}) - 1), {Qt::BackgroundRole, Qt::DecorationRole});
+    }
+
     QVariant DisassemblyModel::data(const QModelIndex& index, int role) const
     {
         if (!index.isValid())
             return QVariant();
 
-        if (role == Qt::BackgroundRole)
+        if (role == Qt::BackgroundRole || (role == Qt::DecorationRole && index.column() == 0))
         {
-            auto pc = m_Disassembler->GetInstruction(index.row());
-            auto hash = m_Disassembler->GetHash();
+            RefreshBreakpointsIfStale();
 
-            auto active = PipeCommands::GetActiveBreakpoint();
-            if (active && active->first == hash && active->second == pc)
-                return QBrush(Qt::green);
+            uint32_t pc = m_Disassembler->GetInstruction(index.row());
+            bool execution = m_ActivePc && *m_ActivePc == pc;
+            bool breakpoint = m_Breakpoints.count(pc) != 0;
 
-            if (PipeCommands::BreakpointExists(hash, pc))
-                return QBrush(Qt::red);
+            if (role == Qt::DecorationRole)
+                return BreakpointStyle::MarkerPixmap(16, breakpoint, execution);
 
+            if (execution)
+                return QBrush(BreakpointStyle::EXECUTION_LINE);
+            if (breakpoint)
+                return QBrush(BreakpointStyle::BREAKPOINT_LINE);
             return QVariant();
         }
 

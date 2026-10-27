@@ -15,6 +15,9 @@ namespace scrDbgApp
 
     signals:
         void JumpToAddressRequested(uint32_t address);
+        void DecompileRequested(uint32_t address);
+        void CodePatched();
+        void BreakpointToggled();
 
     private:
         void OnCopy(const QModelIndex& index);
@@ -24,6 +27,7 @@ namespace scrDbgApp
         void OnViewXrefsDialog(const QModelIndex& index);
         void OnJumpToInstructionAddress(const QModelIndex& index);
         void OnSetBreakpoint(const QModelIndex& index, bool set);
+        void OnDecompileFunction(const QModelIndex& index);
 
         Disassembler* m_Disassembler;
         uint32_t m_ScriptHash;

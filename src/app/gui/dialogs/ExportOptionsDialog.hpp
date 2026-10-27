@@ -20,20 +20,23 @@ namespace scrDbgApp
     private:
         static bool HasProgramGlobals(GameType type);
         static bool HasProgramNatives(GameType type);
+        static bool HasDecompiler(GameType type);
 
-        static void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb);
+        static void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb, const QString& filter = "Text Files (*.txt);;All Files (*)");
         static QString FormatValue(Pointer value, bool includeString);
         static void ExportDisassembly(QTableView* view);
         static void ExportStatics(uint32_t scriptHash);
         static void ExportGlobals(uint32_t scriptHash, bool exportAll);
         static void ExportNatives(uint32_t scriptHash, bool exportAll);
         static void ExportStrings(uint32_t scriptHash, bool onlyTextLabels);
+        static void ExportDecompiled(uint32_t scriptHash);
 
         QPushButton* m_ExportDisassembly;
         QPushButton* m_ExportStatics;
         QPushButton* m_ExportGlobals;
         QPushButton* m_ExportNatives;
         QPushButton* m_ExportStrings;
+        QPushButton* m_ExportDecompiled;
         QCheckBox* m_ExportAllGlobals = nullptr;
         QCheckBox* m_ExportAllNatives = nullptr;
         QCheckBox* m_OnlyTextLabels;

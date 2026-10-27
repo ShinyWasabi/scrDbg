@@ -1065,6 +1065,7 @@ namespace rage::rdr3
             uint32_t ofs = sp[0].Uns;
             if (!ofs)
                 return OnException(pc, op, "Function pointer is NULL!");
+            debugger->RecordIndirectCall(scriptHash, pc, ofs);
             sp[0].Uns = static_cast<int32_t>(code - base);
             JUMP(ofs);
             goto NEXT;

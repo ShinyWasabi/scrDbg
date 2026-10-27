@@ -8,16 +8,22 @@ class QPushButton;
 class QLineEdit;
 class QSortFilterProxyModel;
 class QTableView;
-class QCheckBox;
+class QTabWidget;
 
 namespace scrDbgApp
 {
+    class DisassemblyModel;
+    class PseudocodeView;
+
     class ScriptThreadsWidget : public QWidget
     {
         Q_OBJECT
 
     public:
         explicit ScriptThreadsWidget(QWidget* parent = nullptr);
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override;
 
     private slots:
         void OnUpdateScripts();
@@ -32,9 +38,14 @@ namespace scrDbgApp
         void OnUpdateDisassemblyInfoBySelection();
         void OnDisassemblyContextMenu(const QPoint& pos);
         void OnJumpToAddressFromMenu(uint32_t address);
+        void OnDecompileAt(uint32_t address);
+        void OnPseudocodeAddressActivated(uint32_t address);
 
     private:
         uint32_t GetCurrentScriptHash();
+        DisassemblyModel* GetDisassemblyModel() const;
+        void ToggleDisassemblyBreakpoint(int row);
+        void OnBreakpointsChanged();
         bool ScrollToAddress(uint32_t address);
         void UpdateDisassemblyInfo(int row, bool includeDesc);
         void CleanupDisassembly();
@@ -42,6 +53,7 @@ namespace scrDbgApp
         void UpdateCurrentScript();
 
         uint32_t m_LastThreadId;
+        std::optional<std::pair<uint32_t, uint32_t>> m_LastActiveBreakpoint;
         std::unique_ptr<Disassembler> m_Disassembler;
 
         QLabel* m_State;
@@ -75,13 +87,15 @@ namespace scrDbgApp
         QPushButton* m_BinarySearch;
         QPushButton* m_ViewStack;
         QPushButton* m_ViewBreakpoints;
-        QCheckBox* m_BreakpointsPauseGame;
+        bool m_BreakpointsPauseGame = false; // no pipe getter
         QWidget* m_FunctionWidget;
         QLineEdit* m_FunctionSearch;
         QSortFilterProxyModel* m_FunctionFilter;
         QTableView* m_FunctionList;
         QLabel* m_DisassemblyInfo;
         QTableView* m_Disassembly;
+        QTabWidget* m_CodeTabs;
+        PseudocodeView* m_Pseudocode;
         QTimer* m_UpdateTimer;
     };
 }
