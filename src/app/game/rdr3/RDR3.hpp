@@ -28,6 +28,7 @@ namespace scrDbgApp
         }
 
         std::unique_ptr<Disassembler> CreateDisassembly(std::unique_ptr<ScriptProgram> program) const override;
+        std::unique_ptr<Decompiler> CreateDecompiler(const Disassembler& disassembler) const override;
 
         std::string GetGameBuild() const override;
         Pointer GetGlobal(uint32_t index) const override;

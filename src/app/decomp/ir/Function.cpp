@@ -2,8 +2,9 @@
 
 namespace scrDbgApp::Decomp
 {
-    Function::Function(const Disassembler::FunctionInfo& info, uint32_t reservedSlots)
+    Function::Function(const Disassembler::FunctionInfo& info, uint32_t end, uint32_t reservedSlots)
         : m_Info(info),
+          m_End(end),
           m_ReservedSlots(reservedSlots)
     {
     }
@@ -67,7 +68,7 @@ namespace scrDbgApp::Decomp
             while (j < count && m_Instructions[j].Op == IrOp::INOT)
                 j++;
 
-            if (j >= count || m_Instructions[j].Op != IrOp::JZ)
+            if (j >= count || (m_Instructions[j].Op != IrOp::JZ && m_Instructions[j].Op != IrOp::JNZ))
                 continue;
 
             m_Instructions[i].Nop();

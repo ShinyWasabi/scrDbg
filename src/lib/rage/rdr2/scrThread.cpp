@@ -131,6 +131,10 @@ namespace rage::rdr2
 
         ScriptFiber::Tick(_this->m_Context.m_ProgramHash);
 
+        // Set by the call handlers so ENTER can log the real call site, CALLINDIRECT is shorter than CALL
+        uint32_t lastCallPc = 0;
+        uint32_t lastCallRet = UINT32_MAX;
+
         while (insnCount-- > 0)
         {
             _this->m_InsnCount++;
@@ -502,7 +506,7 @@ namespace rage::rdr2
                 ++sp;
                 sp[0].Int = _this->m_Context.m_Fp;
 
-                uint32_t callsitePc = sp[-1].Uns - 3;
+                uint32_t callsitePc = sp[-1].Uns == lastCallRet ? lastCallPc : sp[-1].Uns - 3;
 
                 uint32_t newSp = static_cast<uint32_t>(sp - stack + 1);
                 _this->m_Context.m_Sp = newSp;
@@ -517,7 +521,7 @@ namespace rage::rdr2
 
                 if (VMLogger::ShouldLog(VMLogType::FUNCTION_CALLS, _this->m_Context.m_ProgramHash))
                 {
-                    auto funcName = program->GetFuncName(pc - 4, nameLen);
+                    auto funcName = program->GetFuncName(opPc, nameLen);
 
                     std::string argsStr = "";
                     for (int i = 0; i < argCount; i++)
@@ -891,6 +895,8 @@ namespace rage::rdr2
             {
                 ++sp;
                 sp[0].Uns = pc + 2;
+                lastCallPc = opPc;
+                lastCallRet = sp[0].Uns;
                 pc = ((static_cast<uint8_t>(op) - static_cast<uint8_t>(scrOpcode::CALL)) << 16) | GET_U16;
                 break;
             }
@@ -1111,6 +1117,8 @@ namespace rage::rdr2
                     uint32_t retPc = pc | (static_cast<uint32_t>(_this->m_Context.m_PatchIndex + 1) << 27);
                     pc = target;
                     sp[0].Uns = retPc;
+                    lastCallPc = opPc;
+                    lastCallRet = sp[0].Uns;
                     _this->m_Context.m_Patched = false;
                     _this->m_Context.m_PatchIndex = -1;
                     curData = program->m_Data;
@@ -1119,7 +1127,10 @@ namespace rage::rdr2
                 {
                     if (target == 0)
                         return _this->OnException(pc, op, "Attempted to call through uninitialized function pointer");
+                    debugger->RecordIndirectCall(_this->m_Context.m_ProgramHash, opPc, target);
                     sp[0].Uns = pc;
+                    lastCallPc = opPc;
+                    lastCallRet = sp[0].Uns;
                     pc = target;
                 }
                 break;
@@ -1260,6 +1271,8 @@ namespace rage::rdr2
             {
                 ++sp;
                 sp[0].Uns = (pc + 3) | (static_cast<uint32_t>(_this->m_Context.m_PatchIndex + 1) << 27);
+                lastCallPc = opPc;
+                lastCallRet = sp[0].Uns;
                 pc = GET_U24;
                 break;
             }
@@ -1267,6 +1280,8 @@ namespace rage::rdr2
             {
                 ++sp;
                 sp[0].Uns = (pc + 3) | (static_cast<uint32_t>(_this->m_Context.m_PatchIndex + 1) << 27);
+                lastCallPc = opPc;
+                lastCallRet = sp[0].Uns;
                 pc = GET_U24;
                 _this->m_Context.m_Patched = false;
                 _this->m_Context.m_PatchIndex = -1;

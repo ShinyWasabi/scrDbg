@@ -28,6 +28,7 @@ namespace scrDbgApp::Decomp
         void PushVectorBinary(const char* symbol);
         void PushCall(std::shared_ptr<FunctionCallBase> call, std::vector<AstPtr>& statements);
         int PopConstantCount(const char* opName);
+        AstPtr AsAddress(AstPtr pointer) const;
 
         const Function& m_Func;
         ScriptContext& m_Context;

@@ -45,12 +45,12 @@ namespace scrDbgApp::Decomp
             return m_Stack.at(m_Stack.size() - 1 - index);
         }
 
-        AstPtr PopVector()
+        AstPtr PopVector(int width = 3)
         {
-            if (Peek()->GetStackCount() == 3)
+            if (Peek()->GetStackCount() == width)
                 return Pop(true);
 
-            if (m_Stack.size() >= 3 && PeekAt(0)->GetStackCount() == 1 && PeekAt(1)->GetStackCount() == 1 && PeekAt(2)->GetStackCount() == 1)
+            if (width == 3 && m_Stack.size() >= 3 && PeekAt(0)->GetStackCount() == 1 && PeekAt(1)->GetStackCount() == 1 && PeekAt(2)->GetStackCount() == 1)
             {
                 AstPtr z = Pop();
                 AstPtr y = Pop();
@@ -58,7 +58,7 @@ namespace scrDbgApp::Decomp
                 return MakeAst<Vector>(std::move(x), std::move(y), std::move(z));
             }
 
-            return MakeAst<Vector>(MakeAst<Unknown>(), MakeAst<Unknown>(), MakeAst<Unknown>());
+            return MakeAst<Vector>(MakeAst<Unknown>(), MakeAst<Unknown>(), MakeAst<Unknown>(), width);
         }
 
         std::vector<AstPtr> PopCount(int count)

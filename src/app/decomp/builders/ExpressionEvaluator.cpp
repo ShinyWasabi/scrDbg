@@ -21,9 +21,10 @@ namespace scrDbgApp::Decomp
 
     void ExpressionEvaluator::PushVectorBinary(const char* symbol)
     {
-        AstPtr rhs = m_Stack.PopVector();
-        AstPtr lhs = m_Stack.PopVector();
-        m_Stack.Push(MakeAst<VectorBinary>(std::move(lhs), std::move(rhs), symbol));
+        int width = m_Context.GetVectorWidth();
+        AstPtr rhs = m_Stack.PopVector(width);
+        AstPtr lhs = m_Stack.PopVector(width);
+        m_Stack.Push(MakeAst<VectorBinary>(std::move(lhs), std::move(rhs), symbol, width));
     }
 
     void ExpressionEvaluator::PushCall(std::shared_ptr<FunctionCallBase> call, std::vector<AstPtr>& statements)
@@ -43,6 +44,23 @@ namespace scrDbgApp::Decomp
         if (constant->GetValue() < 0 || constant->GetValue() > 0xFFFF)
             throw std::runtime_error(std::string(opName) + " count " + std::to_string(constant->GetValue()) + " is out of range");
         return constant->GetValue();
+    }
+
+    // in GTA4 and MP3, a value + constant byte offset used as an address is a field, like Arg_0->f_3. The IADD alone can't tell, Arg_0 might just be an int, so only being dereferenced proves it's a pointer
+    AstPtr ExpressionEvaluator::AsAddress(AstPtr pointer) const
+    {
+        uint32_t slot = m_Context.GetPointerSlotSize();
+        auto sum = slot ? dynamic_cast<BinaryArithmetic*>(pointer.get()) : nullptr;
+        if (!sum || sum->GetSymbol() != "+")
+            return pointer;
+
+        auto offset = dynamic_cast<ConstantInt*>(sum->GetRhs().get());
+        if (!offset || offset->GetValue() < 0 || offset->GetValue() % slot != 0)
+            return pointer;
+
+        auto field = MakeAst<Offset>(sum->GetLhs(), MakeAst<ConstantInt>(offset->GetValue() / static_cast<int32_t>(slot)));
+        field->Address = pointer->Address; // keep the IADD's span
+        return field;
     }
 
     AstPtr ExpressionEvaluator::PopCondition(const Instruction& ins)
@@ -69,6 +87,8 @@ namespace scrDbgApp::Decomp
         case IrOp::ILE_JZ:
             PushCompare("<=");
             break;
+        case IrOp::JNZ: // jumps when the value is non zero, so the JZ style condition is its negation
+            return NegateCondition(m_Stack.Pop());
         default: // JZ tests whatever is on top of the stack
             break;
         }
@@ -99,6 +119,21 @@ namespace scrDbgApp::Decomp
         case IrOp::NOP:
             break;
         case IrOp::IADD:
+        {
+            // for games with no IOFFSET, fields are address + byte offset
+            uint32_t slot = m_Context.GetPointerSlotSize();
+            auto offset = slot ? dynamic_cast<ConstantInt*>(m_Stack.Peek().get()) : nullptr;
+            if (offset && offset->GetValue() >= 0 && offset->GetValue() % slot == 0 && m_Stack.GetSlotCount() >= 2 && m_Stack.PeekAt(1)->IsPointer())
+            {
+                int32_t field = offset->GetValue() / static_cast<int32_t>(slot);
+                m_Stack.Pop();
+                m_Stack.Push(MakeAst<Offset>(m_Stack.Pop(), MakeAst<ConstantInt>(field)));
+                break;
+            }
+
+            PushBinary("+");
+            break;
+        }
         case IrOp::FADD:
             PushBinary("+");
             break;
@@ -163,7 +198,7 @@ namespace scrDbgApp::Decomp
             PushVectorBinary("/");
             break;
         case IrOp::VNEG:
-            m_Stack.Push(MakeAst<VectorNegate>(m_Stack.PopVector()));
+            m_Stack.Push(MakeAst<VectorNegate>(m_Stack.PopVector(m_Context.GetVectorWidth()), m_Context.GetVectorWidth()));
             break;
 
         case IrOp::IAND:
@@ -191,7 +226,8 @@ namespace scrDbgApp::Decomp
         case IrOp::F2V:
         {
             AstPtr value = m_Stack.Pop();
-            m_Stack.Push(value->HasSideEffects() ? MakeAst<FloatToVec>(value) : MakeAst<Vector>(value, value, value));
+            int width = m_Context.GetVectorWidth();
+            m_Stack.Push(value->HasSideEffects() ? MakeAst<FloatToVec>(value, width) : MakeAst<Vector>(value, value, value, width));
             break;
         }
 
@@ -318,11 +354,11 @@ namespace scrDbgApp::Decomp
             break;
 
         case IrOp::LOAD:
-            m_Stack.Push(MakeAst<Load>(m_Stack.Pop()));
+            m_Stack.Push(MakeAst<Load>(AsAddress(m_Stack.Pop())));
             break;
         case IrOp::STORE:
         {
-            AstPtr pointer = m_Stack.Pop();
+            AstPtr pointer = AsAddress(m_Stack.Pop());
             AstPtr value = m_Stack.Pop();
             statements.push_back(MakeAst<Store>(std::move(pointer), std::move(value)));
             break;
@@ -330,19 +366,19 @@ namespace scrDbgApp::Decomp
         case IrOp::STORE_REV:
         {
             AstPtr value = m_Stack.Pop(); // Stores through the pointer below the value without popping it
-            statements.push_back(MakeAst<Store>(m_Stack.Peek(), std::move(value)));
+            statements.push_back(MakeAst<Store>(AsAddress(m_Stack.Peek()), std::move(value)));
             break;
         }
         case IrOp::LOAD_N:
         {
-            AstPtr pointer = m_Stack.Pop();
+            AstPtr pointer = AsAddress(m_Stack.Pop());
             int count = PopConstantCount("LOAD_N");
             m_Stack.Push(MakeAst<LoadN>(std::move(pointer), count));
             break;
         }
         case IrOp::STORE_N:
         {
-            AstPtr pointer = m_Stack.Pop();
+            AstPtr pointer = AsAddress(m_Stack.Pop());
             int count = PopConstantCount("STORE_N");
             statements.push_back(MakeAst<StoreN>(std::move(pointer), m_Stack.PopCount(count)));
             break;
@@ -402,8 +438,18 @@ namespace scrDbgApp::Decomp
             break;
 
         case IrOp::IADD_IMM:
+        {
+            // RDR1 adds byte offsets to addresses with IADD_U8 too (Static_2[i].f_4)
+            uint32_t slot = m_Context.GetPointerSlotSize();
+            if (slot && ins.Imm >= 0 && ins.Imm % slot == 0 && m_Stack.GetSlotCount() >= 1 && m_Stack.Peek()->IsPointer())
+            {
+                m_Stack.Push(MakeAst<Offset>(m_Stack.Pop(), MakeAst<ConstantInt>(static_cast<int32_t>(ins.Imm / slot))));
+                break;
+            }
+
             m_Stack.Push(MakeAst<BinaryArithmetic>(m_Stack.Pop(), MakeAst<ConstantInt>(static_cast<int32_t>(ins.Imm)), "+"));
             break;
+        }
         case IrOp::IMUL_IMM:
             m_Stack.Push(MakeAst<BinaryArithmetic>(m_Stack.Pop(), MakeAst<ConstantInt>(static_cast<int32_t>(ins.Imm)), "*"));
             break;
@@ -453,7 +499,7 @@ namespace scrDbgApp::Decomp
         case IrOp::TEXT_LABEL_APPEND_STRING:
         case IrOp::TEXT_LABEL_APPEND_INT:
         {
-            AstPtr dst = m_Stack.Pop();
+            AstPtr dst = AsAddress(m_Stack.Pop());
             AstPtr value = m_Stack.Pop();
             statements.push_back(MakeAst<TextLabelOp>(GetIrOpName(ins.Op), std::move(dst), std::move(value), static_cast<int>(ins.Imm)));
             break;
@@ -466,6 +512,119 @@ namespace scrDbgApp::Decomp
             statements.push_back(MakeAst<TextLabelCopy>(std::move(dst), m_Stack.PopCount(count), std::move(dstSize)));
             break;
         }
+
+        case IrOp::LOCAL_LOAD_S:
+        case IrOp::STATIC_LOAD_S:
+        case IrOp::GLOBAL_LOAD_S:
+            m_Stack.Push(MakeAst<SecureLoad>(GetIrOpName(ins.Op), m_Stack.Pop(), 1, false));
+            break;
+        case IrOp::LOCAL_STORE_S:
+        case IrOp::LOCAL_STORE_SR:
+        case IrOp::STATIC_STORE_S:
+        case IrOp::STATIC_STORE_SR:
+        case IrOp::GLOBAL_STORE_S:
+        case IrOp::GLOBAL_STORE_SR:
+        {
+            AstPtr pointer = m_Stack.Pop();
+            AstPtr value = m_Stack.Pop();
+            statements.push_back(MakeAst<SecureStore>(GetIrOpName(ins.Op), std::move(pointer), std::vector<AstPtr>{std::move(value)}, false));
+            break;
+        }
+        case IrOp::LOAD_N_S:
+        {
+            AstPtr pointer = m_Stack.Pop();
+            int count = PopConstantCount("LOAD_N_S");
+            m_Stack.Push(MakeAst<SecureLoad>(GetIrOpName(ins.Op), std::move(pointer), count, true));
+            break;
+        }
+        case IrOp::STORE_N_S:
+        case IrOp::STORE_N_SR:
+        {
+            AstPtr pointer = m_Stack.Pop();
+            int count = PopConstantCount(GetIrOpName(ins.Op));
+            statements.push_back(MakeAst<SecureStore>(GetIrOpName(ins.Op), std::move(pointer), m_Stack.PopCount(count), true));
+            break;
+        }
+
+        case IrOp::LOCAL_STACK:
+        case IrOp::STATIC_STACK:
+        case IrOp::GLOBAL_STACK:
+        {
+            AstPtr index = m_Stack.Pop();
+            auto constant = dynamic_cast<ConstantInt*>(index.get());
+            if (ins.Op == IrOp::LOCAL_STACK)
+            {
+                // frame indices count the args and reserved slots, so not Local_[expr]
+                m_Stack.Push(constant ? MakeAst<Local>(m_Func, static_cast<uint32_t>(constant->GetValue())) : MakeAst<DynamicVariable>("FrameVar_", std::move(index)));
+            }
+            else
+            {
+                const char* prefix = ins.Op == IrOp::STATIC_STACK ? "Static_" : "Global_";
+                m_Stack.Push(constant ? MakeAst<Variable>(prefix, static_cast<uint32_t>(constant->GetValue())) : MakeAst<DynamicVariable>(prefix, std::move(index)));
+            }
+            break;
+        }
+        case IrOp::ARRAY_STACK:
+        {
+            AstPtr pointer = AsAddress(m_Stack.Pop());
+            int size = PopConstantCount("ARRAY");
+            AstPtr index = m_Stack.Pop();
+            m_Stack.Push(MakeAst<Array>(static_cast<uint32_t>(size), std::move(pointer), std::move(index)));
+            break;
+        }
+        case IrOp::PUSH_STRING:
+        {
+            std::string comment = m_Context.GetStringComment(ins.Text);
+            m_Stack.Push(MakeAst<StringLiteral>(ins.Text, std::move(comment)));
+            break;
+        }
+        case IrOp::PUSH_NULL:
+            m_Stack.Push(MakeAst<NullReference>());
+            break;
+        case IrOp::GETXPROTECT:
+            m_Stack.Push(MakeAst<SecureLoad>(GetIrOpName(ins.Op), AsAddress(m_Stack.Pop()), 1, false));
+            break;
+        case IrOp::SETXPROTECT:
+        {
+            AstPtr pointer = AsAddress(m_Stack.Pop());
+            AstPtr value = m_Stack.Pop();
+            statements.push_back(MakeAst<SecureStore>(GetIrOpName(ins.Op), std::move(pointer), std::vector<AstPtr>{std::move(value)}, false));
+            break;
+        }
+        case IrOp::REFXPROTECT:
+        {
+            // flags & 1 pushes a reference to an unprotected copy, flags & 2 writes the copy back
+            int flags = PopConstantCount("REFXPROTECT flags");
+            AstPtr count = m_Stack.Pop();
+            AstPtr pointer = m_Stack.Pop();
+            auto constantCount = dynamic_cast<ConstantInt*>(count.get());
+            bool pushes = (flags & 1) && (!constantCount || constantCount->GetValue() > 0);
+            auto node = MakeAst<Intrinsic>(GetIrOpName(ins.Op), std::vector<AstPtr>{std::move(pointer), std::move(count), MakeAst<ConstantInt>(flags)}, pushes);
+            if (pushes)
+                m_Stack.Push(std::move(node));
+            else
+                statements.push_back(std::move(node));
+            break;
+        }
+
+        case IrOp::VECTOR_MAKE:
+        {
+            AstPtr z = m_Stack.Pop();
+            AstPtr y = m_Stack.Pop();
+            AstPtr x = m_Stack.Pop();
+            m_Stack.Push(MakeAst<Vector>(std::move(x), std::move(y), std::move(z), m_Context.GetVectorWidth()));
+            break;
+        }
+        case IrOp::VECTOR_STORE:
+        {
+            AstPtr pointer = AsAddress(m_Stack.Pop());
+            AstPtr value = m_Stack.PopVector(m_Context.GetVectorWidth());
+            statements.push_back(MakeAst<Store>(std::move(pointer), std::move(value)));
+            break;
+        }
+        case IrOp::PUSH_ARRAY:
+            m_Stack.Push(MakeAst<ArrayLiteral>(ins.Ints));
+            break;
 
         case IrOp::IS_BIT_SET:
         {
@@ -481,6 +640,7 @@ namespace scrDbgApp::Decomp
 
         case IrOp::J:
         case IrOp::JZ:
+        case IrOp::JNZ:
         case IrOp::IEQ_JZ:
         case IrOp::INE_JZ:
         case IrOp::IGT_JZ:

@@ -6,46 +6,6 @@ namespace scrDbgApp
 {
     using namespace Decomp;
 
-    struct Reader
-    {
-        const std::vector<uint8_t>& Code;
-
-        // code duplication!!!
-
-        uint8_t U8(uint32_t pc) const
-        {
-            return pc < Code.size() ? Code[pc] : 0;
-        }
-
-        uint16_t U16(uint32_t pc) const
-        {
-            return static_cast<uint16_t>(U8(pc) | (U8(pc + 1) << 8));
-        }
-
-        int16_t S16(uint32_t pc) const
-        {
-            return static_cast<int16_t>(U16(pc));
-        }
-
-        uint32_t U24(uint32_t pc) const
-        {
-            return static_cast<uint32_t>(U8(pc) | (U8(pc + 1) << 8) | (U8(pc + 2) << 16));
-        }
-
-        uint32_t U32(uint32_t pc) const
-        {
-            return static_cast<uint32_t>(U8(pc) | (U8(pc + 1) << 8) | (U8(pc + 2) << 16) | (static_cast<uint32_t>(U8(pc + 3)) << 24));
-        }
-
-        float F32(uint32_t pc) const
-        {
-            uint32_t bits = U32(pc);
-            float value;
-            std::memcpy(&value, &bits, sizeof(value));
-            return value;
-        }
-    };
-
     static std::optional<IrOp> MapSimple(OpcodesGTA5 op) // ops whose GTA V encoding maps 1:1 onto an operand less IR op
     {
         switch (op)
@@ -162,7 +122,7 @@ namespace scrDbgApp
     std::vector<Instruction> DecompilerGTA5::Lift(const Function& func) const
     {
         const auto& code = m_Disassembler.GetCode();
-        const Reader r{code};
+        const auto& r = m_Disassembler;
         const uint32_t end = std::min<uint32_t>(func.GetEnd(), static_cast<uint32_t>(code.size()));
 
         std::vector<Instruction> result;
@@ -209,22 +169,22 @@ namespace scrDbgApp
             switch (op)
             {
             case OpcodesGTA5::PUSH_CONST_U8:
-                pushInts({r.U8(pc + 1)});
+                pushInts({r.GetU8(pc + 1)});
                 break;
             case OpcodesGTA5::PUSH_CONST_U8_U8:
-                pushInts({r.U8(pc + 1), r.U8(pc + 2)});
+                pushInts({r.GetU8(pc + 1), r.GetU8(pc + 2)});
                 break;
             case OpcodesGTA5::PUSH_CONST_U8_U8_U8:
-                pushInts({r.U8(pc + 1), r.U8(pc + 2), r.U8(pc + 3)});
+                pushInts({r.GetU8(pc + 1), r.GetU8(pc + 2), r.GetU8(pc + 3)});
                 break;
             case OpcodesGTA5::PUSH_CONST_U32:
-                pushInts({static_cast<int32_t>(r.U32(pc + 1))});
+                pushInts({static_cast<int32_t>(r.GetU32(pc + 1))});
                 break;
             case OpcodesGTA5::PUSH_CONST_S16:
-                pushInts({r.S16(pc + 1)});
+                pushInts({r.GetS16(pc + 1)});
                 break;
             case OpcodesGTA5::PUSH_CONST_U24:
-                pushInts({static_cast<int32_t>(r.U24(pc + 1))});
+                pushInts({static_cast<int32_t>(r.GetU24(pc + 1))});
                 break;
             case OpcodesGTA5::PUSH_CONST_M1:
             case OpcodesGTA5::PUSH_CONST_0:
@@ -239,7 +199,7 @@ namespace scrDbgApp
                 break;
 
             case OpcodesGTA5::PUSH_CONST_F:
-                make(IrOp::PUSH_FLOAT).Float = r.F32(pc + 1);
+                make(IrOp::PUSH_FLOAT).Float = r.GetF32(pc + 1);
                 break;
             case OpcodesGTA5::PUSH_CONST_FM1:
             case OpcodesGTA5::PUSH_CONST_F0:
@@ -256,143 +216,143 @@ namespace scrDbgApp
             case OpcodesGTA5::NATIVE:
             {
                 auto& ins = make(IrOp::NATIVE);
-                uint8_t packed = r.U8(pc + 1);
+                uint8_t packed = r.GetU8(pc + 1);
                 ins.ArgCount = static_cast<uint8_t>(packed >> 2);
                 ins.RetCount = static_cast<uint8_t>(packed & 3);
-                ins.Imm = (r.U8(pc + 2) << 8) | r.U8(pc + 3);
+                ins.Imm = (r.GetU8(pc + 2) << 8) | r.GetU8(pc + 3);
                 break;
             }
 
             case OpcodesGTA5::ENTER:
             {
                 auto& ins = make(IrOp::ENTER);
-                ins.ArgCount = r.U8(pc + 1);
-                ins.Imm = r.U16(pc + 2);
+                ins.ArgCount = r.GetU8(pc + 1);
+                ins.Imm = r.GetU16(pc + 2);
                 break;
             }
             case OpcodesGTA5::LEAVE:
             {
                 auto& ins = make(IrOp::LEAVE);
-                ins.ArgCount = r.U8(pc + 1);
-                ins.RetCount = r.U8(pc + 2);
+                ins.ArgCount = r.GetU8(pc + 1);
+                ins.RetCount = r.GetU8(pc + 2);
                 break;
             }
 
             case OpcodesGTA5::ARRAY_U8:
-                withImm(IrOp::ARRAY, r.U8(pc + 1));
+                withImm(IrOp::ARRAY, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::ARRAY_U8_LOAD:
-                withImm(IrOp::ARRAY_LOAD, r.U8(pc + 1));
+                withImm(IrOp::ARRAY_LOAD, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::ARRAY_U8_STORE:
-                withImm(IrOp::ARRAY_STORE, r.U8(pc + 1));
+                withImm(IrOp::ARRAY_STORE, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::ARRAY_U16:
-                withImm(IrOp::ARRAY, r.U16(pc + 1));
+                withImm(IrOp::ARRAY, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::ARRAY_U16_LOAD:
-                withImm(IrOp::ARRAY_LOAD, r.U16(pc + 1));
+                withImm(IrOp::ARRAY_LOAD, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::ARRAY_U16_STORE:
-                withImm(IrOp::ARRAY_STORE, r.U16(pc + 1));
+                withImm(IrOp::ARRAY_STORE, r.GetU16(pc + 1));
                 break;
 
             case OpcodesGTA5::LOCAL_U8:
-                withImm(IrOp::LOCAL, r.U8(pc + 1));
+                withImm(IrOp::LOCAL, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::LOCAL_U8_LOAD:
-                withImm(IrOp::LOCAL_LOAD, r.U8(pc + 1));
+                withImm(IrOp::LOCAL_LOAD, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::LOCAL_U8_STORE:
-                withImm(IrOp::LOCAL_STORE, r.U8(pc + 1));
+                withImm(IrOp::LOCAL_STORE, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::LOCAL_U16:
-                withImm(IrOp::LOCAL, r.U16(pc + 1));
+                withImm(IrOp::LOCAL, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::LOCAL_U16_LOAD:
-                withImm(IrOp::LOCAL_LOAD, r.U16(pc + 1));
+                withImm(IrOp::LOCAL_LOAD, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::LOCAL_U16_STORE:
-                withImm(IrOp::LOCAL_STORE, r.U16(pc + 1));
+                withImm(IrOp::LOCAL_STORE, r.GetU16(pc + 1));
                 break;
 
             case OpcodesGTA5::STATIC_U8:
-                withImm(IrOp::STATIC, r.U8(pc + 1));
+                withImm(IrOp::STATIC, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::STATIC_U8_LOAD:
-                withImm(IrOp::STATIC_LOAD, r.U8(pc + 1));
+                withImm(IrOp::STATIC_LOAD, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::STATIC_U8_STORE:
-                withImm(IrOp::STATIC_STORE, r.U8(pc + 1));
+                withImm(IrOp::STATIC_STORE, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::STATIC_U16:
-                withImm(IrOp::STATIC, r.U16(pc + 1));
+                withImm(IrOp::STATIC, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::STATIC_U16_LOAD:
-                withImm(IrOp::STATIC_LOAD, r.U16(pc + 1));
+                withImm(IrOp::STATIC_LOAD, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::STATIC_U16_STORE:
-                withImm(IrOp::STATIC_STORE, r.U16(pc + 1));
+                withImm(IrOp::STATIC_STORE, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::STATIC_U24:
-                withImm(IrOp::STATIC, r.U24(pc + 1));
+                withImm(IrOp::STATIC, r.GetU24(pc + 1));
                 break;
             case OpcodesGTA5::STATIC_U24_LOAD:
-                withImm(IrOp::STATIC_LOAD, r.U24(pc + 1));
+                withImm(IrOp::STATIC_LOAD, r.GetU24(pc + 1));
                 break;
             case OpcodesGTA5::STATIC_U24_STORE:
-                withImm(IrOp::STATIC_STORE, r.U24(pc + 1));
+                withImm(IrOp::STATIC_STORE, r.GetU24(pc + 1));
                 break;
 
             case OpcodesGTA5::GLOBAL_U16:
-                withImm(IrOp::GLOBAL, r.U16(pc + 1));
+                withImm(IrOp::GLOBAL, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::GLOBAL_U16_LOAD:
-                withImm(IrOp::GLOBAL_LOAD, r.U16(pc + 1));
+                withImm(IrOp::GLOBAL_LOAD, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::GLOBAL_U16_STORE:
-                withImm(IrOp::GLOBAL_STORE, r.U16(pc + 1));
+                withImm(IrOp::GLOBAL_STORE, r.GetU16(pc + 1));
                 break;
             case OpcodesGTA5::GLOBAL_U24:
-                withImm(IrOp::GLOBAL, r.U24(pc + 1));
+                withImm(IrOp::GLOBAL, r.GetU24(pc + 1));
                 break;
             case OpcodesGTA5::GLOBAL_U24_LOAD:
-                withImm(IrOp::GLOBAL_LOAD, r.U24(pc + 1));
+                withImm(IrOp::GLOBAL_LOAD, r.GetU24(pc + 1));
                 break;
             case OpcodesGTA5::GLOBAL_U24_STORE:
-                withImm(IrOp::GLOBAL_STORE, r.U24(pc + 1));
+                withImm(IrOp::GLOBAL_STORE, r.GetU24(pc + 1));
                 break;
 
             case OpcodesGTA5::IADD_U8:
-                withImm(IrOp::IADD_IMM, r.U8(pc + 1));
+                withImm(IrOp::IADD_IMM, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::IADD_S16:
-                withImm(IrOp::IADD_IMM, r.S16(pc + 1));
+                withImm(IrOp::IADD_IMM, r.GetS16(pc + 1));
                 break;
             case OpcodesGTA5::IMUL_U8:
-                withImm(IrOp::IMUL_IMM, r.U8(pc + 1));
+                withImm(IrOp::IMUL_IMM, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::IMUL_S16:
-                withImm(IrOp::IMUL_IMM, r.S16(pc + 1));
+                withImm(IrOp::IMUL_IMM, r.GetS16(pc + 1));
                 break;
 
             case OpcodesGTA5::IOFFSET_U8:
-                withImm(IrOp::IOFFSET_IMM, r.U8(pc + 1));
+                withImm(IrOp::IOFFSET_IMM, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::IOFFSET_U8_LOAD:
-                withImm(IrOp::IOFFSET_IMM_LOAD, r.U8(pc + 1));
+                withImm(IrOp::IOFFSET_IMM_LOAD, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::IOFFSET_U8_STORE:
-                withImm(IrOp::IOFFSET_IMM_STORE, r.U8(pc + 1));
+                withImm(IrOp::IOFFSET_IMM_STORE, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::IOFFSET_S16:
-                withImm(IrOp::IOFFSET_IMM, r.S16(pc + 1));
+                withImm(IrOp::IOFFSET_IMM, r.GetS16(pc + 1));
                 break;
             case OpcodesGTA5::IOFFSET_S16_LOAD:
-                withImm(IrOp::IOFFSET_IMM_LOAD, r.S16(pc + 1));
+                withImm(IrOp::IOFFSET_IMM_LOAD, r.GetS16(pc + 1));
                 break;
             case OpcodesGTA5::IOFFSET_S16_STORE:
-                withImm(IrOp::IOFFSET_IMM_STORE, r.S16(pc + 1));
+                withImm(IrOp::IOFFSET_IMM_STORE, r.GetS16(pc + 1));
                 break;
 
             case OpcodesGTA5::J:
@@ -406,35 +366,35 @@ namespace scrDbgApp
             {
                 static constexpr IrOp jumps[] = {IrOp::J, IrOp::JZ, IrOp::IEQ_JZ, IrOp::INE_JZ, IrOp::IGT_JZ, IrOp::IGE_JZ, IrOp::ILT_JZ, IrOp::ILE_JZ};
                 auto& ins = make(jumps[raw - static_cast<uint8_t>(OpcodesGTA5::J)]);
-                ins.Target = static_cast<uint32_t>(static_cast<int64_t>(pc) + 3 + r.S16(pc + 1));
+                ins.Target = static_cast<uint32_t>(static_cast<int64_t>(pc) + 3 + r.GetS16(pc + 1));
                 break;
             }
 
             case OpcodesGTA5::CALL:
-                make(IrOp::CALL).Target = r.U24(pc + 1);
+                make(IrOp::CALL).Target = r.GetU24(pc + 1);
                 break;
 
             case OpcodesGTA5::SWITCH:
             {
                 auto& ins = make(IrOp::SWITCH);
-                uint8_t count = r.U8(pc + 1);
+                uint8_t count = r.GetU8(pc + 1);
                 ins.Cases.reserve(count);
                 for (uint32_t i = 0, entry = pc + 2; i < count; i++, entry += 6)
-                    ins.Cases.push_back({static_cast<int32_t>(r.U32(entry)), static_cast<uint32_t>(static_cast<int64_t>(entry) + 6 + r.S16(entry + 4))});
+                    ins.Cases.push_back({static_cast<int32_t>(r.GetU32(entry)), static_cast<uint32_t>(static_cast<int64_t>(entry) + 6 + r.GetS16(entry + 4))});
                 break;
             }
 
             case OpcodesGTA5::TEXT_LABEL_ASSIGN_STRING:
-                withImm(IrOp::TEXT_LABEL_ASSIGN_STRING, r.U8(pc + 1));
+                withImm(IrOp::TEXT_LABEL_ASSIGN_STRING, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::TEXT_LABEL_ASSIGN_INT:
-                withImm(IrOp::TEXT_LABEL_ASSIGN_INT, r.U8(pc + 1));
+                withImm(IrOp::TEXT_LABEL_ASSIGN_INT, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::TEXT_LABEL_APPEND_STRING:
-                withImm(IrOp::TEXT_LABEL_APPEND_STRING, r.U8(pc + 1));
+                withImm(IrOp::TEXT_LABEL_APPEND_STRING, r.GetU8(pc + 1));
                 break;
             case OpcodesGTA5::TEXT_LABEL_APPEND_INT:
-                withImm(IrOp::TEXT_LABEL_APPEND_INT, r.U8(pc + 1));
+                withImm(IrOp::TEXT_LABEL_APPEND_INT, r.GetU8(pc + 1));
                 break;
 
             default:

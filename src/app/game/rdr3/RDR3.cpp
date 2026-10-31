@@ -1,5 +1,6 @@
 #include "RDR3.hpp"
 #include "core/Scanner.hpp"
+#include "decomp/DecompilerRDR3.hpp"
 #include "disasm/DisassemblerRDR3.hpp"
 #include "types/ScriptProgramRDR3.hpp"
 #include "types/ScriptThreadRDR3.hpp"
@@ -70,6 +71,11 @@ namespace scrDbgApp
         auto disasm = std::make_unique<DisassemblerRDR3>(std::move(program));
         disasm->Refresh();
         return disasm;
+    }
+
+    std::unique_ptr<Decompiler> RDR3::CreateDecompiler(const Disassembler& disassembler) const
+    {
+        return std::make_unique<DecompilerRDR3>(disassembler);
     }
 
     std::string RDR3::GetGameBuild() const

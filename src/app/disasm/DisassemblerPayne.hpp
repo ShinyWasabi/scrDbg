@@ -9,6 +9,7 @@ namespace scrDbgApp
         using Disassembler::Disassembler;
 
         std::optional<FunctionInfo> GetFunctionForPc(uint32_t pc) const override;
+        std::vector<uint32_t> GetFunctionInstructions(const FunctionInfo& func) const override;
         uint16_t GetOpcodeNumber(Opcodes opcode) const override;
         int GetInstructionSize(uint32_t pc) const override;
         bool IsJumpOrCall(uint8_t op) const override;

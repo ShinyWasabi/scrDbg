@@ -559,7 +559,7 @@ namespace rage::gta4
                 addr->Int = val;
                 break;
             }
-            case scrOpcode::ARRAY_LOAD:
+            case scrOpcode::LOAD_N:
             {
                 scrValue* addr = sp[0].Reference;
                 int32_t count = sp[-1].Int;
@@ -568,7 +568,7 @@ namespace rage::gta4
                     (++sp)[0].Int = addr[i].Int;
                 break;
             }
-            case scrOpcode::ARRAY_STORE:
+            case scrOpcode::STORE_N:
             {
                 scrValue* addr = sp[0].Reference;
                 int32_t count = sp[-1].Int;

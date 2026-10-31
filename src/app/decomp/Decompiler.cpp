@@ -28,7 +28,11 @@ namespace scrDbgApp
         m_Functions.reserve(count);
 
         for (int i = 0; i < count; i++)
-            m_Functions.push_back(std::make_unique<Function>(m_Disassembler.GetFunction(i), GetReservedFrameSlots()));
+        {
+            auto info = m_Disassembler.GetFunction(i);
+            uint32_t end = info.End + m_Disassembler.GetInstructionSize(info.End);
+            m_Functions.push_back(std::make_unique<Function>(info, end, RESERVED_FRAME_SLOTS));
+        }
     }
 
     int Decompiler::GetFunctionCount()
@@ -50,15 +54,15 @@ namespace scrDbgApp
     {
         EnsureFunctions();
 
-        auto it = std::upper_bound(m_Functions.begin(), m_Functions.end(), pc, [](uint32_t value, const std::unique_ptr<Function>& func) {
-            return value < func->GetStart();
-        });
-
-        if (it == m_Functions.begin())
+        auto info = m_Disassembler.GetFunctionForPc(pc);
+        if (!info)
             return -1;
 
-        --it;
-        if (pc >= (*it)->GetEnd())
+        auto it = std::lower_bound(m_Functions.begin(), m_Functions.end(), info->Start, [](const std::unique_ptr<Function>& func, uint32_t value) {
+            return func->GetStart() < value;
+        });
+
+        if (it == m_Functions.end() || (*it)->GetStart() != info->Start)
             return -1;
 
         return static_cast<int>(it - m_Functions.begin());
@@ -201,7 +205,7 @@ namespace scrDbgApp
         writer.Line(0, signature, {func.GetStart()});
         writer.Line(0, "{");
 
-        const uint32_t localBase = func.GetArgCount() + GetReservedFrameSlots();
+        const uint32_t localBase = func.GetArgCount() + RESERVED_FRAME_SLOTS;
         for (uint32_t i = 0; i < func.GetLocalCount(); i++)
             writer.Line(1, "var " + func.GetFrameVarName(localBase + i) + ";");
         if (func.GetLocalCount())

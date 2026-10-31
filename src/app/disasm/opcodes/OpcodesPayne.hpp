@@ -40,8 +40,8 @@ namespace scrDbgApp
         IOR,
         IXOR,
         J,
-        JNZ,
         JZ,
+        JNZ,
         I2F,
         F2I,
         F2V,
@@ -59,14 +59,14 @@ namespace scrDbgApp
         STORE_REV,
         LOAD_N,
         STORE_N,
-        LOCAL_U8_0,
-        LOCAL_U8_1,
-        LOCAL_U8_2,
-        LOCAL_U8_3,
-        LOCAL_U8_4,
-        LOCAL_U8_5,
-        LOCAL_U8_6,
-        LOCAL_U8_7,
+        LOCAL_0,
+        LOCAL_1,
+        LOCAL_2,
+        LOCAL_3,
+        LOCAL_4,
+        LOCAL_5,
+        LOCAL_6,
+        LOCAL_7,
         LOCAL,
         STATIC,
         GLOBAL,
@@ -334,14 +334,14 @@ namespace scrDbgApp
         static_cast<uint16_t>(OpcodesPayne::PUSH_CONST_6),
         static_cast<uint16_t>(OpcodesPayne::PUSH_CONST_7),
         static_cast<uint16_t>(OpcodesPayne::JNZ),
-        static_cast<uint16_t>(OpcodesPayne::LOCAL_U8_0),
-        static_cast<uint16_t>(OpcodesPayne::LOCAL_U8_1),
-        static_cast<uint16_t>(OpcodesPayne::LOCAL_U8_2),
-        static_cast<uint16_t>(OpcodesPayne::LOCAL_U8_3),
-        static_cast<uint16_t>(OpcodesPayne::LOCAL_U8_4),
-        static_cast<uint16_t>(OpcodesPayne::LOCAL_U8_5),
-        static_cast<uint16_t>(OpcodesPayne::LOCAL_U8_6),
-        static_cast<uint16_t>(OpcodesPayne::LOCAL_U8_7),
+        static_cast<uint16_t>(OpcodesPayne::LOCAL_0),
+        static_cast<uint16_t>(OpcodesPayne::LOCAL_1),
+        static_cast<uint16_t>(OpcodesPayne::LOCAL_2),
+        static_cast<uint16_t>(OpcodesPayne::LOCAL_3),
+        static_cast<uint16_t>(OpcodesPayne::LOCAL_4),
+        static_cast<uint16_t>(OpcodesPayne::LOCAL_5),
+        static_cast<uint16_t>(OpcodesPayne::LOCAL_6),
+        static_cast<uint16_t>(OpcodesPayne::LOCAL_7),
         static_cast<uint16_t>(OpcodesPayne::LOCAL),
         static_cast<uint16_t>(OpcodesPayne::STATIC),
         static_cast<uint16_t>(OpcodesPayne::GLOBAL),
@@ -512,8 +512,6 @@ namespace scrDbgApp
         static_cast<uint16_t>(OpcodesPayne::PUSH_CONST_157),
         static_cast<uint16_t>(OpcodesPayne::PUSH_CONST_158),
         static_cast<uint16_t>(OpcodesPayne::PUSH_CONST_159),
-        UNAVAILABLE_OP, // ARRAY_LOAD
-        UNAVAILABLE_OP, // ARRAY_STORE
         UNAVAILABLE_OP, // GETXPROTECT
         UNAVAILABLE_OP, // SETXPROTECT
         UNAVAILABLE_OP, // REFXPROTECT
@@ -682,6 +680,8 @@ namespace scrDbgApp
         case OpcodesPayne::SWITCH:
             return 8 * code[pc + 1] + 2;
         case OpcodesPayne::STRING:
+            if (code[pc + 1] == 0) // MP3 strings can be longer than 256 characters
+                return 4 + (code[pc + 2] | (code[pc + 3] << 8));
             return code[pc + 1] + 2;
         case OpcodesPayne::TEXT_LABEL_ASSIGN_STRING:
         case OpcodesPayne::TEXT_LABEL_ASSIGN_INT:

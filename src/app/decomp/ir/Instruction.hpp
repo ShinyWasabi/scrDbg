@@ -73,6 +73,7 @@ namespace scrDbgApp::Decomp
         IOFFSET_IMM_STORE, // Imm
         J,                 // Target
         JZ,                // Target
+        JNZ,               // Target
         IEQ_JZ,            // Target
         INE_JZ,            // Target
         IGT_JZ,            // Target
@@ -92,6 +93,31 @@ namespace scrDbgApp::Decomp
         THROW,
         CALLINDIRECT,
         IS_BIT_SET,
+        LOCAL_LOAD_S, // RDR3 secure variants of LOAD/STORE/LOAD_N/STORE_N
+        LOCAL_STORE_S,
+        LOCAL_STORE_SR,
+        STATIC_LOAD_S,
+        STATIC_STORE_S,
+        STATIC_STORE_SR,
+        GLOBAL_LOAD_S,
+        GLOBAL_STORE_S,
+        GLOBAL_STORE_SR,
+        LOAD_N_S,
+        STORE_N_S,
+        STORE_N_SR,
+        LOCAL_STACK, // index (and for ARRAY_STACK the item size) comes from the stack
+        STATIC_STACK,
+        GLOBAL_STACK,
+        ARRAY_STACK,
+        PUSH_STRING, // string inline in the code
+        PUSH_NULL,
+        GETXPROTECT, // GTA 4 protected variants of LOAD/STORE
+        SETXPROTECT,
+        REFXPROTECT,
+        // RDR1 VECTOR_MAKE packs x, y, z into a 2 slot vector, VECTOR_STORE stores one, PUSH_ARRAY is an inline array
+        VECTOR_MAKE,
+        VECTOR_STORE,
+        PUSH_ARRAY,
         UNKNOWN // Byte the lifter could not decode
     };
 
@@ -117,6 +143,7 @@ namespace scrDbgApp::Decomp
         float Float = 0.0f;
         std::vector<int32_t> Ints;
         std::vector<SwitchCase> Cases;
+        std::string Text;
 
         Instruction() = default;
 

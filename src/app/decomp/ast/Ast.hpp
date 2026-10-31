@@ -64,6 +64,8 @@ namespace scrDbgApp::Decomp
         return std::make_shared<T>(std::forward<Args>(args)...);
     }
 
+    std::string RenderDeref(const AstPtr& pointer);
+
     std::string JoinTokens(const std::vector<AstPtr>& tokens, const char* separator = ", ");
 
     AstPtr NegateCondition(const AstPtr& condition);
@@ -135,6 +137,21 @@ namespace scrDbgApp::Decomp
             return Wrap(m_Lhs) + " " + m_Symbol + " " + Wrap(m_Rhs);
         }
 
+        const AstPtr& GetLhs() const
+        {
+            return m_Lhs;
+        }
+
+        const AstPtr& GetRhs() const
+        {
+            return m_Rhs;
+        }
+
+        const std::string& GetSymbol() const
+        {
+            return m_Symbol;
+        }
+
     private:
         std::string Wrap(const AstPtr& operand) const
         {
@@ -151,16 +168,17 @@ namespace scrDbgApp::Decomp
     class VectorBinary : public AstToken
     {
     public:
-        VectorBinary(AstPtr lhs, AstPtr rhs, std::string symbol)
+        VectorBinary(AstPtr lhs, AstPtr rhs, std::string symbol, int width = 3)
             : m_Lhs(std::move(lhs)),
               m_Rhs(std::move(rhs)),
-              m_Symbol(std::move(symbol))
+              m_Symbol(std::move(symbol)),
+              m_Width(width)
         {
         }
 
         int GetStackCount() const override
         {
-            return 3;
+            return m_Width;
         }
 
         bool HasSideEffects() const override
@@ -183,6 +201,7 @@ namespace scrDbgApp::Decomp
         AstPtr m_Lhs;
         AstPtr m_Rhs;
         std::string m_Symbol;
+        int m_Width;
     };
 
     // INEG/FNEG
@@ -212,14 +231,15 @@ namespace scrDbgApp::Decomp
     class VectorNegate : public AstToken
     {
     public:
-        explicit VectorNegate(AstPtr value)
-            : m_Value(std::move(value))
+        explicit VectorNegate(AstPtr value, int width = 3)
+            : m_Value(std::move(value)),
+              m_Width(width)
         {
         }
 
         int GetStackCount() const override
         {
-            return 3;
+            return m_Width;
         }
 
         bool HasSideEffects() const override
@@ -235,6 +255,7 @@ namespace scrDbgApp::Decomp
 
     private:
         AstPtr m_Value;
+        int m_Width;
     };
 
     // INOT
@@ -376,14 +397,15 @@ namespace scrDbgApp::Decomp
     class FloatToVec : public AstToken
     {
     public:
-        explicit FloatToVec(AstPtr value)
-            : m_Value(std::move(value))
+        explicit FloatToVec(AstPtr value, int width = 3)
+            : m_Value(std::move(value)),
+              m_Width(width)
         {
         }
 
         int GetStackCount() const override
         {
-            return 3;
+            return m_Width;
         }
 
         bool HasSideEffects() const override
@@ -398,21 +420,23 @@ namespace scrDbgApp::Decomp
 
     private:
         AstPtr m_Value;
+        int m_Width;
     };
 
     class Vector : public AstToken
     {
     public:
-        Vector(AstPtr x, AstPtr y, AstPtr z)
+        Vector(AstPtr x, AstPtr y, AstPtr z, int width = 3) // 2 in RDR1 because x and y share one
             : m_X(std::move(x)),
               m_Y(std::move(y)),
-              m_Z(std::move(z))
+              m_Z(std::move(z)),
+              m_Width(width)
         {
         }
 
         int GetStackCount() const override
         {
-            return 3;
+            return m_Width;
         }
 
         bool HasSideEffects() const override
@@ -429,6 +453,7 @@ namespace scrDbgApp::Decomp
         AstPtr m_X;
         AstPtr m_Y;
         AstPtr m_Z;
+        int m_Width;
     };
 
     // A plain name, for example a function referenced by a constant pointer
@@ -510,6 +535,82 @@ namespace scrDbgApp::Decomp
         const Function& m_Func;
         uint32_t m_Index;
         AstPtr m_Value;
+    };
+
+    // RDR1 inline ARRAY in code (never encountered it in any disassembly)
+    class ArrayLiteral : public AstToken
+    {
+    public:
+        explicit ArrayLiteral(std::vector<int32_t> values)
+            : m_Values(std::move(values))
+        {
+        }
+
+        std::string ToString() const override
+        {
+            std::string result = "{ ";
+            for (size_t i = 0; i < m_Values.size(); i++)
+                result += (i ? ", " : "") + std::to_string(m_Values[i]);
+            return result + " }";
+        }
+
+    private:
+        std::vector<int32_t> m_Values;
+    };
+
+    // GTA4 and MP3 NULL pushes a reference to g_NullContainer, the null reference passed as is or loaded through for the null value. Both are NULL in the source
+    class NullReference : public AstToken
+    {
+    public:
+        bool IsPointer() const override
+        {
+            return true;
+        }
+
+        std::string ToString() const override
+        {
+            return "NULL";
+        }
+
+        std::string ToPointerString() const override
+        {
+            return "NULL";
+        }
+    };
+
+    // GTA 4 LOCAL/STATIC/GLOBAL with an index that isn't a constant
+    class DynamicVariable : public AstToken
+    {
+    public:
+        DynamicVariable(const char* prefix, AstPtr index)
+            : m_Prefix(prefix),
+              m_Index(std::move(index))
+        {
+        }
+
+        bool IsPointer() const override
+        {
+            return true;
+        }
+
+        bool HasSideEffects() const override
+        {
+            return m_Index->HasSideEffects();
+        }
+
+        std::string ToString() const override
+        {
+            return "&" + ToPointerString();
+        }
+
+        std::string ToPointerString() const override
+        {
+            return m_Prefix + "[" + m_Index->Render() + "]";
+        }
+
+    private:
+        std::string m_Prefix;
+        AstPtr m_Index;
     };
 
     class Variable : public AstToken
@@ -601,7 +702,7 @@ namespace scrDbgApp::Decomp
 
         std::string ToString() const override
         {
-            return m_Pointer->IsPointer() ? m_Pointer->RenderPointer() : "*" + m_Pointer->Render();
+            return RenderDeref(m_Pointer);
         }
 
     private:
@@ -624,7 +725,7 @@ namespace scrDbgApp::Decomp
 
         std::string ToString() const override
         {
-            std::string lhs = m_Pointer->IsPointer() ? m_Pointer->RenderPointer() : "*" + m_Pointer->Render();
+            std::string lhs = RenderDeref(m_Pointer);
             return lhs + " = " + m_Value->Render() + ";";
         }
 
@@ -655,7 +756,7 @@ namespace scrDbgApp::Decomp
 
         std::string ToString() const override
         {
-            return m_Pointer->IsPointer() ? m_Pointer->RenderPointer() : "*" + m_Pointer->Render();
+            return RenderDeref(m_Pointer);
         }
 
     private:
@@ -679,7 +780,7 @@ namespace scrDbgApp::Decomp
 
         std::string ToString() const override
         {
-            std::string lhs = m_Pointer->IsPointer() ? m_Pointer->RenderPointer() : "*" + m_Pointer->Render();
+            std::string lhs = RenderDeref(m_Pointer);
 
             // One node covering every slot (a multi-return call, a vector, LOAD_N) is assigned as-is
             if (m_Values.size() == 1)
@@ -1168,6 +1269,102 @@ namespace scrDbgApp::Decomp
         AstPtr m_Dst;
         AstPtr m_Value;
         int m_Size;
+    };
+
+    // RDR3 secure loads
+    class SecureLoad : public AstToken
+    {
+    public:
+        SecureLoad(const char* name, AstPtr pointer, int count, bool showCount)
+            : m_Name(name),
+              m_Pointer(std::move(pointer)),
+              m_Count(count),
+              m_ShowCount(showCount)
+        {
+        }
+
+        int GetStackCount() const override
+        {
+            return m_Count;
+        }
+
+        bool HasSideEffects() const override
+        {
+            return m_Pointer->HasSideEffects();
+        }
+
+        std::string ToString() const override
+        {
+            return std::string(m_Name) + "(" + m_Pointer->Render() + (m_ShowCount ? ", " + std::to_string(m_Count) : "") + ")";
+        }
+
+    private:
+        const char* m_Name;
+        AstPtr m_Pointer;
+        int m_Count;
+        bool m_ShowCount;
+    };
+
+    // RDR3 secure stores
+    class SecureStore : public AstToken
+    {
+    public:
+        SecureStore(const char* name, AstPtr pointer, std::vector<AstPtr> values, bool isN)
+            : m_Name(name),
+              m_Pointer(std::move(pointer)),
+              m_Values(std::move(values)),
+              m_IsN(isN)
+        {
+        }
+
+        bool IsStatement() const override
+        {
+            return true;
+        }
+
+        std::string ToString() const override
+        {
+            bool braces = m_IsN && m_Values.size() != 1;
+            std::string values = braces ? "{ " + JoinTokens(m_Values) + " }" : JoinTokens(m_Values);
+            return std::string(m_Name) + "(" + m_Pointer->Render() + ", " + values + ");";
+        }
+
+    private:
+        const char* m_Name;
+        AstPtr m_Pointer;
+        std::vector<AstPtr> m_Values;
+        bool m_IsN;
+    };
+
+    class Intrinsic : public AstToken
+    {
+    public:
+        Intrinsic(const char* name, std::vector<AstPtr> args, bool producesValue)
+            : m_Name(name),
+              m_Args(std::move(args)),
+              m_ProducesValue(producesValue)
+        {
+        }
+
+        bool IsStatement() const override
+        {
+            return !m_ProducesValue;
+        }
+
+        bool HasSideEffects() const override
+        {
+            return true;
+        }
+
+        std::string ToString() const override
+        {
+            return std::string(m_Name) + "(" + JoinTokens(m_Args) + ")" + (m_ProducesValue ? "" : ";");
+        }
+
+    private:
+        const char* m_Name;
+        std::vector<AstPtr> m_Args;
+        bool m_ProducesValue;
     };
 
     class TextLabelCopy : public AstToken

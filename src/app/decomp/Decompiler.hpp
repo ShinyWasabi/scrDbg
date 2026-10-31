@@ -36,12 +36,9 @@ namespace scrDbgApp
         const std::vector<uint32_t>* GetIndirectCallTargets(uint32_t callSite) override;
 
     protected:
-        virtual std::vector<Decomp::Instruction> Lift(const Decomp::Function& func) const = 0; // Decodes [func.GetStart(), func.GetEnd()) into IR
+        static constexpr uint32_t RESERVED_FRAME_SLOTS = 2;
 
-        virtual uint32_t GetReservedFrameSlots() const
-        {
-            return 2;
-        }
+        virtual std::vector<Decomp::Instruction> Lift(const Decomp::Function& func) const = 0; // Decodes [func.GetStart(), func.GetEnd()) into IR
 
         virtual uint64_t GetNativeHash(uint32_t index) const;
 

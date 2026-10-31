@@ -99,6 +99,10 @@ namespace rage::rdr3
 
         ScriptFiber::Tick(scriptHash);
 
+        // Set by the call handlers so ENTER can log the real call site, CALLINDIRECT is shorter than CALL
+        uint32_t lastCallPc = 0;
+        uint32_t lastCallRet = UINT32_MAX;
+
     NEXT:
         uint32_t pc = static_cast<uint32_t>(code - base);
         if (debugger->ProcessBreakpoints(scriptHash, pc, (uint32_t*)&context->m_State))
@@ -450,7 +454,7 @@ namespace rage::rdr3
             if (current >= max)
                 return OnException(pc, op, "Stack overflow: %u >= %u", current, max);
 
-            uint32_t callSitePc = sp[0].Uns - 4;
+            uint32_t callSitePc = sp[0].Uns == lastCallRet ? lastCallPc : sp[0].Uns - 4;
 
             (++sp)->Int = static_cast<int32_t>(fp - stack);
 
@@ -880,6 +884,8 @@ namespace rage::rdr3
             uint32_t ofs = GET_U24;
             ++sp;
             sp[0].Uns = static_cast<int32_t>(code - base);
+            lastCallPc = pc;
+            lastCallRet = sp[0].Uns;
             JUMP(ofs);
             goto NEXT;
         }
@@ -1067,6 +1073,8 @@ namespace rage::rdr3
                 return OnException(pc, op, "Function pointer is NULL!");
             debugger->RecordIndirectCall(scriptHash, pc, ofs);
             sp[0].Uns = static_cast<int32_t>(code - base);
+            lastCallPc = pc;
+            lastCallRet = sp[0].Uns;
             JUMP(ofs);
             goto NEXT;
         }

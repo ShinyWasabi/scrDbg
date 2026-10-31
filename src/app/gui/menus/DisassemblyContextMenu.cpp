@@ -51,13 +51,10 @@ namespace scrDbgApp
             });
         }
 
-        if (g_Game->CreateDecompiler(*disassembler))
-        {
-            QAction* decompileAction = addAction("Decompile Function\tF5");
-            connect(decompileAction, &QAction::triggered, [this, index]() {
-                OnDecompileFunction(index);
-            });
-        }
+        QAction* decompileAction = addAction("Decompile Function\tF5");
+        connect(decompileAction, &QAction::triggered, [this, index]() {
+            OnDecompileFunction(index);
+        });
 
         bool exists = PipeCommands::BreakpointExists(scriptHash, pc);
         QAction* breakpointAction = exists ? addAction("Remove Breakpoint\tF2") : addAction("Set Breakpoint\tF2");

@@ -101,7 +101,7 @@ namespace scrDbgLib
 
         // finalizer opcodes
         case rage::gta4::scrOpcode::STORE:
-        case rage::gta4::scrOpcode::ARRAY_STORE:
+        case rage::gta4::scrOpcode::STORE_N:
         case rage::gta4::scrOpcode::SETXPROTECT:
             return true;
         }

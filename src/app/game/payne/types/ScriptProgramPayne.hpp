@@ -11,6 +11,7 @@ namespace scrDbgApp
         }
 
         uint32_t GetNameHash() const override;
+        std::string GetName() const override;
         uint32_t GetCodeSize() const override;
         uint32_t GetStaticCount() const override;
         uint32_t GetArgCount() const override;
@@ -22,6 +23,7 @@ namespace scrDbgApp
         std::vector<std::string> GetStrings() const override;
 
     private:
+        static constexpr size_t NAME = 0x00;
         static constexpr size_t NAME_HASH = 0x04;
         static constexpr size_t CODE = 0x0C;
         static constexpr size_t STATICS = 0x10;

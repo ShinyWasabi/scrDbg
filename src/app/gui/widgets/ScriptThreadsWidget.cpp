@@ -377,7 +377,7 @@ namespace scrDbgApp
         m_Disassembler = g_Game->CreateDisassembly(std::move(program));
 
         m_Pseudocode->SetDisassembler(m_Disassembler.get(), m_Disassembler->GetHash());
-        m_CodeTabs->setTabEnabled(1, m_Pseudocode->IsSupported());
+        m_CodeTabs->setTabEnabled(1, m_Pseudocode->HasScript());
 
         auto disasmModel = new DisassemblyModel(m_Disassembler.get(), m_Disassembly);
         m_Disassembly->setModel(disasmModel);
@@ -753,7 +753,7 @@ namespace scrDbgApp
         // Tab in the disassembly opens the pseudocode at the selected instruction. we filter here because QWidget::event() would use tab for focus navigation.
         if (watched == m_Disassembly && event->type() == QEvent::KeyPress && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Tab)
         {
-            if (!m_Disassembler || !m_Pseudocode->IsSupported())
+            if (!m_Disassembler || !m_Pseudocode->HasScript())
                 return QWidget::eventFilter(watched, event);
 
             QModelIndex index = m_Disassembly->currentIndex();

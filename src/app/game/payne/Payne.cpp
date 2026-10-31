@@ -1,5 +1,6 @@
 #include "Payne.hpp"
 #include "core/Scanner.hpp"
+#include "decomp/DecompilerPayne.hpp"
 #include "disasm/DisassemblerPayne.hpp"
 #include "types/ScriptProgramPayne.hpp"
 #include "types/ScriptThreadPayne.hpp"
@@ -50,6 +51,11 @@ namespace scrDbgApp
         auto disasm = std::make_unique<DisassemblerPayne>(std::move(program));
         disasm->Refresh();
         return disasm;
+    }
+
+    std::unique_ptr<Decompiler> Payne::CreateDecompiler(const Disassembler& disassembler) const
+    {
+        return std::make_unique<DecompilerPayne>(disassembler);
     }
 
     std::string Payne::GetGameBuild() const

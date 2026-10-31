@@ -19,6 +19,19 @@ namespace scrDbgApp
         return std::nullopt;
     }
 
+    std::vector<uint32_t> DisassemblerGTA4::GetFunctionInstructions(const FunctionInfo& func) const
+    {
+        std::vector<uint32_t> pcs;
+        for (const auto& [pc, entry] : m_PcToEntry)
+        {
+            if (entry == func.Start)
+                pcs.push_back(pc);
+        }
+
+        std::sort(pcs.begin(), pcs.end());
+        return pcs;
+    }
+
     uint16_t DisassemblerGTA4::GetOpcodeNumber(Opcodes opcode) const
     {
         return g_OpcodesGTA4Map[static_cast<uint16_t>(opcode)];

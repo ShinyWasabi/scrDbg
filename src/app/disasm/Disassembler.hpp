@@ -35,7 +35,9 @@ namespace scrDbgApp
         const ScriptProgram* GetProgram() const;
         int GetFunctionCount() const;
         FunctionInfo GetFunction(int index) const;
-        virtual std::optional<FunctionInfo> GetFunctionForPc(uint32_t pc) const; // GTA 4 needs to override it
+        virtual std::optional<FunctionInfo> GetFunctionForPc(uint32_t pc) const; // GTA 4 and MP3 needs to override it
+        // GTA4 and MP3 override this cuz a function's body is emitted at its first call site (J over the body, body, CALL), so its range contains the bodies of the functions it calls first. Only the reachable instructions are its own.
+        virtual std::vector<uint32_t> GetFunctionInstructions(const FunctionInfo& func) const;
         int GetInstructionCount() const;
         uint32_t GetInstruction(int index) const;
         DecodedInstruction DecodeInstruction(int index) const;
@@ -52,17 +54,7 @@ namespace scrDbgApp
         virtual BinarySearchPattern MakeStringSearchPatterns(const std::string& value) const = 0;
         virtual const char* GetInstructionDescription(uint8_t op) const = 0;
 
-    protected:
-        struct InstructionTable
-        {
-            const char* Name;
-            const char* Description;
-            const char* OperandFmt;
-        };
-
-        virtual void BuildFunction(uint32_t pc) = 0;
-        virtual std::string DecodeInstructionInternal(int index) const = 0;
-
+        // these are public so the decompiler can use them
         uint8_t GetU8(uint32_t pc) const
         {
             return (pc < m_Code.size()) ? m_Code[pc] : 0xFF;
@@ -95,6 +87,17 @@ namespace scrDbgApp
             std::memcpy(&f, &val, sizeof(float));
             return f;
         }
+
+    protected:
+        struct InstructionTable
+        {
+            const char* Name;
+            const char* Description;
+            const char* OperandFmt;
+        };
+
+        virtual void BuildFunction(uint32_t pc) = 0;
+        virtual std::string DecodeInstructionInternal(int index) const = 0;
 
         uint32_t m_Hash;
         std::vector<uint8_t> m_Code;

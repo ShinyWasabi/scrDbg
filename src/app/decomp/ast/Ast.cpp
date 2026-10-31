@@ -30,6 +30,27 @@ namespace scrDbgApp::Decomp
         return WrapNode(this, ToPointerString());
     }
 
+    static bool IsCompound(const AstPtr& node)
+    {
+        auto p = node.get();
+        return dynamic_cast<BinaryArithmetic*>(p) || dynamic_cast<Compare*>(p) || dynamic_cast<BitwiseAndOr*>(p) || dynamic_cast<BitwiseXor*>(p) || dynamic_cast<Negate*>(p) || dynamic_cast<Cast*>(p) || dynamic_cast<LogicalNot*>(p);
+    }
+
+    // Static_5 for &Static_5, *Local_0 for a loaded pointer, *(a + b) for computed addresses
+    std::string RenderDeref(const AstPtr& pointer)
+    {
+        if (pointer->IsPointer())
+            return pointer->RenderPointer();
+
+        return IsCompound(pointer) ? "*(" + pointer->Render() + ")" : "*" + pointer->Render();
+    }
+
+    // a non-pointer base in base->f_N or base->[i], parenthesized when it's a computed address
+    static std::string RenderBase(const AstPtr& base)
+    {
+        return IsCompound(base) ? "(" + base->RenderPointer() + ")" : base->RenderPointer();
+    }
+
     std::string JoinTokens(const std::vector<AstPtr>& tokens, const char* separator)
     {
         std::string result;
@@ -143,18 +164,20 @@ namespace scrDbgApp::Decomp
     std::string Array::ToPointerString() const
     {
         std::string sep = m_Pointer->IsPointer() ? "" : "->";
+        std::string base = m_Pointer->IsPointer() ? m_Pointer->RenderPointer() : RenderBase(m_Pointer);
         std::string size = m_Size == 1 ? "" : " /*" + std::to_string(m_Size) + "*/";
-        return m_Pointer->RenderPointer() + sep + "[" + m_Index->Render() + size + "]";
+        return base + sep + "[" + m_Index->Render() + size + "]";
     }
 
     std::string Offset::ToPointerString() const
     {
         std::string sep = m_Base->IsPointer() ? "." : "->";
+        std::string base = m_Base->IsPointer() ? m_Base->RenderPointer() : RenderBase(m_Base);
         auto c = dynamic_cast<ConstantInt*>(m_Offset.get());
         if (c && c->GetValue() >= 0)
-            return m_Base->RenderPointer() + sep + "f_" + std::to_string(c->GetValue());
+            return base + sep + "f_" + std::to_string(c->GetValue());
 
-        return m_Base->RenderPointer() + sep + "f_[" + m_Offset->Render() + "]";
+        return base + sep + "f_[" + m_Offset->Render() + "]";
     }
 
     std::string FunctionCall::GetName() const

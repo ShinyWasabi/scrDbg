@@ -73,6 +73,22 @@ namespace scrDbgApp
         return std::nullopt;
     }
 
+    std::vector<uint32_t> Disassembler::GetFunctionInstructions(const FunctionInfo& func) const
+    {
+        std::vector<uint32_t> pcs;
+        for (uint32_t pc = func.Start; pc <= func.End && pc < m_Code.size();)
+        {
+            pcs.push_back(pc);
+
+            int size = GetInstructionSize(pc);
+            if (size <= 0)
+                break;
+            pc += size;
+        }
+
+        return pcs;
+    }
+
     int Disassembler::GetInstructionCount() const
     {
         return static_cast<int>(m_Instructions.size());

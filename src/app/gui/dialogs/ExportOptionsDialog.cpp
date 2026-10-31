@@ -38,18 +38,6 @@ namespace scrDbgApp
         return false;
     }
 
-    bool ExportOptionsDialog::HasDecompiler(GameType type)
-    {
-        switch (type)
-        {
-        case GameType::GTA5_GEN8:
-        case GameType::GTA5_GEN9:
-            return true;
-        }
-
-        return false;
-    }
-
     ExportOptionsDialog::ExportOptionsDialog(uint32_t scriptHash, QTableView* disassembly, QWidget* parent)
         : QDialog(parent)
     {
@@ -76,11 +64,6 @@ namespace scrDbgApp
 
         m_ExportDecompiled = new QPushButton("Export Decompiled");
         m_ExportDecompiled->setToolTip("Decompile every function of this script program to a C source file.");
-        if (!HasDecompiler(gameType))
-        {
-            m_ExportDecompiled->setEnabled(false);
-            m_ExportDecompiled->setToolTip("Decompilation is not supported for this game yet.");
-        }
 
         int maxButtonWidth = std::max({m_ExportDisassembly->sizeHint().width(),
             m_ExportStatics->sizeHint().width(),

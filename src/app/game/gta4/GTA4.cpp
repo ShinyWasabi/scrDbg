@@ -1,5 +1,6 @@
 #include "GTA4.hpp"
 #include "core/Scanner.hpp"
+#include "decomp/DecompilerGTA4.hpp"
 #include "disasm/DisassemblerGTA4.hpp"
 #include "types/ScriptProgramGTA4.hpp"
 #include "types/ScriptThreadGTA4.hpp"
@@ -46,6 +47,11 @@ namespace scrDbgApp
         auto disasm = std::make_unique<DisassemblerGTA4>(std::move(program));
         disasm->Refresh();
         return disasm;
+    }
+
+    std::unique_ptr<Decompiler> GTA4::CreateDecompiler(const Disassembler& disassembler) const
+    {
+        return std::make_unique<DecompilerGTA4>(disassembler);
     }
 
     std::string GTA4::GetGameBuild() const

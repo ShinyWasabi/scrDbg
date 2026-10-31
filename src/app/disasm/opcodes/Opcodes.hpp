@@ -259,8 +259,6 @@ namespace scrDbgApp
         PUSH_CONST_159,
 
         // GTA4
-        ARRAY_LOAD,
-        ARRAY_STORE,
         GETXPROTECT,
         SETXPROTECT,
         REFXPROTECT,

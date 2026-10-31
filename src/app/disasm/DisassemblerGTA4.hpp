@@ -9,6 +9,7 @@ namespace scrDbgApp
         using Disassembler::Disassembler;
 
         std::optional<FunctionInfo> GetFunctionForPc(uint32_t pc) const override;
+        std::vector<uint32_t> GetFunctionInstructions(const FunctionInfo& func) const override;
         uint16_t GetOpcodeNumber(Opcodes opcode) const override;
         int GetInstructionSize(uint32_t pc) const override;
         bool IsJumpOrCall(uint8_t op) const override;
@@ -79,8 +80,8 @@ namespace scrDbgApp
             {"LOAD", "Load value from reference", ""},
             {"STORE", "Store value to reference", ""},
             {"STORE_REV", "Store value to reference (reversed)", ""},
-            {"ARRAY_LOAD", "Load array elements", ""},
-            {"ARRAY_STORE", "Store array elements", ""},
+            {"LOAD_N", "Load array elements", ""},
+            {"STORE_N", "Store array elements", ""},
             {"LOCAL_0", "Push reference to local 0", ""},
             {"LOCAL_1", "Push reference to local 1", ""},
             {"LOCAL_2", "Push reference to local 2", ""},

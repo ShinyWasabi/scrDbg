@@ -163,6 +163,10 @@ namespace rage::payne
 
         ScriptFiber::Tick(_this->m_Context.m_ProgramHash);
 
+        // Set by the call handlers so ENTER can log the real call site, CALLINDIRECT is shorter than CALL
+        uint32_t lastCallPc = 0;
+        uint32_t lastCallRet = UINT32_MAX;
+
         while (insnCount-- > 0)
         {
             _this->m_InsnCount++;
@@ -552,6 +556,8 @@ namespace rage::payne
                 ENSURE_STACK(1);
                 ++sp;
                 sp[0].Int = retPc;
+                lastCallPc = retPc - 5;
+                lastCallRet = retPc;
                 break;
             }
             case scrOpcode::ENTER:
@@ -566,7 +572,7 @@ namespace rage::payne
                 ++sp;
                 sp[0].Int = _this->m_Context.m_Fp;
 
-                uint32_t callsitePc = sp[-1].Uns - 5;
+                uint32_t callsitePc = sp[-1].Uns == lastCallRet ? lastCallPc : sp[-1].Uns - 5;
 
                 uint32_t newSp = static_cast<uint32_t>(sp - stack + 1);
                 _this->m_Context.m_Sp = newSp;
@@ -894,6 +900,9 @@ namespace rage::payne
             case scrOpcode::CALLINDIRECT:
             {
                 uint32_t target = sp[0].Uns;
+                debugger->RecordIndirectCall(_this->m_Context.m_ProgramHash, pc - 1, target);
+                lastCallPc = pc - 1;
+                lastCallRet = pc;
                 sp[0].Uns = pc;
                 pc = target;
                 break;

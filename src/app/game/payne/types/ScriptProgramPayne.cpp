@@ -8,6 +8,11 @@ namespace scrDbgApp
         return m_Base.Add(NAME_HASH).Get<uint32_t>();
     }
 
+    std::string ScriptProgramPayne::GetName() const
+    {
+        return m_Base.Add(NAME).Deref().GetString();
+    }
+
     uint32_t ScriptProgramPayne::GetCodeSize() const
     {
         return m_Base.Add(CODE_SIZE).Get<uint32_t>();

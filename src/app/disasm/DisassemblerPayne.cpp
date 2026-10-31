@@ -19,6 +19,19 @@ namespace scrDbgApp
         return std::nullopt;
     }
 
+    std::vector<uint32_t> DisassemblerPayne::GetFunctionInstructions(const FunctionInfo& func) const
+    {
+        std::vector<uint32_t> pcs;
+        for (const auto& [pc, entry] : m_PcToEntry)
+        {
+            if (entry == func.Start)
+                pcs.push_back(pc);
+        }
+
+        std::sort(pcs.begin(), pcs.end());
+        return pcs;
+    }
+
     std::string DisassemblerPayne::GetFunctionName(uint32_t pc, uint32_t size) const
     {
         if (size > 0)

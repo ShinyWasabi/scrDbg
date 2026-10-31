@@ -7,7 +7,12 @@ namespace scrDbgApp::Decomp
     class Function
     {
     public:
-        Function(const Disassembler::FunctionInfo& info, uint32_t reservedSlots);
+        Function(const Disassembler::FunctionInfo& info, uint32_t end, uint32_t reservedSlots);
+
+        const Disassembler::FunctionInfo& GetInfo() const
+        {
+            return m_Info;
+        }
 
         const std::string& GetName() const
         {
@@ -21,7 +26,7 @@ namespace scrDbgApp::Decomp
 
         uint32_t GetEnd() const // One past the last LEAVE
         {
-            return m_Info.Start + m_Info.Length;
+            return m_End;
         }
 
         uint32_t GetArgCount() const
@@ -65,6 +70,7 @@ namespace scrDbgApp::Decomp
         void CollapseShortCircuits();
 
         Disassembler::FunctionInfo m_Info;
+        uint32_t m_End;
         uint32_t m_ReservedSlots;
         std::vector<Instruction> m_Instructions;
     };

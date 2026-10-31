@@ -139,11 +139,11 @@ namespace scrDbgApp
         STATIC_STORE_S = 79,
         STATIC_STORE_SR = 116,
         LOAD_N_S = 131,
-        STORE_N_S = 83,
-        STORE_N_SR = 130,
+        STORE_N_S = 63,
+        STORE_N_SR = 42,
         GLOBAL_LOAD_S = 136,
-        GLOBAL_STORE_S = 63,
-        GLOBAL_STORE_SR = 42,
+        GLOBAL_STORE_S = 83,
+        GLOBAL_STORE_SR = 130,
         STATIC_U24 = 62,
         STATIC_U24_LOAD = 107,
         STATIC_U24_STORE = 40
@@ -398,8 +398,6 @@ namespace scrDbgApp
         UNAVAILABLE_OP, // PUSH_CONST_157
         UNAVAILABLE_OP, // PUSH_CONST_158
         UNAVAILABLE_OP, // PUSH_CONST_159
-        UNAVAILABLE_OP, // ARRAY_LOAD
-        UNAVAILABLE_OP, // ARRAY_STORE
         UNAVAILABLE_OP, // GETXPROTECT
         UNAVAILABLE_OP, // SETXPROTECT
         UNAVAILABLE_OP, // REFXPROTECT

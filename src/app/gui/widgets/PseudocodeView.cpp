@@ -318,13 +318,11 @@ namespace scrDbgApp
 
         if (!disassembler)
             ShowPlaceholder("// Nothing to show.");
-        else if (!m_Decompiler)
-            ShowPlaceholder("// Decompilation is not supported for this game yet.");
         else
             ShowPlaceholder("// Select an instruction in the disassembly and press Tab,\n// or right-click it and choose Decompile Function.");
     }
 
-    bool PseudocodeView::IsSupported() const
+    bool PseudocodeView::HasScript() const
     {
         return m_Decompiler != nullptr;
     }

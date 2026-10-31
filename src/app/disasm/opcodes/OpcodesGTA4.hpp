@@ -57,8 +57,8 @@ namespace scrDbgApp
         LOAD,
         STORE,
         STORE_REV,
-        ARRAY_LOAD,
-        ARRAY_STORE,
+        LOAD_N,
+        STORE_N,
         LOCAL_0,
         LOCAL_1,
         LOCAL_2,
@@ -512,8 +512,6 @@ namespace scrDbgApp
         static_cast<uint16_t>(OpcodesGTA4::PUSH_CONST_157),
         static_cast<uint16_t>(OpcodesGTA4::PUSH_CONST_158),
         static_cast<uint16_t>(OpcodesGTA4::PUSH_CONST_159),
-        static_cast<uint16_t>(OpcodesGTA4::ARRAY_LOAD),
-        static_cast<uint16_t>(OpcodesGTA4::ARRAY_STORE),
         static_cast<uint16_t>(OpcodesGTA4::GETXPROTECT),
         static_cast<uint16_t>(OpcodesGTA4::SETXPROTECT),
         static_cast<uint16_t>(OpcodesGTA4::REFXPROTECT),
@@ -565,8 +563,8 @@ namespace scrDbgApp
         UNAVAILABLE_OP, // PUSH_CONST_F5
         UNAVAILABLE_OP, // PUSH_CONST_F6
         UNAVAILABLE_OP, // PUSH_CONST_F7
-        UNAVAILABLE_OP, // LOAD_N
-        UNAVAILABLE_OP, // STORE_N
+        static_cast<uint16_t>(OpcodesGTA4::LOAD_N),
+        static_cast<uint16_t>(OpcodesGTA4::STORE_N),
         UNAVAILABLE_OP, // CALLINDIRECT
         UNAVAILABLE_OP, // IOFFSET
         UNAVAILABLE_OP, // IOFFSET_U8

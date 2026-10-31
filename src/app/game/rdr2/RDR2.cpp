@@ -1,5 +1,6 @@
 #include "RDR2.hpp"
 #include "core/Scanner.hpp"
+#include "decomp/DecompilerRDR2.hpp"
 #include "disasm/DisassemblerRDR2.hpp"
 #include "types/ScriptProgramRDR2.hpp"
 #include "types/ScriptThreadRDR2.hpp"
@@ -43,6 +44,11 @@ namespace scrDbgApp
         auto disasm = std::make_unique<DisassemblerRDR2>(std::move(program));
         disasm->Refresh();
         return disasm;
+    }
+
+    std::unique_ptr<Decompiler> RDR2::CreateDecompiler(const Disassembler& disassembler) const
+    {
+        return std::make_unique<DecompilerRDR2>(disassembler);
     }
 
     std::string RDR2::GetGameBuild() const

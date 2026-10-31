@@ -20,7 +20,6 @@ namespace scrDbgApp
     private:
         static bool HasProgramGlobals(GameType type);
         static bool HasProgramNatives(GameType type);
-        static bool HasDecompiler(GameType type);
 
         static void ExportToFile(const QString& title, const QString& filename, int count, std::function<void(QTextStream&, QProgressDialog&)> cb, const QString& filter = "Text Files (*.txt);;All Files (*)");
         static QString FormatValue(Pointer value, bool includeString);

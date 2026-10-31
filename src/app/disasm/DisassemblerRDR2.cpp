@@ -66,7 +66,7 @@ namespace scrDbgApp
         uint8_t op = GetU8(pc);
 
         if (op == static_cast<uint8_t>(OpcodesRDR2::CALL))
-            return GetU24(pc + 1);
+            return GetU16(pc + 1);
 
         // CALL_U8H_1..F encode the high byte of the 24-bit target in the opcode
         // itself, with the low 16 bits stored as the U16 operand.
@@ -129,12 +129,12 @@ namespace scrDbgApp
     {
         uint8_t op = m_Code[pc];
 
-        if (op == static_cast<uint8_t>(OpcodesRDR2::CALL) || op == static_cast<uint8_t>(OpcodesRDR2::PUSH_CONST_U24)) // check for function pointers
+        if (op == static_cast<uint8_t>(OpcodesRDR2::PUSH_CONST_U24)) // check for function pointers
         {
             if (GetU24(pc + 1) == targetPc)
                 return true;
         }
-        else if (op >= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_1) && op <= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_F))
+        else if (op >= static_cast<uint8_t>(OpcodesRDR2::CALL) && op <= static_cast<uint8_t>(OpcodesRDR2::CALL_U8H_F))
         {
             if (GetJumpTarget(pc) == targetPc)
                 return true;

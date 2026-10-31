@@ -26,7 +26,7 @@ namespace scrDbgApp
         ~PseudocodeView() override;
 
         void SetDisassembler(Disassembler* disassembler, uint32_t scriptHash);
-        bool IsSupported() const;
+        bool HasScript() const;
         bool ShowAddress(uint32_t address);
         std::optional<uint32_t> GetCurrentAddress() const;
         void SetExecutionAddress(std::optional<uint32_t> address);
